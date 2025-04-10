@@ -22,6 +22,29 @@
                             </v-text-field>
                             <v-btn type="submit" color="primary" block>로그인</v-btn>
                         </v-form>
+                        <v-row>
+                            <v-col cols="4" class="d-flex justify-center">
+                                <img 
+                                  src="@/assets/google.png" 
+                                  style="max-height: 40px; width: auto;"
+                                  @click="googleLogin()"
+                                />
+                            </v-col>
+                            <v-col cols="4" class="d-flex justify-center">
+                                <img 
+                                  src="@/assets/kakao.png" 
+                                  style="max-height: 40px; width: auto;"
+                                  @click="kakaoLogin()"
+                                />
+                            </v-col>
+                            <v-col cols="4" class="d-flex justify-center">
+                                <img 
+                                  src="@/assets/samsung.png" 
+                                  style="max-height: 40px; width: auto;"
+                                  @click="samsungLogin()"
+                                />
+                            </v-col>
+                        </v-row>
                     </v-card-text>
                 </v-card>
             </v-col>
@@ -39,7 +62,15 @@ export default {
   data() {
     return {
       loginId: "",
-      password: ""
+      password: "",
+      googleUrl: "https://accounts.google.com/o/oauth2/auth",
+      googleClientId: "73727762121-skf00kqrlnfjput7t493mmdifss29170.apps.googleusercontent.com",
+      googleRedirectUri: "http://localhost:3000/oauth/google/redirect",
+      googleScope: "openid email profile",
+      googleResponseType: "code",
+      kakaoUrl: "https://kauth.kakao.com/oauth/authorize",
+      kakaoClientId: "740a1fc6969a1fc6c821d81a2236d3fe",
+      kakaoRedirectUri: "http://localhost:3000/oauth/kakao/redirect",
     }
   },
   methods: {
@@ -47,7 +78,7 @@ export default {
       try {
         const loginData = {
           loginId: this.loginId,
-          password: this.password
+          password: this.password,
         }
 
         const response = await axios.post(
@@ -55,8 +86,8 @@ export default {
           loginData
         )
         console.log(response)
-        const token = response.data.object.token
-        const refreshToken = response.data.object.refreshToken
+        const token = response.data.result.token
+        const refreshToken = response.data.result.refreshToken
 
         // 저장
         localStorage.setItem("token", token)
@@ -66,7 +97,7 @@ export default {
         // const role = jwtDecode(token).role
         // const loginId = jwtDecode(token).sub
         // localStorage.setItem("role", role)
-        localStorage.setItem("loginId", response.data.object.id)
+        localStorage.setItem("loginId", response.data.result.id)
 
         // 리디렉션
         console.log("Login 성공! now routing to /");
@@ -75,7 +106,16 @@ export default {
         alert('로그인 실패! 아이디 또는 비밀번호를 확인하세요.')
         console.error('로그인 에러:', error)
       }
+    },
+    googleLogin(){
+      const auth_uri = `${this.googleUrl}?client_id=${this.googleClientId}&redirect_uri=${this.googleRedirectUri}&response_type=code&scope=${this.googleScope}&access_type=offline&prompt=consent`;
+      window.location.href = auth_uri;
+    },
+    kakaoLogin(){
+      const auth_url = `${this.kakaoUrl}?client_id=${this.kakaoClientId}&redirect_uri=${this.kakaoRedirectUri}&response_type=code`;
+      window.location.href = auth_url;
     }
+
   }
 }
 </script>

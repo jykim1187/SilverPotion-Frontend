@@ -4,6 +4,8 @@ import LoginPage from "@/views/LoginPage.vue";
 import MainHome from "@/views/MainHome.vue";
 import UserList from "@/views/UserList.vue";
 import { chatRouter } from './chatRouter';
+import GoogleRedirect from "@/components/GoogleRedirect.vue";
+import KakaoRedirect from "@/components/KakaoRedirect.vue";
 
 const routes = [
     ...chatRouter,
@@ -27,6 +29,16 @@ const routes = [
         path:'/user-service/silverpotion/user/list',
         name: 'UserList',
         component: UserList
+    },
+    {
+        path: '/oauth/google/redirect',
+        name: 'GoogleRedirect',
+        component: GoogleRedirect
+    },
+    {
+        path: '/oauth/kakao/redirect',
+        name: 'KakaoRedirect',
+        component: KakaoRedirect
     },
     
     // {

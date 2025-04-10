@@ -77,13 +77,13 @@
   export default {
     data() {
       return {
-        loginId: "",
-        name: "",
-        email: "",
+        loginId: this.$route.query.loginId || "",
+        name: this.$route.query.name || "",
+        email: this.$route.query.email || "",
         password: "",
         sex: null,
         phoneNumber: "",
-        birthday: "",
+         birthday: "",
         nickName: "",
         address: "",
         streetAddress: "",
