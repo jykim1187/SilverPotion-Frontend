@@ -102,6 +102,7 @@ export default{
         },
         async loadChatRoom() {
             const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/group/list`);
+            console.log(response)
             this.chatRoomList = response.data;
         }
     },

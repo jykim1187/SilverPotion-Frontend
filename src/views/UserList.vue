@@ -55,8 +55,9 @@
             }
           }
         );
-        console.log("✅ 회원 목록 불러오기 성공:", response.data.object);
-        this.userlist = response.data.object;
+        console.log(response)
+        console.log("✅ 회원 목록 불러오기 성공:", response.data.result);
+        this.userlist = response.data.result;
       } catch (error) {
         console.error("❌ 회원 목록 불러오기 실패", error);
         alert("회원 목록을 불러오지 못했습니다.");
@@ -80,7 +81,7 @@
   
           const roomId = response.data;
           console.log(`✅ 채팅방 생성 또는 조회 성공! roomId = ${roomId}`);
-          this.$router.push(`/chatpage/${roomId}`);
+          this.$router.push(`/chat/${roomId}`);
         } catch (error) {
           console.error("❌ 채팅방 생성/이동 실패", error);
           alert("채팅방 생성 중 오류가 발생했습니다.");
