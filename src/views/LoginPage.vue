@@ -55,8 +55,8 @@ export default {
           loginData
         )
         console.log(response)
-        const token = response.data.object.token
-        const refreshToken = response.data.object.refreshToken
+        const token = response.data.result.token
+        const refreshToken = response.data.result.refreshToken
 
         // 저장
         localStorage.setItem("token", token)
@@ -66,7 +66,7 @@ export default {
         // const role = jwtDecode(token).role
         // const loginId = jwtDecode(token).sub
         // localStorage.setItem("role", role)
-        localStorage.setItem("loginId", response.data.object.id)
+        localStorage.setItem("loginId", response.data.result.id)
 
         // 리디렉션
         console.log("Login 성공! now routing to /");
