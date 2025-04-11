@@ -21,3 +21,8 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# pnpm 방지
+pnpm-lock.yaml
+.pnpm-store/
+.pnpm-debug.log
