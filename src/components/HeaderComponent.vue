@@ -39,6 +39,7 @@
 
 <script>
 import emitter from '@/event-bus';
+import axios from 'axios';
 
 export default {
   data() {
@@ -59,10 +60,23 @@ export default {
     checkLogin() {
       this.isLogin = !!localStorage.getItem('token');
     },
-    doLogout() {
-      localStorage.clear();
-      emitter.emit('loginChanged');
-      this.$router.push('/');
+    async doLogout() {
+      try{
+        const loginId = localStorage.getItem("loginId");
+
+        await axios.post(
+        `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/logout`,
+        {}, // body 없음
+        { headers: { "X-User-LoginId": loginId } }
+        );
+
+        localStorage.clear();
+        emitter.emit('loginChanged');
+        this.$router.push('/');
+            }
+            catch(error){
+              console.error('로그아웃 실패', error);
+            }
     },
     checkNotifications() {
       this.hasNotifications = true;
