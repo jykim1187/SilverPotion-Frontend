@@ -1,17 +1,17 @@
 
 
-import ChatRoom from "@/views/ChatRoom/ChatRoom.vue";
-import GroupChatList from "@/views/ChatRoom/GroupChatList.vue";
+import ChatBox from "@/views/ChatRoom/ChatBox.vue";
+import ChatList from "@/views/ChatRoom/ChatList.vue";
 
 export const chatRouter= [
     {
         path:'/chat-service/chat/my/rooms',
         name:'GroupChatList',
-        component: GroupChatList
+        component: ChatList
     },
     {
         path:'/chat/:roomId',
-        name: 'ChatRoom',
-        component: ChatRoom
+        name: 'ChatBox',
+        component: ChatBox
     },
 ]

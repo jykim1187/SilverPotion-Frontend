@@ -55,9 +55,44 @@
             }
           }
         );
+        
         console.log(response)
         console.log("✅ 회원 목록 불러오기 성공:", response.data.result);
         this.userlist = response.data.result;
+
+        const enhanceduserlist = await Promise.all(this.userlist.map(async user => {
+              try {
+                const roomRes = await axios.post(
+                  `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/private/create?otherUserId=${user.id}`,
+                  {},
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      "X-User-LoginId": localStorage.getItem("loginId")
+                    }
+                  }
+                );
+                const roomId = roomRes.data;
+
+                const unreadRes = await axios.get(
+                  `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${roomId}/unread-count`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      "X-User-LoginId": localStorage.getItem("loginId")
+                    }
+                  }
+                );
+
+                return { ...user, unreadCount: unreadRes.data };
+              } catch (e) {
+                console.warn(`⚠️ unread 조회 실패: ${user.id}`, e);
+                return { ...user, unreadCount: 0 }; // 실패 시 0으로 fallback
+              }
+            }));
+
+            this.userlist = enhanceduserlist;
+            console.log("✅ 유저 + 안 읽은 메시지 수 세팅 완료", this.userlist);
       } catch (error) {
         console.error("❌ 회원 목록 불러오기 실패", error);
         alert("회원 목록을 불러오지 못했습니다.");
