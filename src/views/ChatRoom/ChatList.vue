@@ -84,7 +84,7 @@ export default{
                 }
             }
         );
-            this.$router.push(`/chatpage/${roomId}`);
+            this.$router.push(`/chat/${roomId}`);
         },
         async createChatRoom() {
             const loginId = localStorage.getItem("loginId");

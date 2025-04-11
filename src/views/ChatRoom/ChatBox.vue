@@ -13,7 +13,8 @@
                              :key="index"
                              :class="['chat-message', msg.senderLoginId ===this.senderLoginId ? 'sent' : 'received' ]"
                             >
-                                <strong>{{ msg.senderLoginId }}: </strong> {{ msg.message }}
+                            <strong>{{ msg.senderLoginId }}: </strong> {{ msg.message }}
+                            <span class="time" v-if="msg.createdTime"> / {{ formatTime(msg.createdTime) }}</span>
                             </div>
                         </div>
                         <v-text-field
@@ -47,6 +48,7 @@ export default{
             senderLoginId: null,
             roomId: null,
             loginId:null,
+            createdTime:null,
         }
     },
     async created(){
@@ -55,6 +57,9 @@ export default{
         const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/history/${this.roomId}`);
         console.log(response);
         this.messages = response.data;
+        this.$nextTick(() => {
+        this.scrollToBottom();
+        });
         this.connectWebsocket();
     },
     // 사용자가 현재 라우트에서 다른 라우트로 이동하려고 할때 호출되는 훅함수
@@ -92,10 +97,12 @@ export default{
         },
         sendMessage(){
             if(this.newMessage.trim() === "")return;
+            const now = new Date().toISOString();
             const message = {
-                roomId: this.roomId ,
+                roomId: this.$route.params.roomId ,
                 senderLoginId: this.senderLoginId,
-                message: this.newMessage
+                message: this.newMessage,
+                createdTime: now,
             }
             this.stompClient.send(`/publish/${this.roomId}`, JSON.stringify(message));
             this.newMessage = ""
@@ -126,6 +133,14 @@ export default{
                 this.stompClient.disconnect();
             }
         },
+        //시간 hh:mm 형식으로 포맷팅
+        formatTime(datetime) {
+            if (!datetime) return '';
+            const date = new Date(datetime);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`; // hh:mm 형식
+        },
     },
 }
 </script>
@@ -145,5 +160,10 @@ export default{
 }
 .received{
     text-align:left;
+}
+.time {
+    font-size: 0.75rem;
+    color: #888;
+    margin-left: 4px;
 }
 </style>
