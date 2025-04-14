@@ -26,8 +26,8 @@
                                 offset-y="3"
                             ></v-badge>
                         </v-btn>
-                        <v-btn v-if="!isLogin" :to="{path:'/user-service/silverpotion/user/create'}" variant="text" class="text-body-2 text-truncate">회원가입</v-btn>
-                        <v-btn v-if="!isLogin" :to="{path:'/user-service/silverpotion/user/login'}" variant="text" class="text-body-2 text-truncate">로그인</v-btn>
+                        <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/create'}" variant="text" class="text-body-2 text-truncate">회원가입</v-btn>
+                        <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/login'}" variant="text" class="text-body-2 text-truncate">로그인</v-btn>
                         <v-btn v-if="isLogin" @click="doLogout" variant="text" class="text-body-2 text-truncate">로그아웃</v-btn>
                     </div>
                 </v-col>
