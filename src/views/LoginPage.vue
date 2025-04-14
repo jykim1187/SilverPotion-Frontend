@@ -1,55 +1,98 @@
 <template>
-    <v-container>
-        <v-row justify="center">
-            <v-col cols="12" sm="4" md="6">
-                <v-card>
-                    <v-card-title class="text-h5 text-center">로그인</v-card-title>
-                    <v-card-text>
-                        <v-form @submit.prevent="doLogin">
-                            <v-text-field 
-                            label="로그인ID"
-                            v-model="loginId"
-                            type="loginId"
-                            required
+    <v-container fluid class="fill-height pa-0 ma-0" style="max-width: 1080px; margin: 0 auto;">
+        <v-row align="center" justify="center">
+            <v-col cols="12" sm="11" md="9" lg="7">
+                <v-card class="elevation-0 pa-0">
+                   <!-- 로고 -->
+                    <v-card-text class="text-center pa-0">
+                      
+                        <img src="@/assets/logo.png" alt="Logo" class="logo mb-8" style="height: 60px;">
+                        <!-- 로그인 폼 -->
+                        <v-form @submit.prevent="doLogin" class="px-4">
+                           <!-- 로그인 ID 입력 필드 -->
+                            <v-text-field
+                                v-model="loginId"
+                                label="로그인 ID"
+                                name="login"
+                                prepend-inner-icon="mdi-account-outline"
+                                type="text"
+                                required
+                                outlined
+                                class="mb-4"
+                                :rules="[v => !!v || '로그인 ID를 입력해주세요']"
                             ></v-text-field>
-                            
-                            <v-text-field 
-                            label="password"
-                            v-model="password"
-                            type="password"
-                            required
+                          <!-- 비밀번호 입력 필드 -->
+                            <v-text-field
+                                v-model="password"
+                                label="비밀번호"
+                                name="password"
+                                prepend-inner-icon="mdi-lock-outline"
+                                type="password"
+                                required
+                                outlined
+                                :rules="[v => !!v || '비밀번호를 입력해주세요']"
+                            ></v-text-field>
+                          <!-- 로그인 버튼 -->
+                            <v-btn
+                                color="#FF6B00"
+                                @click="doLogin"
+                                block
+                                large
+                                class="mb-4 white--text"
+                                height="48"
                             >
-                            </v-text-field>
-                            <v-btn type="submit" color="primary" block>로그인</v-btn>
+                                로그인
+                            </v-btn>
                         </v-form>
+                    </v-card-text>
+                    <v-divider class="my-4"></v-divider>
+                    <!-- 소셜 로그인 버튼 -->
+                    <v-card-actions class="justify-center px-4">
                         <v-row>
-                            <v-col cols="4" class="d-flex justify-center">
-                                <img 
-                                  src="@/assets/google.png" 
-                                  style="max-height: 40px; width: auto;"
-                                  @click="googleLogin()"
-                                />
+                            <v-col cols="6" class="text-center">
+                              <!-- 구글 로그인 버튼 -->
+                                <v-btn
+                                    color="#4285F4"
+                                    class="white--text"
+                                    block
+                                    @click="googleLogin"
+                                >
+                                    <v-img
+                                        src="@/assets/google.png"
+                                        max-height="24"
+                                        max-width="24"
+                                        class="mr-2"
+                                    ></v-img>
+                                    Google
+                                </v-btn>
                             </v-col>
-                            <v-col cols="4" class="d-flex justify-center">
-                                <img 
-                                  src="@/assets/kakao.png" 
-                                  style="max-height: 40px; width: auto;"
-                                  @click="kakaoLogin()"
-                                />
-                            </v-col>
-                            <v-col cols="4" class="d-flex justify-center">
-                                <img 
-                                  src="@/assets/samsung.png" 
-                                  style="max-height: 40px; width: auto;"
-                                  @click="samsungLogin()"
-                                />
+                            <v-col cols="6" class="text-center">
+                              <!-- 카카오 로그인 버튼 -->
+                                <v-btn
+                                    color="#FEE500"
+                                    block
+                                    @click="kakaoLogin"
+                                >
+                                    <v-img
+                                        src="@/assets/kakao.png"
+                                        max-height="24"
+                                        max-width="24"
+                                        class="mr-2"
+                                    ></v-img>
+                                    Kakao
+                                </v-btn>
                             </v-col>
                         </v-row>
-                    </v-card-text>
+                    </v-card-actions>
+                    <!-- 회원가입 버튼 -->
+                    <v-card-actions class="justify-center mt-4">
+                        <v-btn text color="grey darken-1" to="/user-service/silverpotion/user/create">
+                            회원가입
+                        </v-btn>
+                    </v-card-actions>
                 </v-card>
             </v-col>
         </v-row>
-
     </v-container>
 </template>
 
@@ -74,6 +117,7 @@ export default {
     }
   },
   methods: {
+     // 일반 로그인
     async doLogin() {
       try {
         const loginData = {
@@ -119,3 +163,37 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.fill-height {
+    min-height: 100vh;
+    background-color: #f8f8f8;
+    padding: 0;
+    margin: 0;
+}
+
+@media (max-width: 1080px) {
+    .fill-height {
+        padding: 0 16px;
+    }
+}
+
+.logo {
+    margin-top: 40px;
+}
+
+.v-text-field {
+    border-radius: 4px;
+}
+
+.v-btn {
+    text-transform: none;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.v-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+</style>

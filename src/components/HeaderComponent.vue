@@ -1,6 +1,6 @@
 <template>
-    <v-app-bar app dark elevation="1" height="56" class="header-container">
-        <div class="header-content">
+    <v-app-bar dark elevation="1" height="56" class="header-app-bar">
+        <div class="header-container">
             <v-row no-gutters align="center" justify="space-between" class="header-row">
                 <v-col cols="4" class="d-flex align-center">
                     <v-btn :to="{path:'/user-service/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate">회원목록</v-btn>
@@ -86,16 +86,17 @@ export default {
 </script>
 
 <style scoped>
-.header-container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    padding: 0 !important;
-}
-
-.header-content {
+.header-app-bar {
     width: 100%;
     max-width: 768px;
+    margin: 0 auto;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    position: fixed;
+}
+
+.header-container {
+    width: 100%;
     padding: 0 16px;
     overflow: hidden;
 }
