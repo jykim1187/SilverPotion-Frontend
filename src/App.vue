@@ -2,8 +2,10 @@
   <v-app>
     <div class="app-wrapper">
       <div class="app-container">
-        <HeaderComponent/>
-        <v-main>
+        <div class="header-section">
+          <HeaderComponent/>
+        </div>
+        <v-main class="main-section">
           <router-view/>
         </v-main>
       </div>
@@ -46,13 +48,28 @@ html, body {
   background-color: #ffffff;
 }
 
-.v-main {
+.header-section {
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.main-section {
+  width: 100%;
+  position: relative;
+  z-index: 0;
+  margin-top: 56px; /* HeaderComponent의 높이만큼 마진 추가 */
+}
+
+.main-content {
+  margin-top: 60px; /* HeaderComponent의 높이에 맞게 조정 */
   padding-left: 16px !important;
   padding-right: 16px !important;
 }
 
 @media (max-width: 768px) {
-  .v-main {
+  .main-content {
+    margin-top: 50px; /* 모바일에서의 간격 조정 */
     padding-left: 8px !important;
     padding-right: 8px !important;
   }
@@ -62,5 +79,9 @@ html, body {
   .app-container {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
   }
+}
+
+.v-main {
+  padding: 0 !important;
 }
 </style>
