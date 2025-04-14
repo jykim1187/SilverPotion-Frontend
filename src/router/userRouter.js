@@ -13,18 +13,18 @@ export const userRouter =[
         component: MainHome
     },
     {
-        path:'/user-service/silverpotion/user/create',
+        path:'/silverpotion/user/create',
         name: 'UserCreate',
         component: UserCreate
     },
     {
-        path:'/user-service/silverpotion/user/login',
+        path:'/silverpotion/user/login',
         name: 'LoginPage',
         component: LoginPage
     },
     
     {
-        path:'/user-service/silverpotion/user/list',
+        path:'/silverpotion/user/list',
         name: 'UserList',
         component: UserList
     }, 
