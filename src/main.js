@@ -3,7 +3,7 @@ import App from './App.vue'
 import vuetify from './plugins/vuetify'
 import router from '@/router/index.js'
 import axios from 'axios';
-
+import VueDatePicker from '@vuepic/vue-datepicker';
 const app = createApp(App);
 
 axios.interceptors.request.use(
@@ -43,4 +43,5 @@ axios.interceptors.response.use(
 app.use(router);
 app.use(vuetify);
 app.mount('#app');
+app.component('VueDatePicker', VueDatePicker);
 

@@ -3,7 +3,7 @@
         <div class="header-container">
             <v-row no-gutters align="center" justify="space-between" class="header-row">
                 <v-col cols="4" class="d-flex align-center">
-                    <v-btn :to="{path:'/user-service/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate">회원목록</v-btn>
+                    <v-btn :to="{path:'/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate">회원목록</v-btn>
                 </v-col>
                 <v-col cols="4" class="text-center d-flex align-center justify-center">
                     <v-btn :to="{path: '/'}" class="logo-btn" style="height: auto; background: transparent; box-shadow: none;">
@@ -26,8 +26,8 @@
                                 offset-y="3"
                             ></v-badge>
                         </v-btn>
-                        <v-btn v-if="!isLogin" :to="{path:'/user-service/silverpotion/user/create'}" variant="text" class="text-body-2 text-truncate">회원가입</v-btn>
-                        <v-btn v-if="!isLogin" :to="{path:'/user-service/silverpotion/user/login'}" variant="text" class="text-body-2 text-truncate">로그인</v-btn>
+                        <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/create'}" variant="text" class="text-body-2 text-truncate">회원가입</v-btn>
+                        <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/login'}" variant="text" class="text-body-2 text-truncate">로그인</v-btn>
                         <v-btn v-if="isLogin" @click="doLogout" variant="text" class="text-body-2 text-truncate">로그아웃</v-btn>
                     </div>
                 </v-col>
