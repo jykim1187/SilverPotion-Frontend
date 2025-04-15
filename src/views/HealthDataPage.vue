@@ -14,8 +14,9 @@
             @click="selectdependent(dependent)">
             {{ dependent.name }}
           </v-btn>
+          <!-- 피보호자 연결 요청 버튼 -->
         </div>
-        <v-btn small class="add-dependent-btn" icon>
+        <v-btn small class="add-dependent-btn" icon @click="showLinkRequestModal = true">
           <v-icon>mdi-plus</v-icon>
         </v-btn>
       </div>
@@ -30,26 +31,32 @@
     </div>
     <!-- 헬스데이터 컴포넌트 호출 -->
     <div class="health-data-container">
-      <HealthData :loginId="currentUserId" :type="selectedType" />
+      <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" />
     </div>
+    
+    <!-- 피보호자 연결 요청 모달 -->
+    <LinkRequest v-model="showLinkRequestModal" @input="handleModalChange" />
   </div>
 </template>
 
 <script>
 import HealthData from '@/components/HealthData.vue';
+import LinkRequest from '@/components/LinkRequest.vue';
 import axios from 'axios';
 
 export default {
   name: 'HealthDataPage',
   components: {
-    HealthData
+    HealthData,
+    LinkRequest
   },
   data() {
     return { 
       selectedUser: localStorage.getItem('loginId') || '',
       selectedType: 'DAY',
       dependents: [],
-      currentdependent: null
+      currentdependent: null,
+      showLinkRequestModal: false
     }
   },
  async mounted() {
@@ -61,12 +68,38 @@ export default {
   computed: {
     currentUserId() {
       return this.selectedUser
+    },
+    calculatedDate() {
+      const today = new Date();
+      
+      if (this.selectedType === 'DAY') {
+        // 오늘 날짜를 YYYY-MM-DD 형식으로 반환
+        return today.toISOString().split('T')[0];
+      } 
+      else if (this.selectedType === 'WEEKAVG') {
+        // 이번주 월요일 계산
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 구하기
+        const monday = new Date(today);
+        monday.setDate(diff);
+        return monday.toISOString().split('T')[0];
+      } 
+      else if (this.selectedType === 'MONTHAVG') {
+        // 이번달 1일 계산
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        return firstDay.toISOString().split('T')[0];
+      }
+      
+      return today.toISOString().split('T')[0];
     }
   },
   methods: {
     selectdependent(dependent) {
       this.selectedUser = dependent.userId;
     },
+    handleModalChange(val) {
+      this.showLinkRequestModal = val;
+    }
   },
 }
 </script>
@@ -122,29 +155,6 @@ export default {
   display: flex;
   margin-left: 8px;
 }
-
-/* .profile-section {
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.profile-container {
-  display: flex;
-  align-items: center;
-}
-
-.profile-avatar {
-  margin-right: 20px;
-  border: 3px solid #3f51b5;
-}
-
-.profile-info {
-  display: flex;
-  flex-direction: column;
-} */
 
 .user-id {
   font-size: 1.5rem;
