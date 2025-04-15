@@ -96,8 +96,11 @@ export default {
         // 디코딩해서 로그인 ID와 권한 추출 (선택)
         // const role = jwtDecode(token).role
         // const loginId = jwtDecode(token).sub
-        // localStorage.setItem("role", role)
+        localStorage.setItem("role", response.data.result.role)
         localStorage.setItem("loginId", response.data.result.id)
+        localStorage.setItem("nickName", response.data.result.nickName)
+        localStorage.setItem("profileImage", response.data.result.profileImage)
+        localStorage.setItem("userId", response.data.result.userId)
 
         // 리디렉션
         console.log("Login 성공! now routing to /");
