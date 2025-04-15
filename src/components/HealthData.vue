@@ -11,7 +11,7 @@
       <div class="date-picker-section">
         <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
         <div class="date-picker-container" v-show="showDatePicker">
-          <DatePickerRange @handleDateChange="handleDateChange" />
+          <DatePickerRange :type="type" @handleDateChange="handleDateChange" />
         </div>
       </div>
       <div class="date-section">
@@ -63,8 +63,8 @@
             </div>
             <div class="stat-chart heartbeat-animation">
               <svg viewBox="0 0 120 30" class="heartbeat">
-                <polyline
-                  points="0,20 5,20 10,10 15,30 20,10 25,20 30,20 35,10 40,20 45,20 50,10 55,20 60,20 65,10 70,20 75,20 80,10 85,20 90,20 95,10 100,20 105,20 110,10 115,20 120,20"
+                 <polyline 
+                  points="0,20 5,20 10,10 15,30 20,10 25,20 30,20 35,10 40,20 45,20 50,10 55,20 60,20 65,10 70,20 75,20 80,10 85,20 90,20 95,10 100,20 105,20 110,10 115,20 120,20" 
                 />
               </svg>
             </div>
@@ -72,7 +72,7 @@
         </div>
         
         <!-- 소모 칼로리 -->
-        <div class="stats-card calories">
+        <div class="stats-card calories" @click="showCaloryTargetModal = true">
           <div class="card-top">
             <div class="card-badge">
               <v-icon>mdi-fire</v-icon>
@@ -85,7 +85,7 @@
           <div class="card-bottom">
             <div class="stat-title">
               <h3>소모 칼로리</h3>
-              <span class="stat-subtitle">목표 2,000 kcal</span>
+              <span class="stat-subtitle">목표 {{ targetCalory }} kcal</span>
             </div>
             <div class="stat-chart">
               <div class="circular-progress">
@@ -98,13 +98,13 @@
                   />
                   <path
                     class="circle calories-circle"
-                    :stroke-dasharray="`${(myData.calory / 2000) * 100}, 100`"
+                    :stroke-dasharray="`${(myData.calory / targetCalory) * 100}, 100`"
                     d="M18 2.0845
                     a 15.9155 15.9155 0 0 1 0 31.831
                     a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                 </svg>
-                <div class="percentage">{{ Math.round((myData.calory / 2000) * 100) }}%</div>
+                <div class="percentage">{{ Math.round((myData.calory / targetCalory) * 100) }}%</div>
               </div>
             </div>
           </div>
@@ -223,15 +223,36 @@
     </div>
   </div>
   <v-dialog v-model="showErrorModal" max-width="400">
-  <v-card>
-    <v-card-title class="headline">오류 발생</v-card-title>
-    <v-card-text>데이터가 존재하지 않습니다.</v-card-text>
-    <v-card-actions>
-      <v-spacer />
-      <v-btn color="primary" text @click="showErrorModal = false">닫기</v-btn>
-    </v-card-actions>
-  </v-card>
-</v-dialog>
+    <v-card>
+      <v-card-title class="headline">오류 발생</v-card-title>
+      <v-card-text>데이터가 존재하지 않습니다.</v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" text @click="showErrorModal = false">닫기</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  
+  <!-- 목표 칼로리 설정 다이얼로그 -->
+  <v-dialog v-model="showCaloryTargetModal" max-width="400">
+    <v-card>
+      <v-card-title class="headline">소모 칼로리 목표 설정</v-card-title>
+      <v-card-text>
+        <v-text-field
+          v-model="newTargetCalory"
+          label="목표 칼로리 (kcal)"
+          type="number"
+          :rules="[v => !!v || '목표 칼로리를 입력해주세요', v => v > 0 || '0보다 큰 값을 입력해주세요']"
+          outlined
+        ></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="grey darken-1" text @click="showCaloryTargetModal = false">취소</v-btn>
+        <v-btn color="primary" text @click="saveTargetCalory">저장</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
@@ -243,6 +264,7 @@ export default {
   props: {
     loginId: String,
     type: String,
+    targetDate: String
   },
   components: {
     DatePickerRange
@@ -263,40 +285,33 @@ export default {
         remSleepMinutes : 0
       },
       showErrorModal : false,
-    
+      targetCalory: 2000,
+      showCaloryTargetModal: false,
+      newTargetCalory: 2000,
     }
   },
 
   async mounted(){
-    const dto ={
-      "loginId" : this.loginId,
-      "type" : this.type,
-      "date" : this.currentDate
-    }
- 
-    try{
-    const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/allinone`,dto);
-    console.log(response);
-    this.myData.step = response.data.result.step;
-    this.myData.heartbeat = response.data.result.heartbeat;
-    this.myData.calory = response.data.result.calory;
-    this.myData.activeCalory = response.data.result.activeCalory;
-    this.myData.distance = response.data.result.distance;
-    this.myData.totalSleepMinutes = response.data.result.totalSleepMinutes;
-    this.myData.deepSleepMinutes = response.data.result.deepSleepMinutes;
-    this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
-    this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
-    }catch(error){
-      this.showErrorModal = true;
-    }
+    // 목표 칼로리 불러오기
+    this.loadTargetCalory();
+    
+    // 부모 컴포넌트에서 전달받은 targetDate 사용
+    this.currentDate = this.targetDate;
+    
+    // 데이터 불러오기
+    this.fetchData();
   },
   watch: {
     loginId() {
       this.fetchData();
+      this.loadTargetCalory();
     },
     type() {
       this.fetchData();
-      
+    },
+    targetDate(newDate) {
+      this.currentDate = newDate;
+      this.fetchData();
     }
   },
 
@@ -326,26 +341,45 @@ export default {
     },
 
     handleDateChange(dateRange) {
-      console.log(dateRange);
-      // 날짜 범위에서 시작 날짜만 추출하여 currentDate로 설정
-      const dates = dateRange.split('-');
-      this.currentDate = `${dates[0]}-${dates[1]}-${dates[2]}`;
-      this.showDatePicker = false;
-      this.fetchData();
+      console.log('선택된 날짜:', dateRange);
+      
+      // 날짜 형식 검증
+      if (dateRange && dateRange !== 'NaN-NaN-NaN' && dateRange.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        this.currentDate = dateRange;
+        this.showDatePicker = false;
+        this.fetchData();
+      } else {
+        console.error('유효하지 않은 날짜 형식:', dateRange);
+        this.showErrorModal = true;
+      }
     },
 
     toggleDatePicker() {
       console.log('toggleDatePicker 호출됨');
       this.showDatePicker = !this.showDatePicker;
       console.log('showDatePicker:', this.showDatePicker);
+    },
+    
+    // 목표 칼로리 저장
+    saveTargetCalory() {
+      if (this.newTargetCalory > 0) {
+        this.targetCalory = parseInt(this.newTargetCalory);
+        // 로컬 스토리지에 사용자별 목표 칼로리 저장
+        localStorage.setItem(`targetCalory_${this.loginId}`, this.targetCalory);
+        this.showCaloryTargetModal = false;
+      }
+    },
+    
+    // 목표 칼로리 불러오기
+    loadTargetCalory() {
+      const savedTargetCalory = localStorage.getItem(`targetCalory_${this.loginId}`);
+      if (savedTargetCalory) {
+        this.targetCalory = parseInt(savedTargetCalory);
+        this.newTargetCalory = this.targetCalory;
+      }
     }
-
 }
-
-
-
 }
-
 </script>
 
 <style scoped>
@@ -370,7 +404,6 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   padding: 8px;
-  width: 300px;
 }
 
 .health-dashboard-v5 {
@@ -864,6 +897,23 @@ export default {
   .sleep-details {
     width: 100%;
   }
+}
+
+.calories {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.calories:hover {
+  box-shadow: 0 8px 16px rgba(255, 152, 0, 0.2);
+}
+
+.heart-rate:hover {
+  box-shadow: 0 8px 16px rgba(245, 2, 2, 0.2);
+}
+
+.steps:hover {
+  box-shadow: 0 8px 16px rgba(55, 212, 7, 0.342);
 }
 </style>
 

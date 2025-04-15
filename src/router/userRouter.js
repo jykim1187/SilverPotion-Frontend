@@ -4,6 +4,7 @@ import UserCreate from "@/views/UserCreate.vue";
 import UserList from "@/views/UserList.vue";
 import HealthData from "@/components/HealthData.vue";
 import HealthDataPage from "@/views/HealthDataPage.vue";
+import BuyItem from "@/views/BuyItem.vue";
 
 
 export const userRouter =[
@@ -37,6 +38,12 @@ export const userRouter =[
         path:'/silverpotion/healthdatapage',
         name: 'HealthDataPage',
         component: HealthDataPage
+    },
+    // 힐링포션 구매  페이지
+    {
+        path:'/silverpotion/buyitem',
+        name: 'BuyItem',
+        component: BuyItem
     },
 
 
