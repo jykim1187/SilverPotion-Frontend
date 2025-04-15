@@ -3,10 +3,12 @@ import { chatRouter } from './chatRouter';
 import GoogleRedirect from "@/components/GoogleRedirect.vue";
 import KakaoRedirect from "@/components/KakaoRedirect.vue";
 import { userRouter } from "./userRouter";
+import { gatheringRouter } from "./gatheringRouter";
 
 const routes = [
     ...chatRouter,
     ...userRouter,
+    ...gatheringRouter,
     {
         path: '/oauth/google/redirect',
         name: 'GoogleRedirect',
