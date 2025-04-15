@@ -5,7 +5,7 @@
         <div class="logo">
           <v-icon large color="white">mdi-atom</v-icon>
         </div>
-        <h1>{{ loginId }} 님의 건강 모니터링</h1>
+        <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 모니터링</h1>
       </div>
       <!-- 날짜 선택 -->
       <div class="date-picker-section">
@@ -253,21 +253,44 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+  
+  <!-- 사용자 프로필 모달 -->
+  <v-dialog v-model="showUserProfileModal" max-width="450">
+    <v-card>
+      <v-card-actions class="profile-dialog-close">
+        <v-spacer></v-spacer>
+        <v-btn icon @click="showUserProfileModal = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-actions>
+      <v-card-text class="pa-0">
+        <UserProfileComponent 
+          :userId="loginId" 
+          :userName="userName"
+          @start-text-chat="handleStartTextChat"
+          @start-video-chat="handleStartVideoChat"
+        />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
 import axios from 'axios';
 import DatePickerRange from "@/components/DatePickerRange.vue";
+import UserProfileComponent from "@/components/UserProfileComponet.vue";
 import '@vuepic/vue-datepicker/dist/main.css';
 export default {
   name: 'HealthData',
   props: {
     loginId: String,
     type: String,
-    targetDate: String
+    targetDate: String,
+    userName: String
   },
   components: {
-    DatePickerRange
+    DatePickerRange,
+    UserProfileComponent
   },
   data() {
     return {
@@ -288,6 +311,7 @@ export default {
       targetCalory: 2000,
       showCaloryTargetModal: false,
       newTargetCalory: 2000,
+      showUserProfileModal: false
     }
   },
 
@@ -316,6 +340,24 @@ export default {
   },
 
   methods: {
+    // 사용자 프로필 표시
+    showUserProfile() {
+      this.showUserProfileModal = true;
+    },
+    
+    // 채팅 관련 이벤트 핸들러
+    handleStartTextChat(userId) {
+      console.log(`${userId}와의 1:1 채팅 시작`);
+      // 채팅 페이지로 이동하거나 채팅 기능 실행
+      this.showUserProfileModal = false;
+    },
+    
+    handleStartVideoChat(userId) {
+      console.log(`${userId}와의 화상 채팅 시작`);
+      // 화상 채팅 기능 실행
+      this.showUserProfileModal = false;
+    },
+    
     // 컴포넌트 외부에서 사용자가 피보호자 아이디를 클릭했다거나 데이터 타입을 변경했다거나 했을 때 watch를 통해 다시 호출되기 위해서
     async fetchData(){
       const dto ={
@@ -914,6 +956,40 @@ export default {
 
 .steps:hover {
   box-shadow: 0 8px 16px rgba(55, 212, 7, 0.342);
+}
+
+/* 사용자 이름 제목 스타일 */
+.user-name-title {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+.user-name-title:hover {
+  color: #3f51b5;
+}
+
+.user-name-title::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #3f51b5;
+  transition: width 0.3s ease;
+}
+
+.user-name-title:hover::after {
+  width: 100%;
+}
+
+/* 프로필 모달 스타일 */
+.profile-dialog-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
 }
 </style>
 
