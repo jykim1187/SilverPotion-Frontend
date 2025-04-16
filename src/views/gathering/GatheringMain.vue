@@ -28,7 +28,7 @@
             <v-row>
                 <!-- 첫 번째 줄 (6개) -->
                 <v-col v-for="(category, index) in categories.slice(0, 6)" :key="index" cols="12" sm="6" md="4" lg="2">
-                    <div class="category-item text-center">
+                    <div class="category-item text-center" @click="goToSearchWithCategory(category)">
                         <v-avatar size="50" class="mb-1">
                             <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
                         </v-avatar>
@@ -40,7 +40,7 @@
             <v-row>
                 <!-- 두 번째 줄 (6개) -->
                 <v-col v-for="(category, index) in categories.slice(6)" :key="index + 6" cols="12" sm="6" md="4" lg="2">
-                    <div class="category-item text-center">
+                    <div class="category-item text-center" @click="goToSearchWithCategory(category)">
                         <v-avatar size="50" class="mb-1">
                             <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
                         </v-avatar>
@@ -198,11 +198,23 @@
         <v-dialog v-model="showCreateDialog" max-width="300">
             <v-card>
                 <v-card-title class="text-h6">모임 생성</v-card-title>
-                <v-card-text>모임을 생성하시겠습니까?</v-card-text>
+                <v-card-text>
+                    <div v-if="hasMaxGatherings">
+                        만들 수 있는 모임의 최대 개수는 8개입니다.
+                    </div>
+                    <div v-else>
+                        모임을 생성하시겠습니까?
+                    </div>
+                </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="grey-darken-1" variant="text" @click="showCreateDialog = false">취소</v-btn>
-                    <v-btn color="primary" variant="text" @click="goToCreateGathering">확인</v-btn>
+                    <v-btn 
+                        color="primary" 
+                        variant="text" 
+                        @click="goToCreateGathering"
+                        :disabled="hasMaxGatherings"
+                    >확인</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -219,18 +231,18 @@ export default{
             loading: false,
             error: null,
             categories: [
-                { name: '운동/스포츠', image: 'sports' },
-                { name: '책/글', image: 'book' },
-                { name: '공예', image: 'craft' },
-                { name: '스포츠관람', image: 'watching' },
-                { name: '반려동물', image: 'pet' },
-                { name: '음악/악기', image: 'music' },
-                { name: '여행', image: 'travel' },
-                { name: '문화/공연', image: 'culture' },
-                { name: '댄스/무용', image: 'dance' },
-                { name: '사교/인맥', image: 'social' },
-                { name: '사진/영상', image: 'photo' },
-                { name: '요리', image: 'cook' }
+                { id: 1, name: '운동/스포츠', image: 'sports' },
+                { id: 2, name: '책/글', image: 'book' },
+                { id: 3, name: '공예', image: 'craft' },
+                { id: 4, name: '스포츠관람', image: 'watching' },
+                { id: 5, name: '반려동물', image: 'pet' },
+                { id: 6, name: '음악/악기', image: 'music' },
+                { id: 7, name: '여행', image: 'travel' },
+                { id: 8, name: '문화/공연', image: 'culture' },
+                { id: 9, name: '댄스/무용', image: 'dance' },
+                { id: 10, name: '사교/인맥', image: 'social' },
+                { id: 11, name: '사진/영상', image: 'photo' },
+                { id: 12, name: '요리', image: 'cook' }
             ],
             myGatherings: [],
             loadingGatherings: false,
@@ -250,6 +262,9 @@ export default{
             
             // 내 모임에 포함되지 않은 추천 모임만 필터링
             return this.recommendedGatherings.filter(g => !myGatheringIds.includes(g.id));
+        },
+        hasMaxGatherings() {
+            return this.myGatherings.length >= 8;
         }
     },
     mounted() {
@@ -310,7 +325,19 @@ export default{
         },
         goToCreateGathering() {
             this.showCreateDialog = false;
-            this.$router.push('/silverpotion/gathering/create');
+            if (!this.hasMaxGatherings) {
+                this.$router.push('/silverpotion/gathering/create');
+            }
+        },
+        goToSearchWithCategory(category) {
+            // 카테고리 ID와 이름을 쿼리 파라미터로 전달
+            this.$router.push({
+                path: '/silverpotion/gathering/search',
+                query: { 
+                    categoryId: category.id,
+                    categoryName: category.name
+                }
+            });
         },
         formatDate(dateString) {
             if (!dateString) return '';
