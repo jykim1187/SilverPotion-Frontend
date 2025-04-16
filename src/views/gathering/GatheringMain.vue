@@ -11,7 +11,7 @@
             >
                 <div v-if="userInfo" class="d-flex align-center">
                     <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
-                    <span>{{ userInfo.detailAddress || '주소 정보가 없습니다. 클릭하여 주소를 설정하세요.' }}</span>
+                    <span>{{ userInfo.region || '주소 정보가 없습니다. 클릭하여 주소를 설정하세요.' }}</span>
                 </div>
                 <div v-else class="d-flex align-center">
                     <v-progress-circular indeterminate color="primary" size="16" class="mr-2"></v-progress-circular>
@@ -175,13 +175,37 @@
                                 <span class="text-caption">{{ gathering.region }}</span>
                                 <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
                                 <span class="text-caption">{{ gathering.peopleCount }}/{{ gathering.maxPeople }}명</span>
-                                <span class="text-caption ml-5">{{ gathering.introduce || '모임 소개가 없습니다.' }}</span>
+                                <span class="text-caption text-grey ml-2">{{ gathering.introduce || '모임 소개가 없습니다.' }}</span>
                             </div>
                         </div>
                     </div>
                 </v-list-item>
             </v-list>
         </div>
+        
+        <!-- 모임 생성 버튼 -->
+        <v-btn
+            class="create-gathering-btn"
+            color="primary"
+            icon
+            size="large"
+            @click="showCreateDialog = true"
+        >
+            <v-icon>mdi-plus</v-icon>
+        </v-btn>
+        
+        <!-- 모임 생성 확인 다이얼로그 -->
+        <v-dialog v-model="showCreateDialog" max-width="300">
+            <v-card>
+                <v-card-title class="text-h6">모임 생성</v-card-title>
+                <v-card-text>모임을 생성하시겠습니까?</v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey-darken-1" variant="text" @click="showCreateDialog = false">취소</v-btn>
+                    <v-btn color="primary" variant="text" @click="goToCreateGathering">확인</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
@@ -213,7 +237,8 @@ export default{
             gatheringError: null,
             recommendedGatherings: [],
             loadingRecommended: false,
-            recommendedError: null
+            recommendedError: null,
+            showCreateDialog: false
         }
     },
     computed: {
@@ -268,7 +293,7 @@ export default{
             
             this.loadingRecommended = true;
             try {
-                const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/search?region=${this.userInfo.detailAddress}`);
+                const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/search?region=${this.userInfo.region}`);
                 this.recommendedGatherings = response.data.result || [];
             } catch (err) {
                 console.error('추천 모임을 불러오는데 실패했습니다:', err);
@@ -282,6 +307,10 @@ export default{
         },
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
+        },
+        goToCreateGathering() {
+            this.showCreateDialog = false;
+            this.$router.push('/silverpotion/gathering/create');
         },
         formatDate(dateString) {
             if (!dateString) return '';
@@ -322,5 +351,13 @@ export default{
 .category-name {
     font-size: 12px;
     margin-top: 4px;
+}
+.create-gathering-btn {
+    position: fixed;
+    bottom: calc(24px + var(--v-layout-bottom, 0px));
+    left: calc(50% + 330px); /* 중앙에서 오른쪽으로 100px */
+    transform: translateX(-50%);
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 </style>
