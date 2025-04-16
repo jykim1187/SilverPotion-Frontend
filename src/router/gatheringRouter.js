@@ -1,3 +1,4 @@
+import GatheringCreate from "@/views/gathering/GatheringCreate.vue";
 import GatheringHome from "@/views/gathering/GatheringHome.vue";
 import GatheringMain from "@/views/gathering/GatheringMain.vue";
 import MyGathering from "@/views/gathering/MyGathering.vue";
@@ -29,6 +30,11 @@ export const gatheringRouter= [
         path:'/silverpotion/gathering/recommendMeeting',
         name: 'RecommendMeeting',
         component: RecommendMeeting
+    },
+    {
+        path:'/silverpotion/gathering/create',
+        name: 'GatheringCreate',
+        component: GatheringCreate
     },
     
 ]
