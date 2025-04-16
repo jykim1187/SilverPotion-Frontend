@@ -31,7 +31,7 @@
     </div>
     <!-- 헬스데이터 컴포넌트 호출 -->
     <div class="health-data-container">
-      <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" />
+      <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
     </div>
     
     <!-- 피보호자 연결 요청 모달 -->
@@ -65,6 +65,7 @@ export default {
     // 내 피보호자 목록 받아오기 백엔드로부터
     const dependentData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myDependentList`);
     this.dependents = dependentData.data.result;
+    console.log(dependentData);
     console.log(this.dependents);
   },
   computed: {
@@ -101,7 +102,8 @@ export default {
       this.selectedUserName = localStorage.getItem('userName') || '';
     },
     selectdependent(dependent) {
-      this.selectedUser = dependent.userId;
+      this.selectedUser = dependent.loginId;
+      this.selectedLongId = dependent.userId;
       this.selectedUserName = dependent.name;
     },
     handleModalChange(val) {

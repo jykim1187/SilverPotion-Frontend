@@ -265,8 +265,9 @@
       </v-card-actions>
       <v-card-text class="pa-0">
         <UserProfileComponent 
-          :userId="loginId" 
+          :loginId="loginId" 
           :userName="userName"
+          :userLongId="userLongId"
           @start-text-chat="handleStartTextChat"
           @start-video-chat="handleStartVideoChat"
         />
@@ -286,7 +287,8 @@ export default {
     loginId: String,
     type: String,
     targetDate: String,
-    userName: String
+    userName: String,
+    userLongId: Number
   },
   components: {
     DatePickerRange,
@@ -321,7 +323,9 @@ export default {
     
     // 부모 컴포넌트에서 전달받은 targetDate 사용
     this.currentDate = this.targetDate;
-    
+    console.log(this.userName)
+   
+
     // 데이터 불러오기
     this.fetchData();
   },
@@ -342,7 +346,13 @@ export default {
   methods: {
     // 사용자 프로필 표시
     showUserProfile() {
-      this.showUserProfileModal = true;
+      if(this.loginId === localStorage.getItem("loginId")){
+        this.showUserProfileModal = false;
+      }
+      else{
+        this.showUserProfileModal = true;
+        console.log(this.userLongId)
+      }
     },
     
     // 채팅 관련 이벤트 핸들러

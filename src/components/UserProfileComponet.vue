@@ -13,7 +13,8 @@
         </div>
         
         <div class="profile-info">
-          <h3>{{ userInfo.nickname || userName }}</h3>
+          <!-- 여기 userInfo.nickname 으로 바꾸면 닉네임 -->
+          <h3>{{ userName }}</h3>
           <div class="info-item">
             <i class="fas fa-map-marker-alt"></i>
             <span>{{ userInfo.address || '정보 없음' }}</span>
@@ -42,13 +43,17 @@
   export default {
     name: 'UserProfileComponent',
     props: {
-      userId: {
+      loginId: {
         type: String,
         required: true
       },
       userName: {
         type: String,
         default: '사용자'
+      },
+      userLongId: {
+        type: Number,
+        required: true
       }
     },
     data() {
@@ -72,14 +77,14 @@
         this.isLoading = true;
         try {
           // API 호출을 통해 사용자 정보 가져오기
-          const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/profile/${this.userId}`);
-          
+          const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/yourProfile/${this.userLongId}`);
+          console.log(response)
           if (response.data && response.data.result) {
             this.userInfo = {
-              nickname: response.data.result.nickname || this.userName,
-              profileImage: response.data.result.profileImage || 'https://via.placeholder.com/150',
-              address: response.data.result.address || '',
-              birthdate: response.data.result.birthdate || ''
+              nickname: response.data.result.nickname ,
+              profileImage: response.data.result.profileImage,
+              address: response.data.result.address,
+              birthdate: response.data.result.birthday
             };
           }
         } catch (error) {
@@ -100,17 +105,21 @@
       formatBirthdate(date) {
         if (!date) return '정보 없음';
         // YYYY-MM-DD 형식으로 표시
+        if (typeof date === 'string') {
+          return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+        }
         return date;
       },
       startTextChat() {
         // 1:1 채팅 시작 로직
         console.log('1:1 채팅 시작:', this.userId);
-        this.$emit('start-text-chat', this.userId);
+        // this.$emit('start-text-chat', this.userId);
+        //여기에다!! 채팅페이지로 라우팅
       },
       startVideoChat() {
         // 화상 채팅 시작 로직
         console.log('화상 채팅 시작:', this.userId);
-        this.$emit('start-video-chat', this.userId);
+        // this.$emit('start-video-chat', this.userId);
       }
     }
   }
