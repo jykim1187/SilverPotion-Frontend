@@ -9,6 +9,14 @@
             <span v-if="parentType === 'healthData'">{{ userName }}</span>
             <span v-else>{{ userNickname }}</span>
           </div>
+          <div v-if="isWaiting" class="waiting-message">상대방의 화상통화 수신을 기다리고 있습니다.</div>
+          <div v-if="peerClosed" class="call-ended-message">
+            <div class="message-content">
+              <i class="fas fa-phone-slash message-icon"></i>
+              <p>상대방이 통화를 종료했습니다</p>
+              <button @click="closeAndReturn" class="close-btn">화상통화 나가기</button>
+            </div>
+          </div>
         </div>
         <div class="local-video-container">
           <video ref="localVideo" autoplay playsinline muted></video>
@@ -47,7 +55,11 @@ export default {
           parentType: this.$route.query.parentType,
           // 상대방 이름과 닉네임 설정 (백엔드에서 데이터 가져오거나 임시 사용)
           userName: "",
-          userNickname: ""
+          userNickname: "",
+          //상대방 기다리는중인지 여부
+          isWaiting: true,
+          // 상대방이 통화를 종료했는지 여부
+          peerClosed: false
         
       }
   },
@@ -98,7 +110,20 @@ export default {
         this.peerConnection.ontrack = (event) =>{
           console.log('상대방 스트림 수신')
           this.$refs.remoteVideo.srcObject = event.streams[0]
+          this.isWaiting = false;//상대방 스트림 수신시 상대방이 채팅에 들어왔다는 거니까 기다리는 상태를 false로 변경
+          console.log("상대방 스트림 수신 후 기다리는 상태",this.isWaiting)
         }
+
+        // 연결 상태 변경 감지 - 상대방이 연결을 끊었을 때 감지(추가된 부분)
+        this.peerConnection.oniceconnectionstatechange = () => {
+          console.log("ICE 연결 상태 변경:", this.peerConnection.iceConnectionState);
+          if (this.peerConnection.iceConnectionState === 'disconnected' || 
+              this.peerConnection.iceConnectionState === 'closed' || 
+              this.peerConnection.iceConnectionState === 'failed') {
+            this.peerClosed = true;
+            console.log("상대방이 연결을 종료했습니다");
+          }
+        };
 
         // 4.ICE Candidate가 생성될 때마다 시그널링 서버로 보낸다(ice후보는 한번에 생성되는게 아니라 그때그때마다 찾아짐 찾아질때마다 상대방(여기선 this.loginId)에게 보내줘야함)
         // this.peerConnection.onicecandidate는 ICE후보가 생성될때마다 호출되는 이벤트 핸들러
@@ -173,8 +198,21 @@ export default {
               // 3.상대방의 트랙 수신 처리
               this.peerConnection.ontrack = (event) => {
                 console.log('상대방 스트림 수신!');
-                this.$refs.remoteVideo.srcObject = event.streams[0]
-              }
+                this.$refs.remoteVideo.srcObject = event.streams[0];
+                this.isWaiting = false; // 상대방 스트림 수신 시 대기 상태 해제
+              };
+
+              // 연결 상태 변경 감지
+              this.peerConnection.oniceconnectionstatechange = () => {
+                console.log("ICE 연결 상태 변경:", this.peerConnection.iceConnectionState);
+                if (this.peerConnection.iceConnectionState === 'disconnected' || 
+                    this.peerConnection.iceConnectionState === 'closed' || 
+                    this.peerConnection.iceConnectionState === 'failed') {
+                  this.peerClosed = true;
+                  console.log("상대방이 연결을 종료했습니다");
+                }
+              };
+              
               // 4. ICE 후보 발견시 전송
               this.peerConnection.onicecandidate = (event) => {
                 if(event.candidate){
@@ -203,6 +241,10 @@ export default {
             } catch(error){
               console.log('offer처리 중 오류 발생', error)
             }
+            } else if(data.type === 'leave') {
+              // 상대방이 통화를 종료했음을 알리는 메시지
+              this.peerClosed = true;
+              console.log("상대방이 통화를 종료했습니다");
             }
         }
         //4. 연결 종료 또는 오류 핸들링도 추가 가능
@@ -246,11 +288,26 @@ export default {
       //통화 종료 함수
       endCall(){
         if (confirm('통화를 종료하시겠습니까?')) {
+          // 상대방에게 통화 종료 메시지 전송
+          if (this.signalingServer && this.signalingServer.readyState === WebSocket.OPEN) {
+            this.signalingServer.send(JSON.stringify({
+              type: 'leave',
+              from: this.myId,
+              to: this.loginId
+            }));
+          }
+          
           this.peerConnection?.close();
           this.signalingServer?.close();
           //바로 전화면으로 돌아가는 것
           this.$router.go(-1);
         }
+      },
+      // 상대방이 통화를 종료했을 때 나가기 버튼
+      closeAndReturn() {
+        this.peerConnection?.close();
+        this.signalingServer?.close();
+        this.$router.go(-1);
       }
   
   }
@@ -566,6 +623,90 @@ video {
 
 .dark-btn.end-call:hover {
   background: #a72f2f;
+}
+
+.waiting-message{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  padding: 15px 30px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  z-index: 2;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0,0,0,0.05);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  }
+}
+
+.call-ended-message {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(5px);
+}
+
+.message-content {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+  max-width: 400px;
+  width: 80%;
+}
+
+.message-icon {
+  font-size: 36px;
+  color: #e74c3c;
+  margin-bottom: 15px;
+}
+
+.message-content p {
+  margin: 15px 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.close-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 30px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.close-btn:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 </style>
 
