@@ -106,6 +106,7 @@ export default {
     return {
       loginId: "",
       password: "",
+      userName: "",
       googleUrl: "https://accounts.google.com/o/oauth2/auth",
       googleClientId: "73727762121-skf00kqrlnfjput7t493mmdifss29170.apps.googleusercontent.com",
       googleRedirectUri: "http://localhost:3000/oauth/google/redirect",
@@ -142,9 +143,11 @@ export default {
         // const loginId = jwtDecode(token).sub
         localStorage.setItem("role", response.data.result.role)
         localStorage.setItem("loginId", response.data.result.id)
+        localStorage.setItem("userName", response.data.result.name)
         localStorage.setItem("nickName", response.data.result.nickName)
         localStorage.setItem("profileImage", response.data.result.profileImage)
         localStorage.setItem("userId", response.data.result.userId)
+
 
         // 리디렉션
         console.log("Login 성공! now routing to /");

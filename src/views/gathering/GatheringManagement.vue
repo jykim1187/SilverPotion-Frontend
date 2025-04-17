@@ -5,7 +5,7 @@
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">추천 정모</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">멤버 관리</h1>
             </v-card-text>
         </v-card>
 

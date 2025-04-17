@@ -34,7 +34,7 @@ axios.interceptors.response.use(
                 window.location.reload()
             } catch(e) {
                 localStorage.clear()
-                window.location.href = "/user-service/silverpotion/user/login"
+                window.location.href = "/silverpotion/user/login"
             }
         }
         return Promise.reject(error)

@@ -193,6 +193,22 @@
         />
       </div>
 
+      <div class="floating-input-wrapper">
+        <div class="floating-label">
+          <v-icon color="primary" size="20">mdi-map-marker</v-icon>
+          <span>활동지역</span>
+        </div>
+        <v-text-field
+          v-model="formData.region"
+          placeholder="활동지역을 입력해주세요(예시 : 서울시 동작구, 안양시 만안구)"
+          filled
+          dense
+          background-color="transparent"
+          hide-details="auto"
+          class="floating-input"
+        />
+      </div>
+
       <div class="floating-actions">
         <v-btn
           color="primary"
