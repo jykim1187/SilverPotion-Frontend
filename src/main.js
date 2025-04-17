@@ -4,6 +4,7 @@ import vuetify from './plugins/vuetify'
 import router from '@/router/index.js'
 import axios from 'axios';
 import VueDatePicker from '@vuepic/vue-datepicker';
+
 const app = createApp(App);
 
 axios.interceptors.request.use(

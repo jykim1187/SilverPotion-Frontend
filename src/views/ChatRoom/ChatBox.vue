@@ -11,10 +11,20 @@
                             <div 
                              v-for="(msg, index) in messages"
                              :key="index"
-                             :class="['chat-message', msg.senderLoginId ===this.senderLoginId ? 'sent' : 'received' ]"
+                             :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
                             >
-                            <strong>{{ msg.senderLoginId }}: </strong> {{ msg.message }}
-                            <span class="time" v-if="msg.createdTime"> / {{ formatTime(msg.createdTime) }}</span>
+                            <template v-if="msg.senderId === userId">
+                                <div class="message-content">
+                                    {{ msg.content }}
+                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="message-content">
+                                    {{ msg.content }}
+                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                </div>
+                            </template>
                             </div>
                         </div>
                         <v-text-field
@@ -25,145 +35,195 @@
                         <v-btn color="primary" block @click="sendMessage">전송</v-btn>
                     </v-card-text>
                 </v-card>
-
             </v-col>
-
         </v-row>
-
     </v-container>
 </template>
 
 <script>
 import SockJS from 'sockjs-client';
 import Stomp from 'webstomp-client';
-import axios from 'axios';
 
-export default{
-    data(){
+export default {
+    data() {
         return {
             messages: [],
             newMessage: "",
             stompClient: null,
-            token: "",
-            senderLoginId: null,
-            roomId: null,
-            loginId:null,
-            createdTime:null,
+            token: localStorage.getItem("token"),
+            senderLoginId: localStorage.getItem("loginId"),
+            userId: null,
+            roomId: null
         }
     },
-    async created(){
-        this.senderLoginId = localStorage.getItem("loginId");
+    async created() {
         this.roomId = this.$route.params.roomId;
-        const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/history/${this.roomId}`);
-        console.log(response);
-        this.messages = response.data;
-        this.$nextTick(() => {
-        this.scrollToBottom();
-        });
+        this.userId = Number(localStorage.getItem("userId"));
+        this.messages = [];
         this.connectWebsocket();
     },
-    // 사용자가 현재 라우트에서 다른 라우트로 이동하려고 할때 호출되는 훅함수
     beforeRouteLeave(to, from, next) {
         this.disconnectWebSocket();
         next();
     },
-    // 화면을 완전히 꺼버렸을때
     beforeUnmount() {
         this.disconnectWebSocket();
     },
     methods: {
-        connectWebsocket(){
+        connectWebsocket() {
             if(this.stompClient && this.stompClient.connected) return;
-            // sockjs는 websocket을 내장한 향상된 js 라이브러리. http엔드포인트 사용.
-            // url 전부 다들어가야함 chat-service/ ... 
             
-            const loginId = localStorage.getItem("loginId");
-            const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${loginId}`);
+            const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.senderLoginId}`);
             this.stompClient = Stomp.over(socket);
-            this.token = localStorage.getItem("token");
-            this.stompClient.connect({
-                Authorization: `Bearer ${this.token}`
-            },
-                ()=>{
-                    //연결 맺어진상태라 앞에부분은 떼어 들어가도됌됌
-                    console.log("stompClient.connect ✅ 연결 성공");
-                    this.stompClient.subscribe(`/topic/${this.roomId}`, (message) => {
-                        const parseMessage = JSON.parse(message.body);
-                        this.messages.push(parseMessage);
-                        this.scrollToBottom();
-                    },{Authorization: `Bearer ${this.token}`})
+            
+            this.stompClient.connect(
+                { Authorization: `Bearer ${this.token}`,
+                    "X-User-LoginId": this.senderLoginId
+                 },
+                () => {
+                    this.stompClient.subscribe(
+                        `/sub/room/${this.roomId}`,
+                        (message) => {
+                            const parseMessage = JSON.parse(message.body);
+                            this.messages.push(parseMessage);
+                            this.scrollToBottom();
+                        },
+                        { Authorization: `Bearer ${this.token}`,
+                            "X-User-LoginId": this.senderLoginId
+                        }
+                    );
                 }
-            )
+            );
         },
-        sendMessage(){
-            if(this.newMessage.trim() === "")return;
-            const now = new Date().toISOString();
-            const message = {
-                roomId: this.$route.params.roomId ,
-                senderLoginId: this.senderLoginId,
-                message: this.newMessage,
-                createdTime: now,
-            }
-            this.stompClient.send(`/publish/${this.roomId}`, JSON.stringify(message));
-            this.newMessage = ""
+        sendMessage() {
+            if(this.newMessage.trim() === "") return;
+            
+            this.stompClient.send(
+                `/pub/room/${this.roomId}`,
+                JSON.stringify({
+                    roomId: this.roomId,
+                    content: this.newMessage,
+                    type: "TEXT"
+                }),
+                { 
+                    Authorization: `Bearer ${this.token}`,
+                    "X-User-LoginId": this.senderLoginId,
+                    "X-User-Id": localStorage.getItem("userId")
+                }
+            );
+            this.newMessage = "";
         },
-        scrollToBottom(){
-            this.$nextTick(()=>{
+        scrollToBottom() {
+            this.$nextTick(() => {
                 const chatBox = this.$el.querySelector(".chat-box");
                 chatBox.scrollTop = chatBox.scrollHeight;
-            })
+            });
         },
-        async disconnectWebSocket() {
-            try {
-                await axios.post(
-                `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${this.roomId}/read`,
-                {},
-                    {
-                    headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    'X-User-LoginId': this.senderLoginId
-                    }
-                });
-            } catch (e) {
-                console.error("❌ 읽음 처리 실패:", e);
-            }
-
+        disconnectWebSocket() {
             if (this.stompClient && this.stompClient.connected) {
-                this.stompClient.unsubscribe(`/topic/${this.roomId}`);
+                this.stompClient.unsubscribe(`/sub/room/${this.roomId}`);
                 this.stompClient.disconnect();
             }
         },
-        //시간 hh:mm 형식으로 포맷팅
         formatTime(datetime) {
             if (!datetime) return '';
             const date = new Date(datetime);
             const hours = date.getHours().toString().padStart(2, '0');
             const minutes = date.getMinutes().toString().padStart(2, '0');
-            return `${hours}:${minutes}`; // hh:mm 형식
-        },
-    },
+            return `${hours}:${minutes}`;
+        }
+    }
 }
 </script>
+
 <style>
-.chat-box{
-    height: 300px;
+.chat-box {
+    height: 400px;
     overflow-y: auto;
     border: 1px solid #ddd;
     margin-bottom: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.chat-message{
-    margin-bottom:10px;
+.chat-message {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    word-wrap: break-word;
 }
-.sent{
-    text-align:right;
+
+.sent {
+    align-self: flex-end;
 }
-.received{
-    text-align:left;
+
+.received {
+    align-self: flex-start;
 }
+
+.message-content {
+    padding: 8px 12px;
+    border-radius: 12px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.sent .message-content {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-bottom-right-radius: 0;
+}
+
+.received .message-content {
+    background-color: #f5f5f5;
+    color: #333;
+    border-bottom-left-radius: 0;
+}
+
+.sender-info {
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.message-with-time {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.message-text {
+    margin: 4px 0;
+    flex: 1;
+}
+
 .time {
     font-size: 0.75rem;
     color: #888;
-    margin-left: 4px;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 600px) {
+    .chat-message {
+        max-width: 90%;
+    }
+    
+    .message-content {
+        padding: 6px 10px;
+    }
+    
+    .sender-info {
+        font-size: 0.8rem;
+    }
+    
+    .message-text {
+        font-size: 0.9rem;
+    }
 }
 </style>
