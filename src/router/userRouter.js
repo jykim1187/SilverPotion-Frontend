@@ -5,7 +5,7 @@ import UserList from "@/views/UserList.vue";
 import HealthData from "@/components/HealthData.vue";
 import HealthDataPage from "@/views/HealthDataPage.vue";
 import BuyItem from "@/views/BuyItem.vue";
-
+import VisualChat from "@/views/visualChat.vue";
 
 export const userRouter =[
 {
@@ -44,6 +44,11 @@ export const userRouter =[
         path:'/silverpotion/buyitem',
         name: 'BuyItem',
         component: BuyItem
+    },
+    {
+        path:'/silverpotion/visualchat/:loginId',
+        name: 'VisualChat',
+        component: VisualChat
     },
 
 

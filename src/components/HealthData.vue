@@ -268,6 +268,7 @@
           :loginId="loginId" 
           :userName="userName"
           :userLongId="userLongId"
+          :parentType="parentType"
           @start-text-chat="handleStartTextChat"
           @start-video-chat="handleStartVideoChat"
         />
@@ -313,7 +314,9 @@ export default {
       targetCalory: 2000,
       showCaloryTargetModal: false,
       newTargetCalory: 2000,
-      showUserProfileModal: false
+      showUserProfileModal: false,
+      // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
+      parentType: 'healthData'
     }
   },
 
