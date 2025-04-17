@@ -58,7 +58,7 @@ export default {
       dependents: [],
       currentdependent: null,
       showLinkRequestModal: false,
-      selectedUserName: localStorage.getItem('userName') || ''
+      selectedUserName: localStorage.getItem('userName')
     }
   },
  async mounted() {

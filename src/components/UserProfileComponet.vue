@@ -1,7 +1,8 @@
 <template>
     <div class="user-profile">
       <div class="profile-header">
-        <h2>{{ userName }}님의 프로필</h2>
+        <h2 v-if="parentType === 'healthData'">{{ userName }}님의 프로필</h2>
+        <h2 v-else>{{ userInfo.nickname }}님의 프로필</h2>
         <button class="report-btn">
           <i class="fas fa-flag"></i> 신고하기
         </button>
@@ -14,7 +15,8 @@
         
         <div class="profile-info">
           <!-- 여기 userInfo.nickname 으로 바꾸면 닉네임 -->
-          <h3>{{ userName }}</h3>
+          <h3 v-if="parentType === 'healthData'">{{ userName }}</h3>
+          <h3 v-else>{{ userInfo.nickname }}</h3>
           <div class="info-item">
             <i class="fas fa-map-marker-alt"></i>
             <span>{{ userInfo.address || '정보 없음' }}</span>
@@ -54,6 +56,10 @@
       userLongId: {
         type: Number,
         required: true
+      },
+      parentType:{
+        type: String,
+        default: 'healthData'
       }
     },
     data() {
@@ -91,7 +97,7 @@
           console.error('사용자 정보를 가져오는 중 오류 발생:', error);
           this.hasError = true;
           
-          // 오류 발생 시 기본 정보 사용
+          // 오류 발생 시 기본 정보 사용(나중에 삭제하자)
           this.userInfo = {
             nickname: this.userName,
             profileImage: 'https://via.placeholder.com/150',
@@ -118,8 +124,9 @@
       },
       startVideoChat() {
         // 화상 채팅 시작 로직
-        console.log('화상 채팅 시작:', this.userId);
-        // this.$emit('start-video-chat', this.userId);
+        console.log('화상 채팅 시작:', this.loginId);
+        //즉 화상채팅으로 라우팅할때 type이 healthdata라고 전달. 그러면 라우팅된 비주얼 챗에서 타입을 확인해서 이름으로 띄움.([post쪽에서는 다른 쿼리를 전달하게 해서 post쪽에서 라우팅되면 닉네임띄움])
+        this.$router.push({ name: 'VisualChat', params: { loginId: this.loginId }, query: { parentType: this.parentType } });
       }
     }
   }

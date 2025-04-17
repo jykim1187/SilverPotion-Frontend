@@ -1,17 +1,33 @@
 <template>
-  <div>
-    <div class="video-chat">
-    <!-- 내 화면을 보여줄 비디오 태그, autoplay는 비디오가 로드되자마자 자동 재생, muted는 내 비디오에서 내 목소리가 다시 나오는거 막는거(에코방지) -->
-    <video ref="localVideo" autoplay playsinline muted></video>
-    <!-- 상대방의 비디오스트림을 연결할 화면 -->
-    <video ref="remoteVideo" autoplay playsinline></video>
+  <div class="chat-container">
+  
+    <div class="video-chat-minimal">
+      <div class="videos-container">
+        <div class="remote-video-container">
+          <video ref="remoteVideo" autoplay playsinline></video>
+          <div class="floating-name">
+            <span v-if="parentType === 'healthData'">{{ userName }}</span>
+            <span v-else>{{ userNickname }}</span>
+          </div>
+        </div>
+        <div class="local-video-container">
+          <video ref="localVideo" autoplay playsinline muted></video>
+          <div class="floating-name local">나</div>
+        </div>
+      </div>
+      <div class="minimal-controls">
+        <button class="icon-btn" @click="toggleMicrophone"><i class="fas fa-microphone"></i></button>
+        <button class="icon-btn" @click="toggleCamera"><i class="fas fa-video"></i></button>
+        <button class="icon-btn end" @click="endCall"><i class="fas fa-phone-slash"></i></button>
+      </div>
+    </div>
 
-    <!-- <button @click="startCall()">📞 화상통화 시작</button> -->
-  </div>
+  
   </div>
 </template>
 
 <script>
+import axios from 'axios';
 export default {
   name: 'VisualChat',
 
@@ -26,7 +42,13 @@ export default {
         // 상대방 로그인 아이디
           loginId: this.$route.params.loginId,
           // 내 로그인 아이디
-          myId: localStorage.getItem('loginId')
+          myId: localStorage.getItem('loginId'),
+          // 라우팅시킨 곳(healthData이면 이름 명시하고 아니면 닉네임 명시)
+          parentType: this.$route.query.parentType,
+          // 상대방 이름과 닉네임 설정 (백엔드에서 데이터 가져오거나 임시 사용)
+          userName: "",
+          userNickname: ""
+        
       }
   },
   mounted: async function() { 
@@ -34,7 +56,8 @@ export default {
         await this.connectSignalingServer();  // signaling 준비 완료 후
         await this.startCall();               // 이제 safe하게 시작 가능
         // 이 코드는 비동기 작업을 수행하고, 모든 작업이 완료된 후에 실행됨. 즉 initLocalMedia(), connectSignalingServer(), startCall() 순으로 차례로 실행된다는 것
-},
+        await this.getNameInfo();
+      },
 
   methods: {
       async initLocalMedia(){
@@ -199,14 +222,351 @@ export default {
         }catch(error){
           console.error('answer등록 실패')
         }
+      },
+      //상대방 로그인 아이디 주고 상대방 이름과 닉네임 받아오는 함수
+      async getNameInfo(){
+        const OpponentId = {opponentId: this.loginId}
+        try{
+          const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/whatisyourname`, OpponentId);
+          console.log("이름정보", response)
+          this.userName = response.data.result[0]
+          this.userNickname = response.data.result[1]
+        }catch(error){
+          console.error('이름 정보 조회 실패', error)
+        }
+      },
+      //마이크 켜고 끄는 함수
+      toggleMicrophone(){
+        this.localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled)
+      },
+      //카메라 켜고 끄는 함수
+      toggleCamera(){ 
+        this.localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled)
+      },
+      //통화 종료 함수
+      endCall(){
+        if (confirm('통화를 종료하시겠습니까?')) {
+          this.peerConnection?.close();
+          this.signalingServer?.close();
+          //바로 전화면으로 돌아가는 것
+          this.$router.go(-1);
+        }
       }
   
   }
-
-
-
-
 }
 </script>
+
+<style scoped>
+/* 공통 스타일 */
+.chat-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f5f5;
+  overflow: hidden;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* 버전 1: 모던한 그리드 레이아웃 */
+.video-chat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-gap: 20px;
+  padding: 20px;
+  height: 100%;
+}
+
+.video-box {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  background: #000;
+}
+
+.name-tag {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.controls {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.control-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.end-call {
+  background: rgba(255,0,0,0.7);
+}
+
+.end-call:hover {
+  background: rgba(255,0,0,0.9);
+}
+
+/* 버전 2: 전체 화면 집중형 */
+.video-chat-fullscreen {
+  position: relative;
+  height: 100%;
+  background: #000;
+}
+
+.main-video {
+  width: 100%;
+  height: 100%;
+}
+
+.local-video-overlay {
+  position: absolute;
+  width: 200px;
+  height: 150px;
+  bottom: 80px;
+  right: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  border: 2px solid #fff;
+}
+
+.name-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 6px 15px;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.name-badge.local {
+  top: 10px;
+  left: 10px;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.bottom-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+}
+
+.round-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.round-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.round-btn.red {
+  background: #e74c3c;
+}
+
+.round-btn.red:hover {
+  background: #c0392b;
+}
+
+/* 버전 3: 미니멀리스트 디자인 */
+.video-chat-minimal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+
+.videos-container {
+  position: relative;
+  flex: 1;
+}
+
+.remote-video-container {
+  width: 100%;
+  height: 100%;
+}
+
+.local-video-container {
+  position: absolute;
+  width: 180px;
+  height: 135px;
+  bottom: 20px;
+  right: 20px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.floating-name {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  background: white;
+  color: #333;
+  padding: 5px 15px;
+  border-radius: 30px;
+  font-size: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.floating-name.local {
+  bottom: 5px;
+  left: 5px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.minimal-controls {
+  display: flex;
+  justify-content: center;
+  padding: 15px 0;
+  gap: 30px;
+  background: white;
+  border-top: 1px solid #eee;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #555;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #f5f5f5;
+}
+
+.icon-btn.end {
+  color: #e74c3c;
+}
+
+.icon-btn.end:hover {
+  background: #fee;
+}
+
+/* 버전 4: 다크 테마 */
+.video-chat-dark {
+  height: 100%;
+  background: #121212;
+  display: flex;
+  flex-direction: column;
+}
+
+.dark-video-container {
+  position: relative;
+  flex: 1;
+  padding: 20px;
+}
+
+.remote-frame {
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.local-frame {
+  position: absolute;
+  width: 220px;
+  height: 165px;
+  bottom: 30px;
+  right: 30px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+  border: 2px solid #333;
+}
+
+.name-label {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 5px;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+}
+
+.dark-controls {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+  gap: 20px;
+  background: #1e1e1e;
+}
+
+.dark-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: #333;
+  color: #eee;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.dark-btn:hover {
+  background: #444;
+}
+
+.dark-btn.end-call {
+  background: #7d2a2a;
+}
+
+.dark-btn.end-call:hover {
+  background: #a72f2f;
+}
+</style>
 
 
