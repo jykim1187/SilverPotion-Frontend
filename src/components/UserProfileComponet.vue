@@ -57,6 +57,7 @@
         type: Number,
         required: true
       },
+      // 피보호자 타입이 헬스데이터면 이름 표시 post쪽이면 닉네임 표시
       parentType:{
         type: String,
         default: 'healthData'

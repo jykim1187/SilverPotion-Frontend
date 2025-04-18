@@ -72,16 +72,23 @@
     <div class="connection-section section-card">
       <div class="section-header">
         <h2>연결된 보호자</h2>
-        <span class="connection-count">{{ guardians.length }}</span>
+        <span class="connection-count">{{ protectorList.length }}</span>
       </div>
       
       <div class="connection-list">
-        <div v-for="guardian in guardians" :key="guardian.id" class="connection-item">
-          <div class="connection-avatar" :style="{ backgroundColor: guardian.color }">
-            <span v-if="!guardian.profileUrl">{{ guardian.name.charAt(0) }}</span>
-            <img v-else :src="guardian.profileUrl" alt="보호자 이미지" />
+        <!-- 보호자 추가 버튼 -->
+        <div class="connection-item add-button">
+          <div class="connection-avatar add-avatar" @click="showProtectorLinkModal">
+            <v-icon color="white">mdi-plus</v-icon>
           </div>
-          <div class="connection-name">{{ guardian.name }}</div>
+          <div class="connection-name">추가하기</div>
+        </div>
+        <div v-for="protector in protectorList" :key="protector.id" class="connection-item">
+          <div class="connection-avatar" :style="{ backgroundColor: protector.color }" @click="showUserProfile(protector)">
+            <span v-if="!protector.profileUrl">{{ protector.name.charAt(0) }}</span>
+            <img v-else :src="protector.profileImg" alt="보호자 이미지" />
+          </div>
+          <div class="connection-name">{{ protector.name }}</div>
         </div>
       </div>
     </div>
@@ -90,16 +97,24 @@
     <div class="connection-section section-card">
       <div class="section-header">
         <h2>연결된 피보호자</h2>
-        <span class="connection-count">{{ wards.length }}</span>
+        <span class="connection-count">{{ dependentList.length }}</span>
       </div>
       
+      
       <div class="connection-list">
-        <div v-for="ward in wards" :key="ward.id" class="connection-item">
-          <div class="connection-avatar" :style="{ backgroundColor: ward.color }">
-            <span v-if="!ward.profileUrl">{{ ward.name.charAt(0) }}</span>
-            <img v-else :src="ward.profileUrl" alt="피보호자 이미지" />
+        <!-- 피보호자 추가 버튼 -->
+        <div class="connection-item add-button">
+          <div class="connection-avatar add-avatar" @click="showDependentLinkModal">
+            <v-icon color="white">mdi-plus</v-icon>
           </div>
-          <div class="connection-name">{{ ward.name }}</div>
+          <div class="connection-name">추가하기</div>
+        </div>
+        <div v-for="dependent in dependentList" :key="dependent.id" class="connection-item">
+          <div class="connection-avatar" :style="{ backgroundColor: dependent.color }" @click="showUserProfile(dependent)">
+            <span v-if="!dependent.profileImg">{{ dependent.name.charAt(0) }}</span>
+            <img v-else :src="dependent.profileImg" alt="피보호자 이미지" />
+          </div>
+          <div class="connection-name">{{ dependent.name }}</div>
         </div>
       </div>
     </div>
@@ -115,7 +130,7 @@
           <div class="potion-icon"></div>
           <div class="potion-details">
             <div class="potion-amount">
-              <span class="amount">{{ potionCount }}</span>
+              <span class="amount">{{ userInfo.healingPotion }}</span>
               <span class="unit">개</span>
             </div>
             <p class="potion-desc">사용 가능한 힐링포션</p>
@@ -129,12 +144,47 @@
       </div>
     </div>
   </div>
+
+<!-- 사용자 프로필 모달 -->
+<v-dialog v-model="showUserProfileModal" max-width="450">
+  <v-card>
+      <v-card-actions class="profile-dialog-close">
+        <v-spacer></v-spacer>
+        <v-btn icon @click="showUserProfileModal = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-actions>
+      <v-card-text class="pa-0">
+        <UserProfileComponent 
+          :loginId="loginId" 
+          :userName="userName"
+          :userLongId="userLongId"
+          :parentType="parentType"
+          @start-text-chat="handleStartTextChat"
+          @start-video-chat="handleStartVideoChat"
+        />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+
+  <LinkRequest v-model="showLinkRequestModal" @input="handleModalChange" />
+  <LinkRequestToProcteor v-model="showLinkRequestModal2" @input="handleModalChange2" />
+
 </template>
 
 <script>
 import axios from 'axios';
-export default {
+import UserProfileComponent from "@/components/UserProfileComponet.vue";
+import LinkRequest from "@/components/LinkRequest.vue";
+import LinkRequestToProcteor from "@/components/LinkRequestToProcteor.vue";
+
+  export default {
   name: 'MyPage',
+  components: {
+    UserProfileComponent,
+    LinkRequest,
+    LinkRequestToProcteor,
+  },
   data() {
     return {
       userInfo: {
@@ -148,24 +198,28 @@ export default {
         detailAddress: '',
         region: '',
         profileImage: '',
-        dependentName: [],
-        protectorName: [],
+        healingPotion: 0,
       },
-      guardians: [
-        { id: 1, name: '김보호', color: '#e57373' },
-        { id: 2, name: '이돌봄', color: '#64b5f6' },
-        { id: 3, name: '박지킴', color: '#81c784' },
-      ],
-      wards: [
-        { id: 1, name: '최어르신', color: '#ffb74d' },
-        { id: 2, name: '정할머니', color: '#9575cd' },
-      ],
-      potionCount: 15
+      protectorList: [],
+      dependentList: [],
+      // 사용자 프로필 모달
+      showUserProfileModal: false,
+      // 사용자 프로필 모달에 넘겨줄 데이터
+      loginId: '',
+      userName: '',
+      userLongId: '',
+      parentType: 'healthData',
+      // 보호자/피보호자 연결 모달
+      showLinkRequestModal: false,
+      showLinkRequestModal2: false,
     }
   },
   mounted() {
     this.bringUserInfo();
+    this.bringProtector();
+    this.bringDependent();
   },
+
   methods: {
      // 내 정보 불러오는 api
      async bringUserInfo() {
@@ -173,7 +227,25 @@ export default {
       console.log(response)
       this.userInfo = response.data.result;
      },
-// 
+     // 연결된 보호자 불러오는 api
+     async bringProtector() {
+      const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myProtectList`);
+      console.log(response)
+      this.protectorList = response.data.result;
+      console.log("보호자",this.protectorList.length)
+    
+     },
+     // 연결된 피보호자 불러오는 api
+     async bringDependent() {
+      const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myDependentList`);
+      console.log(response)
+      this.dependentList = response.data.result;
+      console.log("피보호자",this.dependentList.length)
+     },
+
+
+
+//  프로필 사진 변경
      triggerFileInput() {
       this.$refs.fileInput.click();
     },
@@ -197,15 +269,55 @@ export default {
             console.log(error)
         }
     },
-    // 
-
+    
+    // 보호자 연결 모달 표시
+    showProtectorLinkModal() {
+      this.linkRequestType = 'protector';
+      this.showLinkRequestModal2 = true;
+    },
+    
+    // 피보호자 연결 모달 표시
+    showDependentLinkModal() {
+      this.linkRequestType = 'dependent';
+      this.showLinkRequestModal = true;
+    },
+    
+    // 프로필 수정 페이지 이동
     goToEditProfile() {
-      this.$router.push('/edit-profile');
+      this.$router.push('/silverpotion/mypageupdate');
+    },
+    // 힐링포션 충전 페이지 이동
+    goToCharge() {
+      this.$router.push('/silverpotion/buyitem');
+    },
+    // 사용자 프로필 모달 열기
+    showUserProfile(user){
+      this.showUserProfileModal = true;
+      console.log("사용자 프로필 모달 열기",this.showUserProfileModal)
+      this.loginId = user.loginId;
+      this.userName = user.name;
+      this.userLongId = user.userId;
+    },
+     // 채팅 관련 이벤트 핸들러
+     handleStartTextChat(userId) {
+      console.log(`${userId}와의 1:1 채팅 시작`);
+      // 채팅 페이지로 이동하거나 채팅 기능 실행
+      this.showUserProfileModal = false;
+    },
+    
+    handleStartVideoChat(userId) {
+      console.log(`${userId}와의 화상 채팅 시작`);
+      // 화상 채팅 기능 실행
+      this.showUserProfileModal = false;
     },
 
-    goToCharge() {
-      this.$router.push('/charge-potion');
-    }
+    handleModalChange(val) {
+      this.showLinkRequestModal = val;
+    },
+    handleModalChange2(val) {
+      this.showLinkRequestModal2 = val;
+    },
+
   }
 }
 </script>
@@ -463,6 +575,25 @@ export default {
   position: relative;
 }
 
+.add-avatar {
+  background: linear-gradient(135deg, #6b46c1 0%, #8a63d2 100%);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.add-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 12px rgba(107, 70, 193, 0.3);
+}
+
+.add-button {
+  transition: transform 0.2s;
+}
+
+.add-button:hover {
+  transform: translateY(-4px);
+}
+
 .connection-avatar::after {
   content: '';
   position: absolute;
@@ -611,6 +742,15 @@ export default {
     width: 100%;
     justify-content: center;
   }
+
+
+}
+  /* 프로필 모달 스타일 */
+  .profile-dialog-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
 }
 </style>
 
