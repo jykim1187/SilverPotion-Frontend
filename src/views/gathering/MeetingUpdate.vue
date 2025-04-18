@@ -5,30 +5,30 @@
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">모임 수정</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">정모 수정</h1>
             </v-card-text>
         </v-card>
 
         <div class="content-wrapper">
             <div v-if="isLoading" class="text-center my-8">
                 <v-progress-circular indeterminate color="primary"></v-progress-circular>
-                <p class="mt-2">모임 정보를 불러오는 중...</p>
+                <p class="mt-2">정모 정보를 불러오는 중...</p>
             </div>
             
             <div v-else-if="error" class="text-center my-8">
                 <v-alert type="error">{{ error }}</v-alert>
-                <v-btn color="primary" class="mt-4" @click="fetchGatheringData">다시 시도</v-btn>
+                <v-btn color="primary" class="mt-4" @click="fetchMeetingData">다시 시도</v-btn>
             </div>
             
-            <v-form v-else ref="form" v-model="isFormValid" @submit.prevent="updateGathering">
-                <!-- 모임 이미지 업로드 -->
+            <v-form v-else ref="form" v-model="isFormValid" @submit.prevent="updateMeeting">
+                <!-- 정모 이미지 업로드 -->
                 <div class="text-center mb-6">
                     <div class="avatar-container position-relative">
-                        <v-avatar size="300" rounded class="mb-2" @click="triggerFileInput" style="cursor: pointer">
+                        <v-avatar size="150" rounded class="mb-2" @click="triggerFileInput" style="cursor: pointer">
                             <v-img 
-                                :src="previewImage || (gatheringData.imageUrl || require('@/assets/default-gathering.png'))" 
+                                :src="previewImage || (meetingData.imageUrl || require('@/assets/default-gathering.png'))" 
                                 cover
-                                alt="모임 이미지"
+                                alt="정모 이미지"
                             ></v-img>
                             <div class="edit-overlay">
                                 <v-icon color="white">mdi-pencil</v-icon>
@@ -50,42 +50,57 @@
                     </div>
                 </div>
 
-                <!-- 모임명 입력 -->
+                <!-- 정모명 입력 -->
                 <v-text-field
-                    v-model="gatheringData.gatheringName"
-                    label="모임명"
+                    v-model="meetingData.name"
+                    label="정모명"
                     variant="outlined"
-                    :rules="[v => !!v || '모임명을 입력해주세요', v => v.length <= 30 || '모임명은 30자 이내로 입력해주세요']"
+                    :rules="[v => !!v || '정모명을 입력해주세요', v => v.length <= 30 || '정모명은 30자 이내로 입력해주세요']"
                     counter="30"
                     required
                 ></v-text-field>
 
-                <!-- 모임 소개 입력 -->
-                <v-textarea
-                    v-model="gatheringData.introduce"
-                    label="모임 소개"
-                    variant="outlined"
-                    :rules="[v => !!v || '모임 소개를 입력해주세요', v => v.length <= 500 || '모임 소개는 500자 이내로 입력해주세요']"
-                    counter="500"
-                    auto-grow
-                    rows="4"
-                    required
-                ></v-textarea>
-
-                <!-- 정원 입력 -->
+                <!-- 날짜 선택 -->
                 <v-text-field
-                    v-model.number="gatheringData.maxPeople"
-                    label="정원"
+                    v-model="meetingData.meetingDate"
+                    label="날짜"
+                    variant="outlined"
+                    type="date"
+                    :rules="[v => !!v || '날짜를 선택해주세요']"
+                    required
+                ></v-text-field>
+
+                <!-- 시간 선택 -->
+                <v-text-field
+                    v-model="meetingData.meetingTime"
+                    label="시간"
+                    variant="outlined"
+                    type="time"
+                    :rules="[v => !!v || '시간을 선택해주세요']"
+                    required
+                ></v-text-field>
+
+                <!-- 장소 입력 -->
+                <v-text-field
+                    v-model="meetingData.place"
+                    label="장소"
+                    variant="outlined"
+                    :rules="[v => !!v || '장소를 입력해주세요', v => v.length <= 100 || '장소는 100자 이내로 입력해주세요']"
+                    counter="100"
+                    required
+                ></v-text-field>
+
+                <!-- 비용 입력 -->
+                <v-text-field
+                    v-model.number="meetingData.cost"
+                    label="비용"
                     variant="outlined"
                     type="number"
                     :rules="[
-                        v => !!v || '정원을 입력해주세요',
-                        v => v >= 2 || '정원은 최소 2명 이상이어야 합니다',
-                        v => v <= 100 || '정원은 최대 100명까지 가능합니다'
+                        v => v !== null && v !== undefined && v !== '' || '비용을 입력해주세요',
+                        v => v >= 0 || '비용은 0원 이상이어야 합니다'
                     ]"
-                    min="2"
-                    max="100"
-                    @input="validateMaxPeople"
+                    min="0"
                     required
                 ></v-text-field>
 
@@ -111,11 +126,14 @@ import axios from 'axios';
 export default{
     data(){
         return {
+            meetingId: null,
             gatheringId: null,
-            gatheringData: {
-                gatheringName: '',
-                introduce: '',
-                maxPeople: 10,
+            meetingData: {
+                name: '',
+                meetingDate: '',
+                meetingTime: '',
+                place: '',
+                cost: 0,
                 imageUrl: null
             },
             imageFile: null,
@@ -133,15 +151,6 @@ export default{
         triggerFileInput() {
             this.$refs.fileInput.$el.querySelector('input').click();
         },
-        validateMaxPeople() {
-            // 숫자 범위 검증 (2~100)
-            const value = parseInt(this.gatheringData.maxPeople);
-            if (isNaN(value) || value < 2) {
-                this.gatheringData.maxPeople = 2;
-            } else if (value > 100) {
-                this.gatheringData.maxPeople = 100;
-            }
-        },
         previewSelectedImage() {
             if (this.imageFile) {
                 this.previewImage = URL.createObjectURL(this.imageFile);
@@ -149,52 +158,59 @@ export default{
                 this.previewImage = null;
             }
         },
-        async fetchGatheringData() {
+        async fetchMeetingData() {
             this.isLoading = true;
             this.error = null;
             
             try {
-                const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}`);
+                const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/${this.meetingId}`);
                 
                 if (response.data.result) {
-                    const gatheringData = response.data.result;
+                    const meetingData = response.data.result;
                     
                     // 가져온 데이터로 폼 초기화
-                    this.gatheringData = {
-                        gatheringName: gatheringData.gatheringName,
-                        introduce: gatheringData.introduce,
-                        maxPeople: gatheringData.maxPeople,
-                        imageUrl: gatheringData.imageUrl
+                    this.meetingData = {
+                        name: meetingData.name,
+                        meetingDate: meetingData.meetingDate,
+                        meetingTime: meetingData.meetingTime,
+                        place: meetingData.place,
+                        cost: meetingData.cost,
+                        imageUrl: meetingData.imageUrl
                     };
+                    
+                    // 모임 ID 저장
+                    this.gatheringId = meetingData.gatheringId;
                 } else {
-                    throw new Error('모임 정보를 불러오는데 실패했습니다.');
+                    throw new Error('정모 정보를 불러오는데 실패했습니다.');
                 }
             } catch (error) {
-                console.error('모임 정보를 불러오는데 실패했습니다:', error);
-                this.error = '모임 정보를 불러오는데 실패했습니다. 다시 시도해주세요.';
+                console.error('정모 정보를 불러오는데 실패했습니다:', error);
+                this.error = '정모 정보를 불러오는데 실패했습니다. 다시 시도해주세요.';
             } finally {
                 this.isLoading = false;
             }
         },
-        async updateGathering() {
+        async updateMeeting() {
             if (!this.$refs.form.validate()) return;
             
             this.isSubmitting = true;
             try {
                 // FormData 객체 생성
                 const formData = new FormData();
-                formData.append('gatheringName', this.gatheringData.gatheringName);
-                formData.append('introduce', this.gatheringData.introduce);
-                formData.append('maxPeople', this.gatheringData.maxPeople);
+                formData.append('name', this.meetingData.name);
+                formData.append('meetingDate', this.meetingData.meetingDate);
+                formData.append('meetingTime', this.meetingData.meetingTime);
+                formData.append('place', this.meetingData.place);
+                formData.append('cost', this.meetingData.cost);
                 
                 // 이미지 파일이 있는 경우에만 추가
                 if (this.imageFile) {
                     formData.append('imageFile', this.imageFile);
                 }
                 
-                // 모임 수정 API 호출
+                // 정모 수정 API 호출
                 const response = await axios.patch(
-                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/update/${this.gatheringId}`,
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/update/${this.meetingId}`,
                     formData,
                     {
                         headers: {
@@ -205,26 +221,26 @@ export default{
                 
                 // 성공 시 모임 상세 페이지로 이동
                 if (response.data.status_code === 200) {
-                    alert('모임 정보가 수정되었습니다.');
+                    alert('정모 정보가 수정되었습니다.');
                     this.$router.push(`/silverpotion/gathering/home/${this.gatheringId}`);
                 }
             } catch (error) {
-                console.error('모임 수정 실패:', error);
-                alert('모임 수정에 실패했습니다. 다시 시도해주세요.');
+                console.error('정모 수정 실패:', error);
+                alert('정모 수정에 실패했습니다. 다시 시도해주세요.');
             } finally {
                 this.isSubmitting = false;
             }
         }
     },
     mounted() {
-        // URL 파라미터에서 모임 ID 가져오기
-        this.gatheringId = this.$route.params.gatheringId;
+        // URL 파라미터에서 정모 ID 가져오기
+        this.meetingId = this.$route.params.meetingId;
         
-        if (this.gatheringId) {
-            // 모임 정보 불러오기
-            this.fetchGatheringData();
+        if (this.meetingId) {
+            // 정모 정보 불러오기
+            this.fetchMeetingData();
         } else {
-            // 모임 ID가 없는 경우 이전 페이지로 이동
+            // 정모 ID가 없는 경우 이전 페이지로 이동
             this.$router.go(-1);
         }
     }
