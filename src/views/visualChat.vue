@@ -74,7 +74,7 @@ export default {
   methods: {
       async initLocalMedia(){
           try{
- // navigator.mediaDevices.getUserMedia()는 브라우저에서 카메라와 마이크 권한을 요청하고, MediaStream객체를 호출하는 함수
+              // navigator.mediaDevices.getUserMedia()는 브라우저에서 카메라와 마이크 권한을 요청하고, MediaStream객체를 호출하는 함수
               this.localStream = await navigator.mediaDevices.getUserMedia({video: true, audio:true})
               // localVideo에 내 스트림을 연결하는 부분으로 내 화면을 내 비디오에 바로 띄우는 작업
               this.$refs.localVideo.srcObject = this.localStream
@@ -114,7 +114,7 @@ export default {
           console.log("상대방 스트림 수신 후 기다리는 상태",this.isWaiting)
         }
 
-        // 연결 상태 변경 감지 - 상대방이 연결을 끊었을 때 감지(추가된 부분)
+        // 연결 상태 변경 감지 - 상대방이 연결을 끊었을 때 감지
         this.peerConnection.oniceconnectionstatechange = () => {
           console.log("ICE 연결 상태 변경:", this.peerConnection.iceConnectionState);
           if (this.peerConnection.iceConnectionState === 'disconnected' || 
@@ -128,9 +128,7 @@ export default {
         // 4.ICE Candidate가 생성될 때마다 시그널링 서버로 보낸다(ice후보는 한번에 생성되는게 아니라 그때그때마다 찾아짐 찾아질때마다 상대방(여기선 this.loginId)에게 보내줘야함)
         // this.peerConnection.onicecandidate는 ICE후보가 생성될때마다 호출되는 이벤트 핸들러
         this.peerConnection.onicecandidate = (event) => {
-          if(event.candidate){
-            console.log('ICE후보11:', event.candidate)
-
+       
             if(event.candidate && this.signalingServer.readyState === WebSocket.OPEN){
 
             this.signalingServer.send(JSON.stringify({
@@ -144,7 +142,7 @@ export default {
             console.log("시그널링 서버 연결 대기중")
           }
 
-          }
+          
         }
         // 5.SDP Offer생성후 전송(상대방은 이걸 받고 Answer을 만들어야 연결이 성립된다)
         const offer = await this.peerConnection.createOffer()
@@ -233,8 +231,8 @@ export default {
               this. signalingServer.send(JSON.stringify({
                 type: 'answer',
                 answer: answer,
-                // from: this.myId,
-                to: this.loginId
+                to: this.loginId,
+                from: this.myId
               }));
 
               console.log('answer전송완료');
@@ -333,141 +331,6 @@ video {
   border-radius: 8px;
 }
 
-/* 버전 1: 모던한 그리드 레이아웃 */
-.video-chat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-gap: 20px;
-  padding: 20px;
-  height: 100%;
-}
-
-.video-box {
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  background: #000;
-}
-
-.name-tag {
-  position: absolute;
-  bottom: 15px;
-  left: 15px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 14px;
-}
-
-.controls {
-  position: absolute;
-  bottom: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 15px;
-}
-
-.control-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.control-btn:hover {
-  background: rgba(255,255,255,0.3);
-}
-
-.end-call {
-  background: rgba(255,0,0,0.7);
-}
-
-.end-call:hover {
-  background: rgba(255,0,0,0.9);
-}
-
-/* 버전 2: 전체 화면 집중형 */
-.video-chat-fullscreen {
-  position: relative;
-  height: 100%;
-  background: #000;
-}
-
-.main-video {
-  width: 100%;
-  height: 100%;
-}
-
-.local-video-overlay {
-  position: absolute;
-  width: 200px;
-  height: 150px;
-  bottom: 80px;
-  right: 20px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  border: 2px solid #fff;
-}
-
-.name-badge {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  padding: 6px 15px;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-.name-badge.local {
-  top: 10px;
-  left: 10px;
-  font-size: 12px;
-  padding: 3px 8px;
-}
-
-.bottom-controls {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 20px;
-}
-
-.round-btn {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.15);
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.round-btn:hover {
-  background: rgba(255,255,255,0.25);
-}
-
-.round-btn.red {
-  background: #e74c3c;
-}
-
-.round-btn.red:hover {
-  background: #c0392b;
-}
-
 /* 버전 3: 미니멀리스트 디자인 */
 .video-chat-minimal {
   display: flex;
@@ -548,82 +411,6 @@ video {
   background: #fee;
 }
 
-/* 버전 4: 다크 테마 */
-.video-chat-dark {
-  height: 100%;
-  background: #121212;
-  display: flex;
-  flex-direction: column;
-}
-
-.dark-video-container {
-  position: relative;
-  flex: 1;
-  padding: 20px;
-}
-
-.remote-frame {
-  height: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-}
-
-.local-frame {
-  position: absolute;
-  width: 220px;
-  height: 165px;
-  bottom: 30px;
-  right: 30px;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-  border: 2px solid #333;
-}
-
-.name-label {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 8px 20px;
-  border-radius: 5px;
-  font-size: 14px;
-  backdrop-filter: blur(5px);
-}
-
-.dark-controls {
-  display: flex;
-  justify-content: center;
-  padding: 15px;
-  gap: 20px;
-  background: #1e1e1e;
-}
-
-.dark-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: none;
-  background: #333;
-  color: #eee;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.dark-btn:hover {
-  background: #444;
-}
-
-.dark-btn.end-call {
-  background: #7d2a2a;
-}
-
-.dark-btn.end-call:hover {
-  background: #a72f2f;
-}
 
 .waiting-message{
   position: absolute;
