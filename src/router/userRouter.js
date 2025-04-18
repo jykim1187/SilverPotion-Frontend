@@ -6,6 +6,7 @@ import HealthData from "@/components/HealthData.vue";
 import HealthDataPage from "@/views/HealthDataPage.vue";
 import BuyItem from "@/views/BuyItem.vue";
 import VisualChat from "@/views/visualChat.vue";
+import MyPage from "@/views/MyPage.vue";
 
 export const userRouter =[
 {
@@ -45,10 +46,17 @@ export const userRouter =[
         name: 'BuyItem',
         component: BuyItem
     },
+    // 화상통화 페이지
     {
         path:'/silverpotion/visualchat/:loginId',
         name: 'VisualChat',
         component: VisualChat
+    },
+    // 마이페이지
+    {
+        path:'/silverpotion/mypage',
+        name: 'MyPage',
+        component: MyPage
     },
 
 
