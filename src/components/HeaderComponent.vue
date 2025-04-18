@@ -4,6 +4,15 @@
             <v-row no-gutters align="center" justify="space-between" class="header-row">
                 <v-col cols="4" class="d-flex align-center">
                     <v-btn :to="{path:'/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate">회원목록</v-btn>
+                    <v-btn 
+                        v-if="isGatheringMainPage" 
+                        icon 
+                        class="ml-2" 
+                        size="small"
+                        :to="{path:'/silverpotion/gathering/opensearch'}"
+                    >
+                        <v-icon size="20">mdi-magnify</v-icon>
+                    </v-btn>
                 </v-col>
                 <v-col cols="4" class="text-center d-flex align-center justify-center">
                     <v-btn :to="{path: '/'}" class="logo-btn" style="height: auto; background: transparent; box-shadow: none;">
@@ -47,6 +56,11 @@ export default {
       isLogin: false,
       hasNotifications: false,
     };
+  },
+  computed: {
+    isGatheringMainPage() {
+      return this.$route.path === '/silverpotion/gathering/main';
+    }
   },
   created() {
     this.checkLogin();

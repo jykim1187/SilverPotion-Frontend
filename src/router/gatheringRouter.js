@@ -2,6 +2,7 @@ import GatheringCreate from "@/views/gathering/GatheringCreate.vue";
 import GatheringHome from "@/views/gathering/GatheringHome.vue";
 import GatheringMain from "@/views/gathering/GatheringMain.vue";
 import GatheringManagement from "@/views/gathering/GatheringManagement.vue";
+import GatheringOpenSearch from "@/views/gathering/GatheringOpenSearch.vue";
 import GatheringSearch from "@/views/gathering/GatheringSearch.vue";
 import GatheringUpdate from "@/views/gathering/GatheringUpdate.vue";
 import MeetingCreate from "@/views/gathering/MeetingCreate.vue";
@@ -65,6 +66,11 @@ export const gatheringRouter= [
         path:'/silverpotion/meeting/update/:meetingId',
         name: 'MeetingUpdate',
         component: MeetingUpdate
+    },
+    {
+        path:'/silverpotion/gathering/opensearch',
+        name: 'GatheringOpenSearch',
+        component: GatheringOpenSearch
     },
     
 ]

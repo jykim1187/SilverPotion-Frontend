@@ -55,63 +55,51 @@
                 </div>
                 
                 <div v-else>
-                    <v-card
-                        v-for="meeting in selectedDateMeetings"
-                        :key="meeting.meetingId"
-                        class="mb-4"
-                        variant="outlined"
-                        @click="goToGatheringDetail(meeting.gatheringId)"
-                    >
-                        <v-row no-gutters>
-                            <v-col cols="4">
-                                <v-img
-                                    :src="meeting.imageUrl || require('@/assets/default-gathering.png')"
-                                    height="120"
-                                    cover
-                                ></v-img>
-                            </v-col>
-                            <v-col cols="8">
-                                <v-card-text class="pa-3">
-                                    <div class="d-flex flex-column">
-                                        <div class="text-subtitle-1 font-weight-bold">{{ meeting.name }}</div>
-                                        <div class="text-caption">
-                                            <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
-                                            {{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}
-                                        </div>
-                                        <div class="text-caption">
-                                            <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                                            {{ meeting.place }}
-                                        </div>
-                                        <div class="text-caption mt-1">
-                                            <v-chip size="x-small" color="primary" variant="outlined" class="mr-1">
-                                                {{ meeting.category || '카테고리 정보 없음' }}
-                                            </v-chip>
-                                            <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
-                                        </div>
-                                        
-                                        <div class="d-flex align-center mt-2">
-                                            <div class="attendees-avatars">
-                                                <v-avatar
-                                                    v-for="(attendee, idx) in meeting.attendees.slice(0, 8)"
-                                                    :key="idx"
-                                                    size="20"
-                                                    class="ma-1"
-                                                >
-                                                    <v-img
-                                                        :src="attendee.profileImage || require('@/assets/default-gathering.png')"
-                                                        alt="참석자"
-                                                    ></v-img>
-                                                </v-avatar>
-                                            </div>
-                                            <span class="text-caption ml-2">
-                                                {{ meeting.attendees.length }}/{{ meeting.maxPeople }}명
-                                            </span>
-                                        </div>
+                    <v-list>
+                        <v-list-item 
+                            v-for="meeting in selectedDateMeetings" 
+                            :key="meeting.meetingId"
+                            class="mb-2"
+                            @click="goToGatheringDetail(meeting.gatheringId)"
+                            :ripple="true"
+                            hover
+                        >
+                            <template v-slot:prepend>
+                                <v-avatar size="50" rounded>
+                                    <v-img :src="meeting.imageUrl || require('@/assets/default-gathering.png')" 
+                                           cover
+                                           alt="정모 이미지"></v-img>
+                                </v-avatar>
+                            </template>
+                            
+                            <div>
+                                <div class="d-flex align-center">
+                                    <span class="font-weight-medium">{{ meeting.name }}</span>
+                                    <v-chip
+                                        size="x-small"
+                                        class="ml-2"
+                                        color="primary"
+                                        variant="outlined"
+                                    >
+                                        {{ meeting.category || '카테고리 정보 없음' }}
+                                    </v-chip>
+                                    <div class="d-flex align-center ml-3">
+                                        <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+                                        <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-map-marker</v-icon>
+                                        <span class="text-caption">{{ meeting.place }}</span>
+                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
+                                        <span class="text-caption">{{ meeting.cost }}원</span>
                                     </div>
-                                </v-card-text>
-                            </v-col>
-                        </v-row>
-                    </v-card>
+                                </div>
+                                <div class="text-caption text-grey mt-1">
+                                    <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
+                                </div>
+                            </div>
+                        </v-list-item>
+                    </v-list>
                 </div>
             </div>
         </div>

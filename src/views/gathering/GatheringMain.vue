@@ -51,17 +51,15 @@
         </div>
         
         <!-- 내 모임 섹션 -->
-        <div class="d-flex align-center mt-6 mb-4">
-            <h2 class="text-h6 font-weight-medium mr-2">내 모임</h2>
+        <div class="d-flex justify-space-between align-center mt-6 mb-4">
+            <h2 class="text-h6 font-weight-medium">내 모임</h2>
             <v-btn 
                 v-if="myGatherings.length > 0"
                 variant="text" 
                 color="primary"
-                size="small"
-                to="/silverpotion/gathering/mygathering"
-                class="ml-2 pa-0"
+                @click="$router.push('/silverpotion/gathering/mygathering')"
             >
-                더보기
+                더보기 <v-icon>mdi-chevron-right</v-icon>
             </v-btn>
         </div>
         
@@ -116,188 +114,170 @@
             </v-list>
         </div>
         
-        <!-- 추천 모임 섹션 -->
-        <div class="d-flex align-center mt-6 mb-4">
-            <h2 class="text-h6 font-weight-medium mr-2">추천 모임</h2>
-            <v-btn 
-                variant="text" 
-                color="primary"
-                size="small"
-                to="/silverpotion/gathering/recommendGathering"
-                class="ml-2 pa-0"
-            >
-                더보기
-            </v-btn>
-        </div>
-        
-        <div v-if="loadingRecommended">
-            <v-progress-circular indeterminate color="primary"></v-progress-circular>
-            <span class="ml-2">추천 모임을 불러오는 중...</span>
-        </div>
-        
-        <div v-else-if="filteredRecommendedGatherings.length === 0" class="text-center pa-4">
-            <v-icon size="large" color="grey">mdi-map-search</v-icon>
-            <p class="mt-2">주변 지역의 추천 모임이 없습니다.</p>
-        </div>
-        
-        <div v-else>
-            <v-list>
-                <v-list-item 
-                    v-for="(gathering, index) in filteredRecommendedGatherings.slice(0, 3)" 
-                    :key="index"
-                    class="mb-2"
-                    @click="goToGatheringDetail(gathering.id)"
-                    :ripple="true"
-                    hover
-                >
-                    <template v-slot:prepend>
-                        <v-avatar size="50" rounded>
-                            <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
-                                   cover
-                                   alt="모임 이미지"></v-img>
-                        </v-avatar>
-                    </template>
-                    
-                    <div>
-                        <div class="d-flex align-center">
-                            <span class="font-weight-medium">{{ gathering.gatheringName }}</span>
-                            <v-chip
-                                size="x-small"
-                                class="ml-2"
-                                color="primary"
-                                variant="outlined"
-                            >
-                                {{ gathering.category }}
-                            </v-chip>
-                            <div class="d-flex align-center ml-3">
-                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                                <span class="text-caption">{{ gathering.region }}</span>
-                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                <span class="text-caption">{{ gathering.peopleCount }}/{{ gathering.maxPeople }}명</span>
-                                <span class="text-caption text-grey ml-2">{{ gathering.introduce || '모임 소개가 없습니다.' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </v-list-item>
-            </v-list>
-        </div>
-        
-        <!-- 추천 정모 섹션 -->
-        <div class="d-flex align-center mt-6 mb-4">
-            <h2 class="text-h6 font-weight-medium mr-2">추천 정모</h2>
-            <v-btn 
-                variant="text" 
-                color="primary"
-                size="small"
-                to="/silverpotion/gathering/recommendMeeting"
-                class="ml-2 pa-0"
-            >
-                더보기
-            </v-btn>
-        </div>
-        
-        <div v-if="loadingMeetings" class="text-center my-4">
-            <v-progress-circular indeterminate color="primary"></v-progress-circular>
-            <span class="ml-2">정모 정보를 불러오는 중...</span>
-        </div>
-        
-        <div v-else-if="meetingsByDate.length === 0" class="text-center pa-4">
-            <v-icon size="large" color="grey">mdi-calendar-blank</v-icon>
-            <p class="mt-2">예정된 정모가 없습니다.</p>
-        </div>
-        
-        <div v-else>
-            <!-- 날짜 선택 버튼 -->
-            <div class="date-selector mb-4">
-                <v-slide-group
-                    v-model="selectedDateIndex"
-                    show-arrows
-                    center-active
-                >
-                    <v-slide-group-item
-                        v-for="(dateInfo, index) in dateButtons"
-                        :key="index"
-                        v-slot="{ isSelected, toggle }"
-                    >
-                        <v-btn
-                            :color="isSelected ? 'primary' : ''"
-                            :variant="isSelected ? 'flat' : 'outlined'"
-                            class="ma-1"
-                            rounded
-                            @click="toggle"
-                        >
-                            <div class="text-center">
-                                <div class="text-caption">{{ dateInfo.dayOfWeek }}</div>
-                                <div class="text-body-2">{{ dateInfo.day }}</div>
-                            </div>
-                        </v-btn>
-                    </v-slide-group-item>
-                </v-slide-group>
+        <!-- 내 주변 모임 섹션 -->
+        <div class="mt-8">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <h2 class="text-h6 font-weight-medium">추천 모임</h2>
+                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/search')">
+                    더보기 <v-icon>mdi-chevron-right</v-icon>
+                </v-btn>
             </div>
             
-            <!-- 선택된 날짜의 정모 목록 -->
-            <div v-if="selectedDateMeetings.length === 0" class="text-center pa-4 empty-meetings-container">
-                <p>선택한 날짜에 예정된 정모가 없습니다.</p>
+            <div v-if="loadingRecommended" class="text-center my-4">
+                <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                <span class="ml-2">모임 정보를 불러오는 중...</span>
+            </div>
+            
+            <div v-else-if="filteredRecommendedGatherings.length === 0" class="text-center pa-4">
+                <v-icon size="large" color="grey">mdi-map-marker-off</v-icon>
+                <p class="mt-2">주변에 모임이 없습니다.</p>
             </div>
             
             <div v-else>
-                <v-card
-                    v-for="meeting in selectedDateMeetings.slice(0, 3)"
-                    :key="meeting.meetingId"
-                    class="mb-4"
-                    variant="outlined"
-                    @click="goToGatheringDetail(meeting.gatheringId)"
-                >
-                    <v-row no-gutters>
-                        <v-col cols="4">
-                            <v-img
-                                :src="meeting.imageUrl || require('@/assets/default-gathering.png')"
-                                height="120"
-                                cover
-                            ></v-img>
-                        </v-col>
-                        <v-col cols="8">
-                            <v-card-text class="pa-3">
-                                <div class="d-flex flex-column">
-                                    <div class="text-subtitle-1 font-weight-bold">{{ meeting.name }}</div>
-                                    <div class="text-caption">
+                <v-list>
+                    <v-list-item 
+                        v-for="gathering in filteredRecommendedGatherings.slice(0, 5)" 
+                        :key="gathering.id"
+                        class="mb-2"
+                        @click="goToGatheringDetail(gathering.id)"
+                        :ripple="true"
+                        hover
+                    >
+                        <template v-slot:prepend>
+                            <v-avatar size="50" rounded>
+                                <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
+                                       cover
+                                       alt="모임 이미지"></v-img>
+                            </v-avatar>
+                        </template>
+                        
+                        <div>
+                            <div class="d-flex align-center">
+                                <span class="font-weight-medium">{{ gathering.gatheringName }}</span>
+                                <v-chip
+                                    size="x-small"
+                                    class="ml-2"
+                                    color="primary"
+                                    variant="outlined"
+                                >
+                                    {{ gathering.category || getCategoryName(gathering.categoryId) }}
+                                </v-chip>
+                                <div class="d-flex align-center ml-3">
+                                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                    <span class="text-caption">{{ gathering.region }}</span>
+                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                    <span class="text-caption">{{ gathering.peopleCount || 0 }}/{{ gathering.maxPeople || '제한없음' }}명</span>
+                                </div>
+                            </div>
+                            <div class="text-caption text-grey mt-1" v-if="gathering.introduce">
+                                {{ gathering.introduce }}
+                            </div>
+                        </div>
+                    </v-list-item>
+                </v-list>
+            </div>
+        </div>
+        
+        <!-- 추천 정모 섹션 -->
+        <div class="mt-8">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <h2 class="text-h6 font-weight-medium">추천 정모</h2>
+                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/recommendMeeting')">
+                    더보기 <v-icon>mdi-chevron-right</v-icon>
+                </v-btn>
+            </div>
+            
+            <div v-if="loadingMeetings" class="text-center my-4">
+                <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                <span class="ml-2">정모 정보를 불러오는 중...</span>
+            </div>
+            
+            <div v-else-if="upcomingMeetings.length === 0" class="text-center pa-4">
+                <v-icon size="large" color="grey">mdi-calendar-blank</v-icon>
+                <p class="mt-2">예정된 정모가 없습니다.</p>
+            </div>
+            
+            <div v-else>
+                <!-- 날짜 선택 버튼 -->
+                <div class="date-selector mb-4">
+                    <v-slide-group
+                        v-model="selectedDateIndex"
+                        show-arrows
+                        center-active
+                    >
+                        <v-slide-group-item
+                            v-for="(dateInfo, index) in dateButtons"
+                            :key="index"
+                            v-slot="{ isSelected, toggle }"
+                        >
+                            <v-btn
+                                :color="isSelected ? 'primary' : ''"
+                                :variant="isSelected ? 'flat' : 'outlined'"
+                                class="ma-1"
+                                rounded
+                                @click="toggle"
+                            >
+                                <div class="text-center">
+                                    <div class="text-caption">{{ dateInfo.dayOfWeek }}</div>
+                                    <div class="text-body-2">{{ dateInfo.day }}</div>
+                                </div>
+                            </v-btn>
+                        </v-slide-group-item>
+                    </v-slide-group>
+                </div>
+                
+                <!-- 선택된 날짜의 정모 목록 -->
+                <div v-if="selectedDateMeetings.length === 0" class="text-center pa-4 empty-meetings-container">
+                    <p>선택한 날짜에 예정된 정모가 없습니다.</p>
+                </div>
+                
+                <div v-else>
+                    <v-list>
+                        <v-list-item 
+                            v-for="meeting in selectedDateMeetings.slice(0, 3)" 
+                            :key="meeting.meetingId"
+                            class="mb-2"
+                            @click="goToMeetingDetail(meeting.gatheringId, meeting.meetingId)"
+                            :ripple="true"
+                            hover
+                        >
+                            <template v-slot:prepend>
+                                <v-avatar size="50" rounded>
+                                    <v-img :src="meeting.imageUrl || require('@/assets/default-gathering.png')" 
+                                           cover
+                                           alt="정모 이미지"></v-img>
+                                </v-avatar>
+                            </template>
+                            
+                            <div>
+                                <div class="d-flex align-center">
+                                    <span class="font-weight-medium">{{ meeting.name }}</span>
+                                    <v-chip
+                                        size="x-small"
+                                        class="ml-2"
+                                        color="primary"
+                                        variant="outlined"
+                                    >
+                                        {{ meeting.category || '카테고리 정보 없음' }}
+                                    </v-chip>
+                                    <div class="d-flex align-center ml-3">
                                         <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
-                                        {{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}
-                                    </div>
-                                    <div class="text-caption">
-                                        <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                                        {{ meeting.place }}
-                                    </div>
-                                    <div class="text-caption mt-1">
-                                        <v-chip size="x-small" color="primary" variant="outlined" class="mr-1">
-                                            {{ meeting.category || '카테고리 정보 없음' }}
-                                        </v-chip>
-                                        <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
-                                    </div>
-                                    
-                                    <div class="d-flex align-center mt-2">
-                                        <div class="attendees-avatars">
-                                            <v-avatar
-                                                v-for="(attendee, idx) in meeting.attendees.slice(0, 8)"
-                                                :key="idx"
-                                                size="20"
-                                                class="ma-1"
-                                            >
-                                                <v-img
-                                                    :src="attendee.profileImage || require('@/assets/default-gathering.png')"
-                                                    alt="참석자"
-                                                ></v-img>
-                                            </v-avatar>
-                                        </div>
-                                        <span class="text-caption ml-2">
-                                            {{ meeting.attendees.length }}/{{ meeting.maxPeople }}명
-                                        </span>
+                                        <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-map-marker</v-icon>
+                                        <span class="text-caption">{{ meeting.place }}</span>
+                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
+                                        <span class="text-caption">{{ meeting.cost }}원</span>
                                     </div>
                                 </div>
-                            </v-card-text>
-                        </v-col>
-                    </v-row>
-                </v-card>
+                                <div class="text-caption text-grey mt-1">
+                                    <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
+                                </div>
+                            </div>
+                        </v-list-item>
+                    </v-list>
+                </div>
             </div>
         </div>
         
@@ -569,6 +549,13 @@ export default{
             } finally {
                 this.loadingMeetings = false;
             }
+        },
+        goToMeetingDetail(gatheringId, meetingId) {
+            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
+        },
+        getCategoryName(categoryId) {
+            const category = this.categories.find(c => c.id === categoryId);
+            return category ? category.name : '카테고리 정보 없음';
         }
     }
 }
