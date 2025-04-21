@@ -265,6 +265,13 @@ export default {
       }
     }
   },
+  created() {
+    // URL 쿼리 파라미터에서 구글 로그인 정보 가져오기
+    const { loginId, email, name } = this.$route.query;
+    if (loginId) this.formData.loginId = loginId;
+    if (email) this.formData.email = email;
+    if (name) this.formData.name = name;
+  },
   methods: {
     handleAddressSearch() {
       new window.daum.Postcode({

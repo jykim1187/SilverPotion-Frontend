@@ -2,14 +2,14 @@
     <div class="post-list">
         <PostHeader />
         <div class="post-feed">
-            <div v-for="post in posts" :key="post.id" class="post-card">
+            <div v-for="post in posts" :key="post.postId" class="post-card">
                 <!-- 게시물 헤더 -->
                 <div class="post-header">
                     <div class="user-info">
                         <img :src="post.profileImage" class="profile-image" alt="프로필 이미지">
                         <span class="nickname">{{ post.nickname }}</span>
                     </div>
-                    <div class="post-date">{{ formatDate(post.createdAt) }}</div>
+                    <div class="post-date">{{ formatDate(post.createdTime) }}</div>
                 </div>
 
                 <!-- 게시물 이미지 -->
@@ -19,20 +19,21 @@
                             <img v-for="(image, index) in post.imageUrls" 
                                 :key="index" 
                                 :src="image" 
+                                @click="goToPostDetail(post.postId)"
                                 alt="게시물 이미지">
                         </div>
                         <div class="slider-dots" v-if="post.imageUrls.length > 1">
                             <span v-for="(_, index) in post.imageUrls" 
                                 :key="index" 
                                 :class="['dot', { active: index === post.currentSlide }]"
-                                @click="setSlide(post, index)"></span>
+                                @click.stop="setSlide(post, index)"></span>
                         </div>
                         <button v-if="post.imageUrls.length > 1" 
                                 class="slider-button prev" 
-                                @click="prevSlide(post)">&lt;</button>
+                                @click.stop="prevSlide(post)">&lt;</button>
                         <button v-if="post.imageUrls.length > 1" 
                                 class="slider-button next" 
-                                @click="nextSlide(post)">&gt;</button>
+                                @click.stop="nextSlide(post)">&gt;</button>
                     </div>
                 </div>
                 
@@ -49,21 +50,6 @@
                             </p>
                         </div>
                     </div>
-                </div>
-                
-                <div class="post-actions-section">
-                    <v-btn text @click="toggleLike(post)" class="post-action-button like-button">
-                        <div class="action-content">
-                            <i :class="post.isLike ? 'mdi mdi-heart red-heart' : 'mdi mdi-heart-outline'"></i>
-                            <span :class="{'red-text': post.isLike}">좋아요 {{ post.likeCount }}</span>
-                        </div>
-                    </v-btn>
-                    <v-btn text @click="goToPostDetail(post.postId)" class="post-action-button">
-                        <div class="action-content">
-                            <i class="mdi mdi-comment-outline"></i>
-                            <span>댓글 {{ post.commentCount }}</span>
-                        </div>
-                    </v-btn>
                 </div>
                 
                 <!-- 게시물 내용 -->
@@ -83,6 +69,22 @@
                 </div>
 
                 <!-- 게시물 액션 버튼 -->
+                <div class="post-actions-section">
+                  <button @click="toggleLike(post)" class="post-action-button like-button">
+                    <div class="action-content">
+                      <i :class="post.isLike ? 'mdi mdi-heart red-heart' : 'mdi mdi-heart-outline'"></i>
+                      <span :class="{'red-text': post.isLike}">좋아요</span>
+                    </div>
+                  </button>
+                  <button @click="goToPostDetail(post.postId)" class="post-action-button">
+                    <div class="action-content">
+                      <i class="mdi mdi-comment-outline"></i>
+                      <span>댓글 달기</span>
+                    </div>
+                  </button>
+                </div>
+
+                <!-- 댓글 섹션 -->
                 <div class="comments-section">
                     <button class="comments-count-button" @click="goToPostDetail(post.postId)" v-if="post.commentCount > 0">
                         댓글 {{ post.commentCount }}개 모두 보기
@@ -119,10 +121,21 @@ export default {
             try {
                 this.loading = true;
                 const loginId = localStorage.getItem('loginId');
-                const apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/free/list`;
                 
+                if (!loginId) {
+                    console.error('로그인 ID가 없습니다.');
+                    return;
+                }
+
+                console.log('로그인 ID:', loginId);
+                console.log('API 요청 URL:', `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/free/list`);
+                console.log('요청 파라미터:', {
+                    page: this.page,
+                    size: this.size
+                });
+
                 const response = await axios.get(
-                    apiUrl,
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/free/list`,
                     {
                         params: {
                             page: this.page,
@@ -134,26 +147,86 @@ export default {
                     }
                 );
                 
-                this.posts = response.data.result.content.map(post => ({
-                    ...post,
-                    postId: post.id,
-                    profileImage: post.profileImage && !isNaN(post.profileImage) 
-                        ? require('@/assets/default-profile.png')
-                        : post.profileImage || require('@/assets/default-profile.png'),
-                    nickname: post.nickname || '익명',
-                    createdAt: post.createdTime || post.createdAt || new Date().toISOString(),
-                    imageUrls: post.imageUrls || [],
-                    currentSlide: 0,
-                    showFullContent: false,
-                    newComment: '',
-                    isLike: post.isLike === "Y",
-                    likeCount: post.likeCount || 0,
-                    commentCount: post.commentCount || 0
-                }));
+                console.log('API 응답 상태:', response.status);
+                console.log('API 응답 데이터:', response.data);
+                
+                if (!response.data || !response.data.result) {
+                    console.error('응답 데이터 구조가 올바르지 않습니다:', response.data);
+                    return;
+                }
+
+                const postsData = response.data.result.content;
+                console.log('처리 전 게시물 데이터:', postsData);
+                
+                if (!Array.isArray(postsData)) {
+                    console.error('게시물 데이터가 배열이 아닙니다:', postsData);
+                    return;
+                }
+                
+                // 포스트 데이터 처리
+                this.posts = postsData.map(post => {
+                    console.log('처리 중인 게시물:', post);
+                    
+                    if (!post.postId) {
+                        console.error('게시물 ID가 없습니다:', post);
+                        return null;
+                    }
+                    
+                    // PostID 설정
+                    const postId = post.postId;
+                    
+                    // 기본 상태 - 서버에서 받은 좋아요 상태
+                    let isLike = false;
+                    if (post.isLike === 'Y' || post.isLike === 'y' || 
+                        post.isLike === true || post.isLike === 1) {
+                        isLike = true;
+                    }
+                    
+                    // 로컬 스토리지에서 좋아요 상태 가져오기
+                    const savedLikeState = localStorage.getItem(`like_state_${postId}`);
+                    if (savedLikeState) {
+                        isLike = savedLikeState === 'true';
+                    } else {
+                        localStorage.setItem(`like_state_${postId}`, isLike.toString());
+                    }
+                    
+                    // 프로필 이미지 처리
+                    let profileImage = post.profileImage;
+                    if (!profileImage || (profileImage && !isNaN(profileImage))) {
+                        profileImage = require('@/assets/default-profile.png');
+                    }
+                    
+                    // 이미지 URL 처리
+                    const imageUrls = post.imageUrls || [];
+                    
+                    const processedPost = {
+                        ...post,
+                        postId,
+                        profileImage,
+                        nickname: post.nickname || '익명',
+                        createdAt: post.createdTime || post.createdAt || new Date().toISOString(),
+                        imageUrls: imageUrls,
+                        currentSlide: 0,
+                        showFullContent: false,
+                        newComment: '',
+                        isLike,
+                        likeCount: post.likeCount || 0,
+                        commentCount: post.commentCount || 0,
+                        postCategory: post.postCategory || 'free',
+                        title: post.title || '',
+                        content: post.content || ''
+                    };
+                    
+                    console.log('처리된 게시물:', processedPost);
+                    return processedPost;
+                }).filter(post => post !== null); // null인 게시물 제거
+                
+                console.log('최종 게시물 목록:', this.posts);
             } catch (error) {
                 console.error('자유 게시물을 불러오는데 실패했습니다:', error);
                 if (error.response) {
-                    console.error('Error response:', error.response.data);
+                    console.error('에러 응답:', error.response.data);
+                    console.error('에러 상태:', error.response.status);
                 }
             } finally {
                 this.loading = false;
@@ -187,21 +260,38 @@ export default {
             }
         },
         async toggleLike(post) {
+            // 현재 상태 저장 (롤백용)
+            const prevState = {
+                isLike: post.isLike,
+                likeCount: post.likeCount
+            };
+            
             try {
-                if (!post || !post.postId) {
-                    console.error('게시물 ID가 없습니다:', post);
-                    return;
+                console.log('현재 좋아요 상태:', post.isLike, '좋아요 수:', post.likeCount);
+                
+                // UI 즉시 업데이트 (클릭 시 바로 효과가 보이도록)
+                post.isLike = !post.isLike;
+                
+                // 좋아요 수 업데이트
+                if (post.isLike) {
+                    // 좋아요 활성화 시 카운트 증가
+                    post.likeCount += 1;
+                } else {
+                    // 좋아요 비활성화 시 카운트 감소 (0 미만으로 내려가지 않도록)
+                    post.likeCount = Math.max(0, post.likeCount - 1);
                 }
-
+                
+                // 로컬 스토리지에 상태 저장 (브라우저 새로고침 후에도 상태 유지)
+                localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
+                
+                console.log('업데이트된 상태:', post.isLike, '좋아요 수:', post.likeCount);
+                
+                // 서버에 좋아요 상태 변경 요청
                 const loginId = localStorage.getItem('loginId');
-                console.log('좋아요 요청 전:', {
-                    postId: post.postId,
-                    currentLikeCount: post.likeCount,
-                    currentIsLike: post.isLike
-                });
-
+                const endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.postId}`;
+                
                 const response = await axios.post(
-                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.postId}`,
+                    endpoint,
                     {},
                     {
                         headers: {
@@ -209,28 +299,35 @@ export default {
                         }
                     }
                 );
-
+                
+                // 서버 응답 처리
                 if (response.data && response.data.result) {
-                    // 좋아요 상태와 개수를 즉시 업데이트
-                    post.isLike = response.data.result.isLiked;
-                    post.likeCount = response.data.result.likeCount;
+                    const result = response.data.result;
                     
-                    console.log('좋아요 응답:', response.data.result);
-                    
-                    // posts 배열에서 해당 게시물을 찾아 업데이트
-                    const index = this.posts.findIndex(p => p.postId === post.postId);
-                    if (index !== -1) {
-                        this.posts[index] = {
-                            ...this.posts[index],
-                            isLike: response.data.result.isLiked,
-                            likeCount: response.data.result.likeCount
-                        };
+                    // 서버에서 반환한 정확한 카운트로 업데이트
+                    if (typeof result.likeCount === 'number') {
+                        post.likeCount = result.likeCount;
                     }
+                    
+                    // 좋아요 버튼을 클릭했을 때의 동작에 따라 상태 설정
+                    if (post.isLike) {  // 좋아요를 누른 경우
+                        post.isLike = true;  // 강제로 true로 설정
+                        localStorage.setItem(`like_state_${post.postId}`, 'true');
+                    } else {  // 좋아요를 취소한 경우
+                        post.isLike = false;  // 강제로 false로 설정
+                        localStorage.setItem(`like_state_${post.postId}`, 'false');
+                    }
+                    
+                    console.log('최종 상태:', post.isLike, '좋아요 수:', post.likeCount);
                 }
             } catch (error) {
-                console.error('좋아요 처리 중 오류가 발생했습니다:', error);
-                if (error.response) {
-                    console.error('서버 응답:', error.response.data);
+                console.error('좋아요 처리 중 오류 발생:', error);
+                
+                // 오류 발생 시 이전 상태로 복원
+                if (prevState) {
+                    post.isLike = prevState.isLike;
+                    post.likeCount = prevState.likeCount;
+                    localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
                 }
             }
         },
@@ -247,33 +344,47 @@ export default {
             post.currentSlide = post.currentSlide < post.imageUrls.length - 1 ? post.currentSlide + 1 : 0;
         },
         goToPostDetail(postId) {
-            this.$router.push(`/silverpotion/post/detail/${postId}`);
+            console.log('상세 페이지로 이동, 게시글 ID:', postId);
+            if (!postId) {
+                console.error('게시글 ID가 없습니다');
+                return;
+            }
+            try {
+                this.$router.push(`/silverpotion/post/detail/${postId}`);
+            } catch (error) {
+                console.error('라우팅 오류:', error);
+            }
         },
         showLikeList(postId) {
-            this.$router.push(`/silverpotion/post/${postId}/likes`);
+            console.log('좋아요 목록 표시:', postId);
         }
     }
 }
 </script>
 
 <style scoped>
+@import '@mdi/font/css/materialdesignicons.min.css';
+
 .post-list {
     width: 100%;
     max-width: 768px;
     margin: 0 auto;
-    position: relative;
+    padding: 0 20px 0 20px;
 }
 
 .post-feed {
-    padding: 16px;
-    padding-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .post-card {
-    background: white;
+    background-color: white;
     border-radius: 8px;
-    margin-bottom: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    width: 100%;
+    margin: 0 auto;
 }
 
 .post-header {
@@ -286,7 +397,7 @@ export default {
 .user-info {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .profile-image {
@@ -298,24 +409,26 @@ export default {
 
 .nickname {
     font-weight: 600;
-    font-size: 14px;
+    color: #262626;
 }
 
 .post-date {
-    color: #666;
     font-size: 12px;
+    color: #8e8e8e;
+    margin-left: auto;
 }
 
 .post-images {
     position: relative;
     width: 100%;
-    overflow: hidden;
+    aspect-ratio: 1;
 }
 
 .slider-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 1;
+    height: 100%;
+    overflow: hidden;
 }
 
 .slider {
@@ -330,6 +443,7 @@ export default {
     height: 100%;
     object-fit: cover;
     flex-shrink: 0;
+    cursor: pointer;
 }
 
 .slider-dots {
@@ -338,26 +452,26 @@ export default {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 4px;
+    gap: 6px;
 }
 
 .dot {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
 }
 
 .dot.active {
-    background: white;
+    background-color: #0095f6;
 }
 
 .slider-button {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.3);
     color: white;
     border: none;
     width: 30px;
@@ -378,72 +492,109 @@ export default {
 }
 
 .post-actions {
+    padding: 12px 16px;
+}
+
+.counts-section {
+    margin-top: 8px;
+}
+
+.counts-row {
     display: flex;
-    justify-content: space-between;
+    gap: 16px;
+}
+
+.likes-count,
+.comments-count {
+    font-size: 14px;
+    color: #262626;
+    cursor: pointer;
+}
+
+.likes-count strong,
+.comments-count strong {
+    font-weight: 600;
+}
+
+.post-content {
+    padding: 0 16px 12px;
+}
+
+.content-wrapper {
+    margin-bottom: 8px;
+}
+
+.content-line {
+    display: flex;
     align-items: center;
-    padding: 0 16px;
+}
+
+.content {
+    font-size: 14px;
+    color: #262626;
+    line-height: 1.5;
+}
+
+.content.truncated {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.more-button {
+    background: none;
+    border: none;
+    color: #8e8e8e;
+    padding: 0;
+    margin-left: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.post-actions-section {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 10px;
 }
 
 .post-action-button {
-    background: none;
-    border: none;
-    padding: 0;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 8px 16px;
     cursor: pointer;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.post-action-button:hover {
+    background-color: #f0f0f0;
 }
 
 .action-content {
     display: flex;
     align-items: center;
     gap: 8px;
+    justify-content: center;
 }
 
-.red-heart {
-    color: #e91e63 !important;
-}
-
-.red-text {
-    color: #e91e63 !important;
-}
-
-.post-content {
-    padding: 0 16px;
-    margin-bottom: 8px;
-}
-
-.content-wrapper {
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.content {
-    display: inline;
-}
-
-.content.truncated {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.more-button {
-    color: #666;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font-size: 14px;
+.mdi {
+    font-size: 18px;
 }
 
 .comments-section {
-    padding: 8px 16px;
-    border-top: 1px solid #eee;
+    padding: 0 16px 12px;
 }
 
 .comments-count-button {
-    color: #666;
     background: none;
     border: none;
+    color: #8e8e8e;
     padding: 0;
     cursor: pointer;
     font-size: 14px;
@@ -452,47 +603,28 @@ export default {
 .loading {
     text-align: center;
     padding: 20px;
-    color: #666;
-}
-
-.content-text {
-    white-space: pre-wrap;
-    margin-bottom: 8px;
-}
-
-.counts-section {
-    width: 100%;
-    padding: 0;
-}
-
-.counts-row {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 10px;
-}
-
-.likes-count, .comments-count {
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
-    margin: 0;
-}
-
-.likes-count:hover, .comments-count:hover {
-    text-decoration: underline;
-}
-
-.post-actions-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    border-top: 1px solid #eee;
+    color: #8e8e8e;
 }
 
 @media (max-width: 430px) {
-    .post-feed {
-        padding: 8px;
+    .post-list {
+        padding: 0;
     }
+    
+    .mdi {
+        font-size: 20px;
+    }
+    
+    .action-text {
+        font-size: 14px;
+    }
+}
+
+.red-heart {
+  color: #e91e63 !important;
+}
+
+.red-text {
+  color: #e91e63 !important;
 }
 </style>

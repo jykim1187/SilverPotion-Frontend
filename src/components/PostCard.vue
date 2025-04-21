@@ -2,30 +2,57 @@
     <div class="post-card">
         <div class="post-header">
             <div class="user-info">
-                <img :src="post.profileImage || require('@/assets/default-profile.png')" class="profile-image" alt="프로필 이미지">
+                <img 
+                    :src="post.profileImage" 
+                    class="profile-image" 
+                    alt="프로필 이미지"
+                    @error="handleImageError"
+                >
                 <span class="nickname">{{ post.nickname }}</span>
             </div>
             <div class="post-date">{{ formatDate(post.createdAt) }}</div>
         </div>
         
         <div class="post-content">
-            <div v-if="post.imageUrls && post.imageUrls.length > 0" class="post-images">
-                <img 
-                    v-for="(imageUrl, index) in post.imageUrls" 
-                    :key="index"
-                    :src="imageUrl" 
-                    alt="게시물 이미지"
-                    class="post-image"
-                >
+            <div v-if="post.type === 'VOTE'" class="vote-content">
+                <h3 class="vote-title">{{ post.title }}</h3>
+                <p class="vote-description">{{ post.description }}</p>
+                <div class="vote-options" v-if="post.voteOptions && post.voteOptions.length > 0">
+                    <div v-for="(option, index) in post.voteOptions" :key="index" class="vote-option">
+                        <input 
+                            type="checkbox" 
+                            v-if="post.multipleChoice"
+                            :id="'option-' + post.votedId + '-' + index"
+                            :value="option"
+                            v-model="selectedOptions"
+                        >
+                        <input 
+                            type="radio" 
+                            v-else
+                            :id="'option-' + post.votedId + '-' + index"
+                            :value="option"
+                            v-model="selectedOption"
+                            :name="'vote-' + post.votedId"
+                        >
+                        <label :for="'option-' + post.votedId + '-' + index">{{ option }}</label>
+                    </div>
+                    <button 
+                        class="vote-submit-btn" 
+                        @click="submitVote"
+                        :disabled="!canSubmitVote"
+                    >
+                        투표하기
+                    </button>
+                </div>
             </div>
-            <div class="post-text">
-                <span v-if="post.content.length > 100 && !showFullContent">
+            <div v-else class="post-text">
+                <span v-if="post.content && post.content.length > 100 && !showFullContent">
                     {{ post.content.substring(0, 100) }}...
                     <button class="show-more-btn" @click="showFullContent = true">더보기</button>
                 </span>
                 <span v-else>
                     {{ post.content }}
-                    <button v-if="post.content.length > 100 && showFullContent" 
+                    <button v-if="post.content && post.content.length > 100 && showFullContent" 
                             class="show-less-btn" 
                             @click="showFullContent = false">
                         접기
@@ -36,8 +63,8 @@
 
         <!-- 좋아요와 댓글 아이콘 -->
         <PostIcons
-          :is-liked="post.isLiked"
-          :like-count="post.likeCount"
+          :is-liked="post.isLike === 'Y'"
+          :like-count="post.voteLikeCount"
           :comment-count="post.commentCount"
           @toggle-like="toggleLike"
           @show-comments="focusComment"
@@ -86,11 +113,23 @@ export default {
     data() {
         return {
             newComment: '',
-            showFullContent: false
+            showFullContent: false,
+            selectedOptions: [],
+            selectedOption: null
+        }
+    },
+    computed: {
+        canSubmitVote() {
+            if (this.post.multipleChoice) {
+                return this.selectedOptions.length > 0;
+            } else {
+                return this.selectedOption !== null;
+            }
         }
     },
     methods: {
         formatDate(date) {
+            if (!date) return '';
             const d = new Date(date);
             const now = new Date();
             const diff = now - d;
@@ -106,7 +145,7 @@ export default {
             try {
                 const loginId = localStorage.getItem('loginId');
                 const response = await axios.post(
-                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${this.post.id}`,
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${this.post.votedId}`,
                     {},
                     {
                         headers: {
@@ -115,14 +154,48 @@ export default {
                     }
                 );
                 
-                const { likeCount, isLiked } = response.data.result;
+                const { voteLikeCount, isLike } = response.data.result;
                 this.$emit('update:post', {
                     ...this.post,
-                    likeCount,
-                    isLiked
+                    voteLikeCount,
+                    isLike
                 });
             } catch (error) {
                 console.error('좋아요 처리 중 오류가 발생했습니다:', error);
+                alert('좋아요 처리 중 오류가 발생했습니다.');
+            }
+        },
+        async submitVote() {
+            try {
+                const loginId = localStorage.getItem('loginId');
+                const selectedVotes = this.post.multipleChoice ? this.selectedOptions : [this.selectedOption];
+                
+                const response = await axios.post(
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/${this.post.votedId}`,
+                    {
+                        voteOptions: selectedVotes
+                    },
+                    {
+                        headers: {
+                            'X-User-LoginId': loginId
+                        }
+                    }
+                );
+                
+                // 투표 완료 후 상태 업데이트
+                this.$emit('update:post', {
+                    ...this.post,
+                    ...response.data.result
+                });
+                
+                // 선택 초기화
+                this.selectedOptions = [];
+                this.selectedOption = null;
+                
+                alert('투표가 완료되었습니다.');
+            } catch (error) {
+                console.error('투표 처리 중 오류가 발생했습니다:', error);
+                alert('투표 처리 중 오류가 발생했습니다.');
             }
         },
         focusComment() {
@@ -134,7 +207,7 @@ export default {
             try {
                 const loginId = localStorage.getItem('loginId');
                 const response = await axios.post(
-                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/${this.post.id}/comment`,
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/${this.post.votedId}/comment`,
                     {
                         content: this.newComment
                     },
@@ -152,7 +225,11 @@ export default {
                 this.newComment = '';
             } catch (error) {
                 console.error('댓글 작성 중 오류가 발생했습니다:', error);
+                alert('댓글 작성 중 오류가 발생했습니다.');
             }
+        },
+        handleImageError(event) {
+            event.target.src = require('@/assets/default-profile.png');
         }
     }
 }
@@ -181,10 +258,11 @@ export default {
 }
 
 .profile-image {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     object-fit: cover;
+    background-color: #f0f0f0;
 }
 
 .nickname {
@@ -320,6 +398,70 @@ export default {
     cursor: not-allowed;
 }
 
+.vote-content {
+    margin-bottom: 16px;
+}
+
+.vote-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.vote-description {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.vote-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.vote-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vote-option input[type="radio"],
+.vote-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.vote-option label {
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+.vote-submit-btn {
+    margin-top: 16px;
+    padding: 8px 16px;
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.vote-submit-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.vote-submit-btn:hover:not(:disabled) {
+    background-color: #1565c0;
+}
+
 @media (max-width: 430px) {
     .post-card {
         padding: 12px;
@@ -336,6 +478,23 @@ export default {
     
     .post-images {
         gap: 6px;
+    }
+    
+    .vote-title {
+        font-size: 16px;
+    }
+    
+    .vote-description {
+        font-size: 13px;
+    }
+    
+    .vote-option label {
+        font-size: 13px;
+    }
+    
+    .vote-submit-btn {
+        font-size: 13px;
+        padding: 6px 12px;
     }
 }
 </style> 

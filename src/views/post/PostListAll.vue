@@ -13,7 +13,7 @@
                 </div>
 
                 <!-- 게시물 이미지 -->
-                <div class="post-images" v-if="post.imageUrls && post.imageUrls.length">
+                <div class="post-images" v-if="post.type !== 'VOTE' && post.imageUrls && post.imageUrls.length">
                     <div class="slider-container">
                         <div class="slider" :style="{ transform: `translateX(-${post.currentSlide * 100}%)` }">
                             <img v-for="(image, index) in post.imageUrls" 
@@ -34,6 +34,34 @@
                         <button v-if="post.imageUrls.length > 1" 
                                 class="slider-button next" 
                                 @click.stop="nextSlide(post)">&gt;</button>
+                    </div>
+                </div>
+                
+                <!-- 투표 게시물인 경우 -->
+                <div v-if="post.type === 'VOTE'" class="vote-container">
+                    <div class="vote-header">
+                        <h3 class="vote-title">{{ post.title }}</h3>
+                        <p class="vote-description">{{ post.description }}</p>
+                    </div>
+                    <div class="vote-options">
+                        <div v-for="(option, index) in post.voteOptions" 
+                             :key="index" 
+                             class="vote-option"
+                             @click="selectVoteOption(post, index)">
+                            <div class="option-content">
+                                <span class="option-text">{{ option }}</span>
+                                <span class="option-count" v-if="post.voteCounts && post.voteCounts[index]">
+                                    {{ post.voteCounts[index] }}명
+                                </span>
+                            </div>
+                            <div class="option-progress" 
+                                 :style="{ width: calculateProgress(post, index) + '%' }">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vote-info">
+                        <span class="vote-count">{{ post.voteCount || 0 }}명 참여</span>
+                        <span class="vote-multiple" v-if="post.multipleChoice">복수선택 가능</span>
                     </div>
                 </div>
                 
@@ -148,14 +176,26 @@ export default {
                         isLike = true;
                     }
                     
-                    // 로컬 스토리지에서 좋아요 상태 가져오기
+                    // 로컬 스토리지에서 좋아요 상태와 개수 가져오기
                     const savedLikeState = localStorage.getItem(`like_state_${postId}`);
+                    const savedLikeCount = localStorage.getItem(`like_count_${postId}`);
+                    
                     if (savedLikeState) {
                         // 로컬 스토리지 값이 있으면 그 값을 우선 사용
                         isLike = savedLikeState === 'true';
                     } else {
                         // 없으면 서버에서 가져온 값을 로컬 스토리지에 저장
                         localStorage.setItem(`like_state_${postId}`, isLike.toString());
+                    }
+                    
+                    // 좋아요 개수 처리
+                    let likeCount = post.likeCount || 0;
+                    if (savedLikeCount) {
+                        // 로컬 스토리지에 저장된 좋아요 개수가 있으면 사용
+                        likeCount = parseInt(savedLikeCount, 10);
+                    } else {
+                        // 없으면 서버에서 가져온 값을 로컬 스토리지에 저장
+                        localStorage.setItem(`like_count_${postId}`, likeCount.toString());
                     }
                     
                     // 프로필 이미지 처리
@@ -167,6 +207,7 @@ export default {
                     return {
                         ...post,
                         postId,
+                        voteId: post.voteId || postId,
                         profileImage,
                         nickname: post.nickname || '익명',
                         createdAt: post.createdTime || post.createdAt || new Date().toISOString(),
@@ -175,7 +216,7 @@ export default {
                         showFullContent: false,
                         newComment: '',
                         isLike,
-                        likeCount: post.likeCount || 0,
+                        likeCount,
                         commentCount: post.commentCount || 0
                     };
                 });
@@ -236,15 +277,26 @@ export default {
                     post.likeCount = Math.max(0, post.likeCount - 1);
                 }
                 
-                // 로컬 스토리지에 상태 저장 (브라우저 새로고침 후에도 상태 유지)
+                // 로컬 스토리지에 상태와 개수 저장
                 localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
+                localStorage.setItem(`like_count_${post.postId}`, post.likeCount.toString());
                 
                 console.log('업데이트된 상태:', post.isLike, '좋아요 수:', post.likeCount);
                 
                 // 서버에 좋아요 상태 변경 요청
                 const loginId = localStorage.getItem('loginId');
+                let endpoint;
+
+                if (post.type === 'VOTE') {
+                    console.log('투표 게시물 - voteId:', post.voteId);
+                    endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/like/${post.voteId}`;
+                } else {
+                    console.log('일반 게시물 - postId:', post.postId);
+                    endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.postId}`;
+                }
+                
                 const response = await axios.post(
-                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.postId}`,
+                    endpoint,
                     {},
                     {
                         headers: {
@@ -260,21 +312,20 @@ export default {
                     // 서버에서 반환한 정확한 카운트로 업데이트
                     if (typeof result.likeCount === 'number') {
                         post.likeCount = result.likeCount;
+                        // 서버에서 받은 최신 좋아요 개수를 로컬 스토리지에 저장
+                        localStorage.setItem(`like_count_${post.postId}`, post.likeCount.toString());
                     }
                     
-                    // 서버에서 반환한 좋아요 상태 처리
-                    const serverIsLiked = result.isLiked === 'Y' || 
-                                        result.isLiked === 'y' || 
-                                        result.isLiked === true || 
-                                        result.isLiked === 1;
-                    
-                    // 클라이언트와 서버의 상태가 불일치하면 서버 상태로 동기화
-                    if (serverIsLiked !== post.isLike) {
-                        post.isLike = serverIsLiked;
-                        localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
+                    // 좋아요 버튼을 클릭했을 때의 동작에 따라 상태 설정
+                    if (post.isLike) {  // 좋아요를 누른 경우
+                        post.isLike = true;  // 강제로 true로 설정
+                        localStorage.setItem(`like_state_${post.postId}`, 'true');
+                    } else {  // 좋아요를 취소한 경우
+                        post.isLike = false;  // 강제로 false로 설정
+                        localStorage.setItem(`like_state_${post.postId}`, 'false');
                     }
                     
-                    console.log('서버 응답 후 상태:', post.isLike, '좋아요 수:', post.likeCount);
+                    console.log('최종 상태:', post.isLike, '좋아요 수:', post.likeCount);
                 }
             } catch (error) {
                 console.error('좋아요 처리 중 오류 발생:', error);
@@ -284,6 +335,7 @@ export default {
                     post.isLike = prevState.isLike;
                     post.likeCount = prevState.likeCount;
                     localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
+                    localStorage.setItem(`like_count_${post.postId}`, post.likeCount.toString());
                 }
             }
         },
@@ -336,6 +388,16 @@ export default {
         },
         showLikeList(postId) {
             console.log('좋아요 목록 표시:', postId);
+        },
+        calculateProgress(post, index) {
+            if (!post.voteCounts || post.voteCounts.length === 0 || post.voteCount === 0) {
+                return 0;
+            }
+            return (post.voteCounts[index] / post.voteCount) * 100;
+        },
+        selectVoteOption(post, index) {
+            // 투표 선택 로직 구현
+            console.log('Selected vote option:', index, 'for post:', post.postId);
         }
     }
 }
@@ -605,5 +667,93 @@ export default {
 
 .red-text {
   color: #e91e63 !important;
+}
+
+/* 투표 게시물 스타일 */
+.vote-container {
+    padding: 16px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    margin: 12px 16px;
+}
+
+.vote-header {
+    margin-bottom: 16px;
+}
+
+.vote-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.vote-description {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.vote-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vote-option {
+    position: relative;
+    background-color: white;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.vote-option:hover {
+    background-color: #f0f0f0;
+}
+
+.option-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1;
+    position: relative;
+}
+
+.option-text {
+    font-size: 14px;
+    color: #333;
+}
+
+.option-count {
+    font-size: 12px;
+    color: #666;
+}
+
+.option-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: rgba(0, 149, 246, 0.1);
+    border-radius: 8px;
+    transition: width 0.3s ease;
+}
+
+.vote-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #666;
+}
+
+.vote-count {
+    color: #0095f6;
+}
+
+.vote-multiple {
+    color: #666;
 }
 </style>
