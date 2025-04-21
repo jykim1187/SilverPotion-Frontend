@@ -10,7 +10,7 @@
                         <v-list>
                             <v-list-item
                                 v-for="chat in chatRoomList"
-                                :key="chat.id"
+                                :key="`${chat.id}-${chat.lastMessageTime}`"
                                 @click="joinChatRoom(chat.id)"
                                 class="chat-list-item"
                             >
@@ -21,12 +21,12 @@
                                 </template>
 
                                 <v-list-item-title class="d-flex justify-space-between">
-                                    <span class="font-weight-bold">{{ chat.otherUserNickname }}</span>
+                                    <span class="font-weight-bold">{{ chat.title }}</span>
                                     <span class="text-caption text-medium-emphasis">{{ formatTime(chat.lastMessageTime) }}</span>
                                 </v-list-item-title>
 
                                 <v-list-item-subtitle class="d-flex justify-space-between align-center">
-                                    <span class="text-truncate">{{ chat.lastMessage }}</span>
+                                    <span class="text-truncate">{{ chat.lastMessageContent || '메시지가 없습니다.' }}</span>
                                     <v-badge
                                         v-if="chat.unreadCount > 0"
                                         :content="chat.unreadCount"
@@ -48,6 +48,7 @@
 
 <script>
 import axios from 'axios';
+import WebSocketManager from '@/WebSocketManager';
 
 export default {
     data() {
@@ -55,12 +56,63 @@ export default {
             chatRoomList: [],
             showCreateRoomModal: false,
             newRoomTitle: "",
+            token: localStorage.getItem("token"),
+            senderLoginId: localStorage.getItem("loginId")
         }
     },
-    async created() {
-        this.loadChatRooms();
+    created() {
+    this.loadChatRooms();
+
+    const loginId = localStorage.getItem("loginId");
+    const topic = `/user/${loginId}/chat`;
+
+    WebSocketManager.replaceSubscribe(topic, (parsed) => {
+        console.log('📨 리스트용 메시지 수신:', parsed);
+
+        // 메시지에서 roomId 추출
+        if (parsed && parsed.roomId) {
+        this.updateChatRoom(parsed.roomId, parsed);
+        }
+    });
+    },
+    beforeRouteLeave(to, from, next) {
+        // this.disconnectWebSocket();
+        next();
+    },
+    beforeUnmount() {
+        this.disconnectWebSocket();
     },
     methods: {
+        
+        updateChatRoom(roomId, message) {
+            console.log('🔄 updateChatRoom called with:', { roomId, message });
+            const roomIndex = this.chatRoomList.findIndex(room => room.id == roomId);
+            console.log('Found room index:', roomIndex);
+            
+            if (roomIndex !== -1) {
+                // Vue의 반응성을 100% 보장하는 방식
+                this.$set(this.chatRoomList, roomIndex, {
+                    ...this.chatRoomList[roomIndex],
+                    lastMessageContent: message.content,
+                    lastMessageTime: message.createdAt || new Date().toISOString()
+                });
+                
+                // 채팅방 목록을 최신순으로 정렬
+                this.chatRoomList.sort((a, b) => {
+                    const timeA = new Date(a.lastMessageTime || a.createdAt);
+                    const timeB = new Date(b.lastMessageTime || b.createdAt);
+                    return timeB - timeA;
+                });
+                
+                console.log('✅ 채팅방 리스트 실시간 갱신됨:', this.chatRoomList);
+            } else {
+                console.warn('⚠️ 채팅방을 찾을 수 없음:', roomId);
+            }
+        },
+        disconnectWebSocket() {
+            const topic = `/user/${this.senderLoginId}/chat`;
+            WebSocketManager.unsubscribe(topic);
+        },
         async loadChatRooms() {
             try {
                 const response = await axios.get(
@@ -75,49 +127,23 @@ export default {
                         }
                     }
                 );
+                console.log('Chat rooms response:', response.data);
                 this.chatRoomList = response.data;
             } catch (error) {
                 console.error("❌ 채팅방 목록 불러오기 실패", error);
                 alert("채팅방 목록을 불러오지 못했습니다.");
             }
         },
+        
         async joinChatRoom(roomId) {
             try {
-                // 메시지 읽음 처리
-                await axios.patch(
-                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${roomId}/read`,
-                    null,
-                    {
-                        params: {
-                            userId: localStorage.getItem("userId"),
-                            messageId: 0
-                        },
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                            "X-User-LoginId": localStorage.getItem("loginId")
-                        }
-                    }
-                );
                 this.$router.push(`/chat/${roomId}`);
             } catch (error) {
                 console.error("❌ 채팅방 참여 실패", error);
                 alert("채팅방 참여 중 오류가 발생했습니다.");
             }
         },
-        async createChatRoom() {
-            const loginId = localStorage.getItem("loginId");
-            await axios.post(
-                `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/group/create?roomName=${this.newRoomTitle}`,
-                null,
-                {
-                    headers: {
-                        "X-User-LoginId": loginId // ✅ 헤더에 추가
-                    }
-                }
-            );
-            this.showCreateRoomModal = false;
-            this.loadChatRooms();
-        },
+        
         formatTime(datetime) {
             if (!datetime) return '';
             const date = new Date(datetime);

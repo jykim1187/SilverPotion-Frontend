@@ -41,29 +41,29 @@
 </template>
 
 <script>
-import SockJS from 'sockjs-client';
-import Stomp from 'webstomp-client';
+import WebSocketManager from '@/WebSocketManager';
 
 export default {
     data() {
         return {
             messages: [],
             newMessage: "",
-            stompClient: null,
+            userId: null,
+            roomId: null,
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
-            userId: null,
-            roomId: null
+            isSubscribed: false
         }
     },
     async created() {
+        console.log("🔥 채팅방 created() 실행됨");
         this.roomId = this.$route.params.roomId;
         this.userId = Number(localStorage.getItem("userId"));
         this.messages = [];
         this.connectWebsocket();
     },
     beforeRouteLeave(to, from, next) {
-        this.disconnectWebSocket();
+        // this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
@@ -71,45 +71,52 @@ export default {
     },
     methods: {
         connectWebsocket() {
-            if(this.stompClient && this.stompClient.connected) return;
-            
-            const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.senderLoginId}`);
-            this.stompClient = Stomp.over(socket);
-            
-            this.stompClient.connect(
-                { Authorization: `Bearer ${this.token}`,
-                    "X-User-LoginId": this.senderLoginId
-                 },
-                () => {
-                    this.stompClient.subscribe(
-                        `/sub/room/${this.roomId}`,
-                        (message) => {
-                            const parseMessage = JSON.parse(message.body);
-                            this.messages.push(parseMessage);
-                            this.scrollToBottom();
-                        },
-                        { Authorization: `Bearer ${this.token}`,
-                            "X-User-LoginId": this.senderLoginId
-                        }
-                    );
+            console.log("🔧 connectWebsocket 호출됨");
+            if (this.isSubscribed){
+                console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
+                return;
+            }
+            const loginId = localStorage.getItem("loginId");
+            const topic = `/user/${loginId}/chat`;
+
+            console.log("📡 replaceSubscribe 호출 예정 topic:", topic);
+
+            WebSocketManager.replaceSubscribe(topic, (message) => {
+                console.log('📨 ChatRoom용 메시지 수신:', message);
+                
+                if (!message) {
+                    console.warn("❌ message is undefined/null");
+                    return;
                 }
-            );
+                
+                if (!message.roomId) {
+                    console.warn("⚠️ message.roomId 없음, 전체 메시지:", message);
+                    return;
+                }
+                
+                if (message.roomId == this.roomId) {
+                    this.messages.push(message);
+                    this.scrollToBottom();
+                } else {
+                    console.log('📪 다른 방 메시지:', message.roomId, '현재 방:', this.roomId);
+                }
+            });
+            
+            this.isSubscribed = true;
         },
         sendMessage() {
             if(this.newMessage.trim() === "") return;
             
-            this.stompClient.send(
+            const message = {
+                roomId: this.roomId,
+                content: this.newMessage,
+                type: "TEXT"
+            };
+            
+            console.log('Sending message:', message);
+            WebSocketManager.send(
                 `/pub/room/${this.roomId}`,
-                JSON.stringify({
-                    roomId: this.roomId,
-                    content: this.newMessage,
-                    type: "TEXT"
-                }),
-                { 
-                    Authorization: `Bearer ${this.token}`,
-                    "X-User-LoginId": this.senderLoginId,
-                    "X-User-Id": localStorage.getItem("userId")
-                }
+                message
             );
             this.newMessage = "";
         },
@@ -119,19 +126,18 @@ export default {
                 chatBox.scrollTop = chatBox.scrollHeight;
             });
         },
-        disconnectWebSocket() {
-            if (this.stompClient && this.stompClient.connected) {
-                this.stompClient.unsubscribe(`/sub/room/${this.roomId}`);
-                this.stompClient.disconnect();
-            }
-        },
         formatTime(datetime) {
             if (!datetime) return '';
             const date = new Date(datetime);
             const hours = date.getHours().toString().padStart(2, '0');
             const minutes = date.getMinutes().toString().padStart(2, '0');
             return `${hours}:${minutes}`;
-        }
+        },
+        disconnectWebSocket() {
+            const topic = `/user/${this.senderLoginId}/chat`;
+            WebSocketManager.unsubscribe(topic);
+            this.isSubscribed = false;
+        },
     }
 }
 </script>

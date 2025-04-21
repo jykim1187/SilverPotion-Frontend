@@ -99,6 +99,7 @@
 <script>
 import axios from 'axios'
 import emitter from '@/event-bus';
+import WebSocketManager from '@/WebSocketManager';
 // import { jwtDecode } from 'jwt-decode'
 
 export default {
@@ -117,6 +118,7 @@ export default {
     }
   },
   methods: {
+    
      // 일반 로그인
     async doLogin() {
       try {
@@ -148,6 +150,9 @@ export default {
 
         // 리디렉션
         console.log("Login 성공! now routing to /");
+        WebSocketManager.token = token;
+        WebSocketManager.loginId = response.data.result.id;
+        WebSocketManager.connect();
         this.$router.push('/');
       } catch (error) {
         alert('로그인 실패! 아이디 또는 비밀번호를 확인하세요.')
