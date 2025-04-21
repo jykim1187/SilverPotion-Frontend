@@ -74,6 +74,10 @@
                             
                             <div>
                                 <div class="d-flex align-center">
+                                    <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+                                    <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
                                     <span class="font-weight-medium">{{ meeting.name }}</span>
                                     <v-chip
                                         size="x-small"
@@ -83,16 +87,14 @@
                                     >
                                         {{ meeting.category || '카테고리 정보 없음' }}
                                     </v-chip>
-                                    <div class="d-flex align-center ml-3">
-                                        <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
-                                        <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
-                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-map-marker</v-icon>
-                                        <span class="text-caption">{{ meeting.place }}</span>
-                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
-                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
-                                        <span class="text-caption">{{ meeting.cost }}원</span>
-                                    </div>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                    <span class="text-caption">{{ meeting.place }}</span>
+                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                    <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
+                                    <span class="text-caption">{{ meeting.cost }}원</span>
                                 </div>
                                 <div class="text-caption text-grey mt-1">
                                     <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
@@ -149,24 +151,41 @@ export default{
             return this.meetingsByDate[this.selectedDateIndex].meetings;
         },
         dateButtons() {
-            const today = new Date();
-            const buttons = [];
-            
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(today);
-                date.setDate(today.getDate() + i);
+            // 정모가 있는 날짜만 버튼으로 표시
+            if (this.meetingsByDate.length === 0) {
+                // 정모가 없는 경우 오늘부터 7일간 표시
+                const today = new Date();
+                const buttons = [];
                 
-                const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    
+                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                    
+                    buttons.push({
+                        date: this.formatDateForApi(date),
+                        day: date.getDate(),
+                        dayOfWeek: dayNames[date.getDay()],
+                        month: date.getMonth() + 1
+                    });
+                }
                 
-                buttons.push({
-                    date: this.formatDateForApi(date),
-                    day: date.getDate(),
-                    dayOfWeek: dayNames[date.getDay()],
-                    month: date.getMonth() + 1
+                return buttons;
+            } else {
+                // 정모가 있는 날짜만 버튼으로 표시
+                return this.meetingsByDate.map(dateGroup => {
+                    const date = new Date(dateGroup.date);
+                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                    
+                    return {
+                        date: dateGroup.date,
+                        day: date.getDate(),
+                        dayOfWeek: dayNames[date.getDay()],
+                        month: date.getMonth() + 1
+                    };
                 });
             }
-            
-            return buttons;
         }
     },
     mounted() {

@@ -21,35 +21,25 @@
             
             <!-- 카테고리 선택 단계 -->
             <div v-if="currentStep === 1">
-                <h2 class="text-h6 font-weight-medium mb-4">모임 카테고리 선택</h2>
+                <h2 class="text-h6 font-weight-bold mb-4">모임 카테고리 선택</h2>
                 
-                <!-- 메인 카테고리 선택 -->
+                <!-- 카테고리 선택 -->
                 <div class="category-container">
-                    <v-row>
-                        <!-- 첫 번째 줄 (6개) -->
-                        <v-col v-for="(category, index) in categories.slice(0, 6)" :key="index" cols="12" sm="6" md="4" lg="2">
+                    <v-row dense>
+                        <v-col v-for="category in categories" 
+                               :key="category.id" 
+                               cols="4" 
+                               sm="3" 
+                               md="2" 
+                               lg="2"
+                               class="pa-1"
+                        >
                             <div 
                                 class="category-item text-center" 
                                 :class="{ 'category-selected': selectedCategory === category.id }"
                                 @click="selectCategory(category.id)"
                             >
-                                <v-avatar size="50" class="mb-1">
-                                    <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
-                                </v-avatar>
-                                <div class="category-name">{{ category.name }}</div>
-                            </div>
-                        </v-col>
-                    </v-row>
-                    
-                    <v-row>
-                        <!-- 두 번째 줄 (6개) -->
-                        <v-col v-for="(category, index) in categories.slice(6)" :key="index + 6" cols="12" sm="6" md="4" lg="2">
-                            <div 
-                                class="category-item text-center" 
-                                :class="{ 'category-selected': selectedCategory === category.id }"
-                                @click="selectCategory(category.id)"
-                            >
-                                <v-avatar size="50" class="mb-1">
+                                <v-avatar size="40" class="mb-1">
                                     <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
                                 </v-avatar>
                                 <div class="category-name">{{ category.name }}</div>
@@ -58,41 +48,36 @@
                     </v-row>
                 </div>
                 
-                <!-- 상세 카테고리 선택 (메인 카테고리가 선택된 경우에만 표시) -->
-                <div v-if="selectedCategory && subCategories.length > 0" class="mt-8">
-                    <h3 class="text-subtitle-1 font-weight-medium mb-4">상세 카테고리 선택 (최대 2개)</h3>
-                    <v-alert v-if="selectedSubCategories.length >= 2" type="info" class="mb-4">
-                        최대 2개의 상세 카테고리를 선택할 수 있습니다.
-                    </v-alert>
-                    
+                <!-- 상세 카테고리 선택 -->
+                <div v-if="selectedCategory" class="mt-6">
+                    <h3 class="text-subtitle-1 font-weight-bold mb-3">상세 카테고리 선택</h3>
                     <div class="sub-category-container">
-                        <v-chip-group
-                            v-model="selectedSubCategories"
-                            column
-                            multiple
-                            max="2"
+                        <v-chip
+                            v-for="subCategory in subCategories"
+                            :key="subCategory.id"
+                            :color="selectedSubCategories.includes(subCategory.id) ? 'primary' : ''"
+                            :variant="selectedSubCategories.includes(subCategory.id) ? 'flat' : 'outlined'"
+                            class="ma-1"
+                            @click="toggleSubCategory(subCategory.id)"
                         >
-                            <v-chip
-                                v-for="subCategory in subCategories"
-                                :key="subCategory.id"
-                                :value="subCategory.id"
-                                filter
-                                variant="outlined"
-                                color="primary"
-                                class="ma-1"
-                            >
-                                {{ subCategory.name }}
-                            </v-chip>
-                        </v-chip-group>
+                            {{ subCategory.name }}
+                        </v-chip>
                     </div>
                 </div>
                 
-                <!-- 다음 단계 버튼 -->
-                <div class="d-flex justify-end mt-8">
+                <!-- 버튼 그룹 -->
+                <div class="d-flex justify-space-between mt-8">
+                    <v-btn
+                        variant="outlined"
+                        @click="handleBackButton"
+                    >
+                        이전
+                    </v-btn>
+                    
                     <v-btn
                         color="primary"
-                        :disabled="!selectedCategory || selectedSubCategories.length === 0"
                         @click="goToNextStep"
+                        :disabled="!selectedCategory || selectedSubCategories.length === 0"
                     >
                         다음
                     </v-btn>
@@ -431,6 +416,15 @@ export default {
                 // 카테고리 선택 단계에서는 이전 페이지로 이동
                 this.$router.go(-1);
             }
+        },
+        toggleSubCategory(subCategoryId) {
+            if (this.selectedSubCategories.includes(subCategoryId)) {
+                this.selectedSubCategories = this.selectedSubCategories.filter(id => id !== subCategoryId);
+            } else {
+                if (this.selectedSubCategories.length < 2) {
+                    this.selectedSubCategories.push(subCategoryId);
+                }
+            }
         }
     }
 };
@@ -459,6 +453,11 @@ export default {
 .category-item {
     cursor: pointer;
     padding: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     border-radius: 8px;
     transition: all 0.2s ease;
 }
@@ -472,10 +471,19 @@ export default {
 .category-name {
     font-size: 12px;
     margin-top: 4px;
+    text-align: center;
+    word-break: keep-all;
 }
 .sub-category-container {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+/* 모바일 화면에서 폰트 크기 조정 */
+@media (max-width: 600px) {
+    .category-name {
+        font-size: 10px;
+    }
 }
 </style>
