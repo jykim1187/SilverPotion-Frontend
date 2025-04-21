@@ -3,6 +3,9 @@
     <div class="dependents-toggle-section">
       <div class="me-section">
         <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectMyData">내 데이터</v-btn>
+        <v-btn small class="add-btn2" icon @click="showLinkRequestModal = true" v-if="dependents.length === 0 && protectors.length === 0">
+              <v-icon small>mdi-plus</v-icon>
+            </v-btn>
       </div>
       
       <div class="lists-container">
@@ -59,9 +62,31 @@
         <v-tab value="MONTHAVG">월간 평균</v-tab>
       </v-tabs>
     </div>
-    <!-- 헬스데이터 컴포넌트 호출 -->
-    <div class="health-data-container">
+
+    <!-- 뷰 전환 버튼 -->
+    <div class="view-toggle-container">
+      <v-btn 
+        :color="showHealthData ? 'primary' : ''" 
+        :outlined="!showHealthData"
+        @click="showHealthData = true">
+        건강 데이터
+      </v-btn>
+      <v-btn 
+        :color="!showHealthData ? 'primary' : ''" 
+        :outlined="showHealthData"
+        @click="showHealthData = false">
+        건강 리포트
+      </v-btn>
+    </div>
+    
+    <!-- 헬스데이터 컴포넌트 호출  -->
+    <div class="health-data-container" v-if="showHealthData">
       <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
+    </div>
+    
+    <!-- 헬스리포트 컴포넌트 호출 -->
+    <div class="health-report-container" v-else>
+      <HealthReportComponent :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
     </div>
     
     <!-- 피보호자 연결 요청 모달 -->
@@ -73,6 +98,7 @@
 
 <script>
 import HealthData from '@/components/HealthData.vue';
+import HealthReportComponent from '@/components/HealthReportComponent.vue';
 import LinkRequest from '@/components/LinkRequest.vue';
 import LinkRequestToProcteor from '@/components/LinkRequestToProcteor.vue';
 import axios from 'axios';
@@ -81,6 +107,7 @@ export default {
   name: 'HealthDataPage',
   components: {
     HealthData,
+    HealthReportComponent,
     LinkRequest,
     LinkRequestToProcteor
   },
@@ -95,7 +122,8 @@ export default {
       showLinkRequestModal: false,
       showLinkRequestModal2: false,
       selectedUserName: localStorage.getItem('userName'),
-      selectedLongId: null
+      selectedLongId: null,
+      showHealthData: true // 기본적으로 건강 데이터 화면 표시
     }
   },
  async mounted() {
@@ -164,7 +192,6 @@ export default {
     handleModalChange2(val) {
       this.showLinkRequestModal2 = val;
     }
-
   },
 }
 </script>
@@ -256,6 +283,15 @@ export default {
   background-color: #e0e0e0;
 }
 
+.add-btn2 {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  margin-left: 20px;
+}
+
 .period-selection {
   margin-bottom: 20px;
   background-color: white;
@@ -264,11 +300,19 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.health-data-container {
+.view-toggle-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.health-data-container, .health-report-container {
   background-color: white;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 /* 모바일 대응 */
