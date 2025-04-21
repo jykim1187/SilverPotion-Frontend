@@ -73,6 +73,7 @@
 
 <script>
 import DatePickerRange from "@/components/DatePickerRange.vue";
+import axios from 'axios';
 
 export default {
   name: 'HealthReportComponent',
@@ -160,7 +161,9 @@ export default {
       }
     }
   },
+
   methods: {
+
     toggleDatePicker() {
       this.showDatePicker = !this.showDatePicker;
     },
@@ -175,17 +178,22 @@ export default {
       }
     },
     
-    fetchReportData() {
-      // 실제 구현 시에는 API로 데이터를 가져옴
-      // 현재는 더미 데이터 사용
-      console.log(`리포트 데이터 가져오기: ${this.loginId}, ${this.type}, ${this.targetDate}`);
-      
+    async fetchReportData() {
+      const dto ={
+        "loginId" : this.loginId,
+        "type" : this.type,
+        "date" : this.currentDate
+      };
+      console.log("리포트",dto);
+      const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/allInOneReport`,dto);
+      console.log("리포트",response);
+      this.reportData = response.data.result;
       // 타입에 따라 다른 데이터 표시 (실제로는 API에서 가져온 데이터 사용)
-      if (this.type === 'WEEKAVG') {
-        this.reportData.summary = "주간 건강 데이터를 분석한 결과, 활동량이 증가하고 있습니다. 특히 심박수와 수면의 질이 개선되고 있어 긍정적입니다. 이대로 꾸준히 건강 관리를 계속하시면 좋겠습니다.";
-      } else if (this.type === 'MONTHAVG') {
-        this.reportData.summary = "한 달간의 건강 데이터를 종합했을 때, 전반적인 건강 패턴이 안정적입니다. 월초에 비해 월말로 갈수록 활동량이 증가하고 있으며, 평균 심박수도 정상 범위를 유지하고 있습니다.";
-      }
+      // if (this.type === 'WEEKAVG') {
+      //   this.reportData.summary = "주간 건강 데이터를 분석한 결과, 활동량이 증가하고 있습니다. 특히 심박수와 수면의 질이 개선되고 있어 긍정적입니다. 이대로 꾸준히 건강 관리를 계속하시면 좋겠습니다.";
+      // } else if (this.type === 'MONTHAVG') {
+      //   this.reportData.summary = "한 달간의 건강 데이터를 종합했을 때, 전반적인 건강 패턴이 안정적입니다. 월초에 비해 월말로 갈수록 활동량이 증가하고 있으며, 평균 심박수도 정상 범위를 유지하고 있습니다.";
+      // }
     }
   },
   mounted() {
