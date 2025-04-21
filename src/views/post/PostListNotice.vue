@@ -99,6 +99,7 @@
 <script>
 import PostHeader from '@/components/PostHeader.vue';
 import axios from 'axios';
+import { toggleLike } from '@/utils/likeUtils';
 
 export default {
     name: 'PostListNotice',
@@ -260,75 +261,11 @@ export default {
             }
         },
         async toggleLike(post) {
-            // 현재 상태 저장 (롤백용)
-            const prevState = {
-                isLike: post.isLike,
-                likeCount: post.likeCount
-            };
-            
             try {
-                console.log('현재 좋아요 상태:', post.isLike, '좋아요 수:', post.likeCount);
-                
-                // UI 즉시 업데이트 (클릭 시 바로 효과가 보이도록)
-                post.isLike = !post.isLike;
-                
-                // 좋아요 수 업데이트
-                if (post.isLike) {
-                    // 좋아요 활성화 시 카운트 증가
-                    post.likeCount += 1;
-                } else {
-                    // 좋아요 비활성화 시 카운트 감소 (0 미만으로 내려가지 않도록)
-                    post.likeCount = Math.max(0, post.likeCount - 1);
-                }
-                
-                // 로컬 스토리지에 상태 저장 (브라우저 새로고침 후에도 상태 유지)
-                localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
-                
-                console.log('업데이트된 상태:', post.isLike, '좋아요 수:', post.likeCount);
-                
-                // 서버에 좋아요 상태 변경 요청
-                const loginId = localStorage.getItem('loginId');
                 const endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.postId}`;
-                
-                const response = await axios.post(
-                    endpoint,
-                    {},
-                    {
-                        headers: {
-                            'X-User-LoginId': loginId
-                        }
-                    }
-                );
-                
-                // 서버 응답 처리
-                if (response.data && response.data.result) {
-                    const result = response.data.result;
-                    
-                    // 서버에서 반환한 정확한 카운트로 업데이트
-                    if (typeof result.likeCount === 'number') {
-                        post.likeCount = result.likeCount;
-                    }
-                    
-                    // 좋아요 버튼을 클릭했을 때의 동작에 따라 상태 설정
-                    if (post.isLike) {  // 좋아요를 누른 경우
-                        post.isLike = true;  // 강제로 true로 설정
-                        localStorage.setItem(`like_state_${post.postId}`, 'true');
-                    } else {  // 좋아요를 취소한 경우
-                        post.isLike = false;  // 강제로 false로 설정
-                        localStorage.setItem(`like_state_${post.postId}`, 'false');
-                    }
-                    
-                    console.log('최종 상태:', post.isLike, '좋아요 수:', post.likeCount);
-                }
+                await toggleLike(post, endpoint);
             } catch (error) {
-                console.error('좋아요 처리 중 오류 발생:', error);
-                
-                // 오류 발생 시 이전 상태로 복원
-                if (prevState) {
-                    post.isLike = prevState.isLike;
-                    post.likeCount = prevState.likeCount;
-                    localStorage.setItem(`like_state_${post.postId}`, post.isLike.toString());
-                }
+                console.error('좋아요 처리 중 오류가 발생했습니다:', error);
             }
         },
         showMore(post) {

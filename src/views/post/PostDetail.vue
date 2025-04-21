@@ -226,6 +226,7 @@
 
 <script>
 import axios from 'axios';
+import { toggleLike } from '@/utils/likeUtils';
 
 export default {
   name: 'PostDetail',
@@ -390,49 +391,12 @@ export default {
     async toggleLike() {
       if (!this.post) return;
       
-      // 현재 상태 저장 (롤백용)
-      const prevState = {
-        isLike: this.post.isLike,
-        likeCount: this.post.likeCount
-      };
-      
       try {
-        // UI 즉시 업데이트
-        this.post.isLike = !this.post.isLike;
-        
-        // 좋아요 수 업데이트
-        if (this.post.isLike) {
-          this.post.likeCount += 1;
-        } else {
-          this.post.likeCount = Math.max(0, this.post.likeCount - 1);
-        }
-        
-        // 로컬 스토리지에 상태 저장
-        localStorage.setItem(`like_state_${this.post.id}`, this.post.isLike.toString());
-        
-        const loginId = localStorage.getItem('loginId');
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${this.post.id}`,
-          {},
-          {
-            headers: {
-              'X-User-LoginId': loginId
-            }
-          }
-        );
-
-        if (response.data && response.data.result) {
-          const result = response.data.result;
-          if (typeof result.likeCount === 'number') {
-            this.post.likeCount = result.likeCount;
-          }
-        }
+        const endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${this.post.id}`;
+        await toggleLike(this.post, endpoint);
       } catch (error) {
+        // 에러는 이미 likeUtils에서 처리되었으므로 여기서는 추가적인 에러 처리가 필요한 경우에만 처리
         console.error('좋아요 처리 중 오류가 발생했습니다:', error);
-        // 오류 발생 시 이전 상태로 복원
-        this.post.isLike = prevState.isLike;
-        this.post.likeCount = prevState.likeCount;
-        localStorage.setItem(`like_state_${this.post.id}`, this.post.isLike.toString());
       }
     },
     async toggleCommentLike(comment) {
