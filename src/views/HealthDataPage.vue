@@ -1,24 +1,57 @@
 <template>
   <div class="health-data-page">
     <div class="dependents-toggle-section">
-      <div class="data-toggle">
+      <div class="me-section">
         <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectMyData">내 데이터</v-btn>
-        <!-- 상단 피보호자 목록 -->
-        <div class="dependents-list" v-if="dependents.length > 0">
-          <v-btn 
-            v-for="dependent in dependents" 
-            :key="dependent.userId" 
-            small 
-            class="dependent-btn" 
-            :class="{ active: selectedUser === dependent.userId }"
-            @click="selectdependent(dependent)">
-            {{ dependent.name }}
-          </v-btn>
-          <!-- 피보호자 연결 요청 버튼 -->
+        <v-btn small class="add-btn2" icon @click="showLinkRequestModal = true" v-if="dependents.length === 0 && protectors.length === 0">
+              <v-icon small>mdi-plus</v-icon>
+            </v-btn>
+      </div>
+      
+      <div class="lists-container">
+        <!-- 피보호자 목록 섹션 -->
+        <div class="list-section dependents-section" v-if="dependents.length > 0">
+          <div class="list-header">
+            <v-icon small color="primary" class="mr-1">mdi-account-child</v-icon>
+            <span>피보호자</span>
+          </div>
+          <div class="list-content">
+            <v-btn 
+              v-for="dependent in dependents" 
+              :key="dependent.userId" 
+              small 
+              class="dependent-btn" 
+              :class="{ active: selectedUser === dependent.userId }"
+              @click="selectdependent(dependent)">
+              {{ dependent.name }}
+            </v-btn>
+            <v-btn small class="add-btn" icon @click="showLinkRequestModal = true">
+              <v-icon small>mdi-plus</v-icon>
+            </v-btn>
+          </div>
         </div>
-        <v-btn small class="add-dependent-btn" icon @click="showLinkRequestModal = true">
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
+        
+        <!-- 보호자 목록 섹션 -->
+        <div class="list-section guardians-section" v-if="protectors.length > 0">
+          <div class="list-header">
+            <v-icon small color="primary" class="mr-1">mdi-account-tie</v-icon>
+            <span>보호자</span>
+          </div>
+          <div class="list-content">
+            <v-btn 
+              v-for="protector in protectors" 
+              :key="protector.userId" 
+              small 
+              class="guardian-btn" 
+              :class="{ active: selectedUser === protector.userId }"
+              @click="selectProtector(protector)">
+              {{ protector.name }}
+            </v-btn>
+            <v-btn small class="add-btn" icon @click="showLinkRequestModal2 = true">
+              <v-icon small>mdi-plus</v-icon>
+            </v-btn>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -29,26 +62,54 @@
         <v-tab value="MONTHAVG">월간 평균</v-tab>
       </v-tabs>
     </div>
-    <!-- 헬스데이터 컴포넌트 호출 -->
-    <div class="health-data-container">
+
+    <!-- 뷰 전환 버튼 -->
+    <div class="view-toggle-container">
+      <v-btn 
+        :color="showHealthData ? 'primary' : ''" 
+        :outlined="!showHealthData"
+        @click="showHealthData = true">
+        건강 데이터
+      </v-btn>
+      <v-btn 
+        :color="!showHealthData ? 'primary' : ''" 
+        :outlined="showHealthData"
+        @click="showHealthData = false">
+        건강 리포트
+      </v-btn>
+    </div>
+    
+    <!-- 헬스데이터 컴포넌트 호출  -->
+    <div class="health-data-container" v-if="showHealthData">
       <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
+    </div>
+    
+    <!-- 헬스리포트 컴포넌트 호출 -->
+    <div class="health-report-container" v-else>
+      <HealthReportComponent :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
     </div>
     
     <!-- 피보호자 연결 요청 모달 -->
     <LinkRequest v-model="showLinkRequestModal" @input="handleModalChange" />
+    <!-- 보호자 연결 요청 모달 -->
+    <LinkRequestToProcteor v-model="showLinkRequestModal2" @input="handleModalChange2" />
   </div>
 </template>
 
 <script>
 import HealthData from '@/components/HealthData.vue';
+import HealthReportComponent from '@/components/HealthReportComponent.vue';
 import LinkRequest from '@/components/LinkRequest.vue';
+import LinkRequestToProcteor from '@/components/LinkRequestToProcteor.vue';
 import axios from 'axios';
 
 export default {
   name: 'HealthDataPage',
   components: {
     HealthData,
-    LinkRequest
+    HealthReportComponent,
+    LinkRequest,
+    LinkRequestToProcteor
   },
   data() {
     return { 
@@ -56,17 +117,30 @@ export default {
       selectedUser: localStorage.getItem('loginId') || '',
       selectedType: 'DAY',
       dependents: [],
+      protectors: [],
       currentdependent: null,
       showLinkRequestModal: false,
-      selectedUserName: localStorage.getItem('userName') || ''
+      showLinkRequestModal2: false,
+      selectedUserName: localStorage.getItem('userName'),
+      selectedLongId: null,
+      showHealthData: true // 기본적으로 건강 데이터 화면 표시
     }
   },
  async mounted() {
     // 내 피보호자 목록 받아오기 백엔드로부터
     const dependentData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myDependentList`);
     this.dependents = dependentData.data.result;
-    console.log(dependentData);
-    console.log(this.dependents);
+    console.log("피보호자", this.dependents);
+    
+    // 내 보호자 목록 받아오기 (API가 실제로 구현되어 있는지 확인 필요)
+    try {
+      const protectorData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myProtectList`);
+      this.protectors = protectorData.data.result;
+      console.log("보호자", this.protectors);
+    } catch (error) {
+      console.error("보호자 목록 가져오기 실패:", error);
+      this.protectors = []; // 에러 시 빈 배열 할당
+    }
   },
   computed: {
     currentUserId() {
@@ -100,14 +174,23 @@ export default {
     selectMyData() {
       this.selectedUser = this.me;
       this.selectedUserName = localStorage.getItem('userName') || '';
+      this.selectedLongId = null;
     },
     selectdependent(dependent) {
       this.selectedUser = dependent.loginId;
       this.selectedLongId = dependent.userId;
       this.selectedUserName = dependent.name;
     },
+    selectProtector(protector) {
+      this.selectedUser = protector.loginId;
+      this.selectedLongId = protector.userId;
+      this.selectedUserName = protector.name;
+    },
     handleModalChange(val) {
       this.showLinkRequestModal = val;
+    },
+    handleModalChange2(val) {
+      this.showLinkRequestModal2 = val;
     }
   },
 }
@@ -125,57 +208,88 @@ export default {
 .dependents-toggle-section {
   background-color: white;
   border-radius: 12px;
-  padding: 10px 15px;
+  padding: 15px;
   margin-bottom: 15px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.data-toggle {
-  display: flex;
-  align-items: center;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding: 2px;
+.me-section {
+  margin-bottom: 15px;
 }
 
-.me-btn, .dependent-btn, .add-dependent-btn {
-  margin-right: 8px;
+.lists-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.list-section {
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  padding: 10px 15px;
+}
+
+.dependents-section {
+  border-left: 4px solid #4caf50; /* 피보호자 섹션은 초록색 */
+}
+
+.guardians-section {
+  border-left: 4px solid #2196f3; /* 보호자 섹션은 파란색 */
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.list-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.me-btn, .dependent-btn, .guardian-btn, .add-btn {
   border-radius: 20px;
 }
 
-.me-btn.active, .dependent-btn.active {
+.me-btn.active, .dependent-btn.active, .guardian-btn.active {
   background-color: #3f51b5;
   color: white;
 }
 
 .me-btn {
   font-weight: bold;
+  background-color: #e0e0e0;
 }
 
-.add-dependent-btn {
-  min-width: 36px;
-  width: 36px;
-  height: 36px;
+.dependent-btn {
+  background-color: #e8f5e9; /* 연한 초록색 배경 */
+}
+
+.guardian-btn {
+  background-color: #e3f2fd; /* 연한 파란색 배경 */
+}
+
+.add-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background-color: #e0e0e0;
 }
 
-.dependents-list {
-  display: flex;
-  margin-left: 8px;
-}
-
-.user-id {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 4px;
-  color: #333;
-}
-
-.user-status {
-  font-size: 0.9rem;
-  color: #666;
-  margin: 0;
+.add-btn2 {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  margin-left: 20px;
 }
 
 .period-selection {
@@ -186,11 +300,31 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.health-data-container {
+.view-toggle-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.health-data-container, .health-report-container {
   background-color: white;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+/* 모바일 대응 */
+@media (min-width: 768px) {
+  .lists-container {
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  .list-section {
+    flex: 1;
+  }
 }
 </style>
 

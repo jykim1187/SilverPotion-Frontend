@@ -2,7 +2,7 @@
   <div class="health-data-page">
     <div class="dependents-toggle-section">
       <div class="data-toggle">
-        <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectedUser = me">내 데이터</v-btn>
+        <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectMyData">내 데이터</v-btn>
         <!-- 상단 피보호자 목록 -->
         <div class="dependents-list" v-if="dependents.length > 0">
           <v-btn 
@@ -31,7 +31,7 @@
     </div>
     <!-- 헬스데이터 컴포넌트 호출 -->
     <div class="health-data-container">
-      <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" />
+      <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
     </div>
     
     <!-- 피보호자 연결 요청 모달 -->
@@ -57,14 +57,15 @@ export default {
       selectedType: 'DAY',
       dependents: [],
       currentdependent: null,
-      showLinkRequestModal: false
+      showLinkRequestModal: false,
+      selectedUserName: localStorage.getItem('userName')
     }
   },
  async mounted() {
     // 내 피보호자 목록 받아오기 백엔드로부터
     const dependentData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myDependentList`);
     this.dependents = dependentData.data.result;
-    console.log(this.dependents);
+    console.log("피보호자",this.dependents);
   },
   computed: {
     currentUserId() {
@@ -95,8 +96,14 @@ export default {
     }
   },
   methods: {
+    selectMyData() {
+      this.selectedUser = this.me;
+      this.selectedUserName = localStorage.getItem('userName') || '';
+    },
     selectdependent(dependent) {
-      this.selectedUser = dependent.userId;
+      this.selectedUser = dependent.loginId;
+      this.selectedLongId = dependent.userId;
+      this.selectedUserName = dependent.name;
     },
     handleModalChange(val) {
       this.showLinkRequestModal = val;

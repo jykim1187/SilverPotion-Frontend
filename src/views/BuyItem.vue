@@ -180,7 +180,8 @@ export default {
                         const result =verifyRes.data.result;
                         console.log(result)
                         this.showSuccessMessage = true;
-                        this.$router.push('/silverpotion/healthdatapage');
+                        this.$router.push('/silverpotion/');
+                        // this.$router.go(-2);
                         } else{
                             alert("결제실패"+rsp.error_msg)
                         }

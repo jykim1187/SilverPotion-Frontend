@@ -6,21 +6,25 @@
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
                 <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">{{ gatheringName }}</h1>
+                <!-- 모임 메뉴 버튼 -->
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn icon v-bind="props" flat>
+                        <v-btn icon v-bind="props">
                             <v-icon>mdi-dots-vertical</v-icon>
                         </v-btn>
                     </template>
                     <v-list>
-                        <v-list-item @click="showLeaveDialog = true">
+                        <v-list-item v-if="isGatheringLeader" @click="goToUpdateGathering">
+                            <v-list-item-title>모임 수정</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item v-if="isGatheringMember && !isGatheringLeader" @click="showLeaveDialog = true">
                             <v-list-item-title>모임 탈퇴</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item v-if="isGatheringLeader" @click="showDisbandDialog = true">
+                            <v-list-item-title class="text-error">모임 해체</v-list-item-title>
                         </v-list-item>
                         <v-list-item @click="showReportDialog = true">
                             <v-list-item-title>모임 신고</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item>
-                            <v-list-item-title>취소</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-menu>
@@ -88,7 +92,7 @@
                                 <p>예정된 정기모임이 없습니다.</p>
                             </div>
                             
-                            <v-card v-for="meeting in meetings" :key="meeting.meetingId" class="mb-4" variant="outlined">
+                            <v-card v-for="meeting in sortedMeetings" :key="meeting.meetingId" class="mb-4" variant="outlined">
                                 <div class="d-flex flex-column pa-4">
                                     <div class="text-caption text-primary mb-1">{{ formatDate(meeting.meetingDate) }}</div>
                                     
@@ -96,8 +100,18 @@
                                     <div class="d-flex justify-space-between align-center mb-3">
                                         <div class="text-subtitle-1 font-weight-bold">{{ meeting.name }}</div>
                                         
-                                        <!-- 참석/취소 버튼 -->
-                                        <div>
+                                        <!-- 정모 수정 버튼 (정모 생성자에게만 표시) -->
+                                        <div class="d-flex align-center">
+                                            <v-btn
+                                                v-if="isCreator(meeting)"
+                                                icon="mdi-pencil"
+                                                size="small"
+                                                color="primary"
+                                                class="mr-2"
+                                                @click="goToUpdateMeeting(meeting.meetingId)"
+                                            ></v-btn>
+                                            
+                                            <!-- 참석/취소 버튼 -->
                                             <v-btn
                                                 v-if="!isAttending(meeting) && isGatheringMember"
                                                 color="primary"
@@ -289,16 +303,60 @@
             </v-card>
         </v-dialog>
 
+        <!-- 모임 해체 다이얼로그 -->
+        <v-dialog v-model="showDisbandDialog" max-width="400">
+            <v-card>
+                <v-card-title class="text-h6">모임 해체</v-card-title>
+                <v-card-text>
+                    <p class="mb-3">정말로 모임을 해체하시겠습니까?</p>
+                    <p class="text-caption text-error">이 작업은 되돌릴 수 없으며, 모든 모임 데이터가 삭제됩니다.</p>
+                    <v-text-field
+                        v-model="disbandConfirmText"
+                        label="확인을 위해 '해체'를 입력하세요"
+                        variant="outlined"
+                        class="mt-4"
+                        :rules="[v => v === '해체' || '정확히 \'해체\'를 입력해주세요']"
+                    ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey-darken-1" variant="text" @click="showDisbandDialog = false">취소</v-btn>
+                    <v-btn 
+                        color="error" 
+                        variant="text" 
+                        @click="disbandGathering"
+                        :disabled="disbandConfirmText !== '해체'"
+                    >
+                        해체
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- 모임 신고 다이얼로그 -->
         <v-dialog v-model="showReportDialog" max-width="400">
             <v-card>
                 <v-card-title class="text-h6">모임 신고</v-card-title>
                 <v-card-text>
+                    <v-select
+                        v-model="reportSmallCategory"
+                        label="신고 사유 선택"
+                        :items="reportCategories"
+                        item-title="text"
+                        item-value="value"
+                        variant="outlined"
+                        required
+                        :rules="[v => !!v || '신고 사유를 선택해주세요']"
+                        class="mb-4"
+                    ></v-select>
+                    
                     <v-textarea
-                        v-model="reportReason"
-                        label="신고 사유"
-                        hint="신고 사유를 자세히 작성해주세요."
+                        v-model="reportContent"
+                        label="상세 내용"
+                        hint="신고 사유에 대한 상세 내용을 작성해주세요."
                         rows="4"
+                        variant="outlined"
+                        :rules="[v => !!v || '상세 내용을 입력해주세요']"
                     ></v-textarea>
                 </v-card-text>
                 <v-card-actions>
@@ -371,7 +429,16 @@ export default{
             gatheringLeaderId: null,
             showLeaveDialog: false,
             showReportDialog: false,
-            reportReason: '',
+            reportSmallCategory: '',
+            reportContent: '',
+            reportCategories: [
+                { text: '성적 행위', value: 'SEXUAL_CONTENT' },
+                { text: '혐오 발언', value: 'HATE_SPEECH' },
+                { text: '사기', value: 'FRAUD' },
+                { text: '폭력', value: 'VIOLENCE' },
+                { text: '불법', value: 'ILLEGAL_ACT' },
+                { text: '따돌림', value: 'BULLYING' }
+            ],
             activeTab: 'home',
             isGatheringMember: false,
             userList: [],
@@ -381,7 +448,9 @@ export default{
             memberSearchQuery: '',
             filteredMembers: [],
             showJoinDialog: false,
-            greetingMessage: ''
+            greetingMessage: '',
+            showDisbandDialog: false,
+            disbandConfirmText: ''
         }
     },
     computed: {
@@ -391,6 +460,13 @@ export default{
         },
         currentUserId() {
             return parseInt(localStorage.getItem('userId'), 10);
+        },
+        sortedMeetings() {
+            return [...this.meetings].sort((a, b) => {
+                const dateA = new Date(a.meetingDate + ' ' + a.meetingTime);
+                const dateB = new Date(b.meetingDate + ' ' + b.meetingTime);
+                return dateA - dateB;
+            });
         }
     },
     mounted() {
@@ -424,11 +500,13 @@ export default{
             try {
                 const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}/userList`);
                 this.userList = response.data.result || [];
-                this.filteredMembers = [...this.userList]; // 초기 필터링된 멤버 목록 설정
+                
+                // 상태가 ACTIVATE인 멤버만 필터링
+                this.filteredMembers = this.userList.filter(member => member.status === 'ACTIVATE');
                 
                 const currentUserId = localStorage.getItem('userId');
                 const currentUserIdNum = parseInt(currentUserId, 10);
-                this.isGatheringMember = this.userList.some(user => user.userId === currentUserIdNum);
+                this.isGatheringMember = this.userList.some(user => user.userId === currentUserIdNum && user.status === 'ACTIVATE');
                 
                 console.log('현재 사용자 ID:', currentUserIdNum);
                 console.log('모임 회원 목록:', this.userList);
@@ -463,29 +541,36 @@ export default{
         },
         async leaveGathering() {
             try {
-                await axios.delete(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/withdraw/${this.gatheringId}`);
+                await axios.patch(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/withdraw/${this.gatheringId}`);
                 this.showLeaveDialog = false;
+                alert('모임을 성공적으로 탈퇴했습니다.');
                 this.$router.push('/silverpotion/gathering/main');
             } catch (error) {
                 console.error('모임 탈퇴에 실패했습니다:', error);
             }
         },
         async reportGathering() {
-            if (!this.reportReason.trim()) {
-                alert('신고 사유를 입력해주세요.');
+            if (!this.reportSmallCategory || !this.reportContent.trim()) {
+                alert('신고 사유와 상세 내용을 모두 입력해주세요.');
                 return;
             }
             
             try {
-                await axios.post(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/report`, {
-                    gatheringId: this.gatheringId,
-                    reason: this.reportReason
+                await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/report/create`, {
+                    referenceId: this.gatheringId,
+                    reportBigCategory: 'GATHERING',
+                    reportSmallCategory: this.reportSmallCategory,
+                    content: this.reportContent
                 });
+                
                 this.showReportDialog = false;
-                this.reportReason = '';
+                this.reportSmallCategory = '';
+                this.reportContent = '';
+                
                 alert('신고가 접수되었습니다.');
             } catch (error) {
                 console.error('모임 신고에 실패했습니다:', error);
+                alert('모임 신고에 실패했습니다. 다시 시도해주세요.');
             }
         },
         // 사용자가 정기모임에 참석 중인지 확인
@@ -554,13 +639,14 @@ export default{
         // 멤버 검색
         searchMembers() {
             if (!this.memberSearchQuery.trim()) {
-                this.filteredMembers = [...this.userList];
+                // 상태가 ACTIVATE인 멤버만 필터링
+                this.filteredMembers = this.userList.filter(member => member.status === 'ACTIVATE');
                 return;
             }
             
             const query = this.memberSearchQuery.toLowerCase();
             this.filteredMembers = this.userList.filter(member => 
-                member.nickname.toLowerCase().includes(query)
+                member.status === 'ACTIVATE' && member.nickname.toLowerCase().includes(query)
             );
         },
         
@@ -600,6 +686,25 @@ export default{
             } catch (error) {
                 console.error('모임 가입에 실패했습니다:', error);
                 this.alertMessage = '모임 가입에 실패했습니다.';
+                this.showAlert = true;
+            }
+        },
+        // 정모 수정 페이지로 이동
+        goToUpdateMeeting(meetingId) {
+            this.$router.push(`/silverpotion/meeting/update/${meetingId}`);
+        },
+        async disbandGathering() {
+            if (this.disbandConfirmText !== '해체') return;
+            
+            try {
+                await axios.patch(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/disband/${this.gatheringId}`);
+                
+                this.showDisbandDialog = false;
+                alert('모임이 성공적으로 해체되었습니다.');
+                this.$router.push('/silverpotion/gathering/main');
+            } catch (error) {
+                console.error('모임 해체에 실패했습니다:', error);
+                this.alertMessage = '모임 해체에 실패했습니다. 다시 시도해주세요.';
                 this.showAlert = true;
             }
         },
