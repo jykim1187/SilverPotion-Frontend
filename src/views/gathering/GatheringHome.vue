@@ -70,12 +70,14 @@
                 <v-window-item value="home">
                     <div class="home-content px-4">
                         <!-- 모임 사진 -->
-                        <div class="mb-6">
+                        <div class="mb-6 gathering-image-container">
                             <v-img
                                 :src="gatheringImage || require('@/assets/default-gathering-main.png')"
                                 height="200"
-                                cover
+                                :width="380"
                                 class="gathering-image"
+                                contain
+                                position="center"
                             ></v-img>
                         </div>
                         
@@ -481,10 +483,11 @@
         <!-- 가입하기 버튼 (모임 멤버가 아닌 경우에만 표시) -->
         <v-btn
             v-if="!isGatheringMember"
-            color="primary"
             class="join-btn"
             @click="showJoinDialog = true"
             elevation="3"
+            rounded="lg"
+            style="background-color: #E8F1FD; color: #1976d2;"
         >
             가입하기
         </v-btn>
@@ -830,8 +833,6 @@ export default{
     max-width: 768px; /* 앱 컨테이너 크기에 맞게 조정 */
     margin: 0 auto;
     width: 100%;
-    border-radius: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* 콘텐츠 래퍼 */
@@ -873,10 +874,21 @@ export default{
 }
 
 /* 모임 이미지 */
-.gathering-image {
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.gathering-image-container {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border-radius: 8px;
     overflow: hidden;
+}
+
+.gathering-image {
+    max-width: 380px;
+    height: 200px;
+    object-fit: contain;
+    margin: 0 auto;
 }
 
 /* 모임 정보 섹션 */
@@ -977,8 +989,8 @@ export default{
 }
 
 .meeting-image-container {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
     border-radius: 8px;
     overflow: hidden;
     flex-shrink: 0;
@@ -1081,7 +1093,7 @@ export default{
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
-    min-width: 120px;
+    min-width: 50%;
     height: 48px;
     border-radius: 24px;
     font-weight: 600;

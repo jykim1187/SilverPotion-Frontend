@@ -118,7 +118,7 @@
         <div class="mt-8">
             <div class="d-flex justify-space-between align-center mb-4">
                 <h2 class="text-h6 font-weight-medium">추천 모임</h2>
-                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/search')">
+                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/recommendGathering')">
                     더보기 <v-icon>mdi-chevron-right</v-icon>
                 </v-btn>
             </div>
@@ -209,10 +209,9 @@
                         <v-slide-group-item
                             v-for="(dateInfo, index) in dateButtons"
                             :key="index"
-                            v-slot="{ isSelected, toggle }"
                         >
-                            <div class="date-btn-wrapper" @click="toggle">
-                                <div class="date-btn" :class="{ 'date-btn-selected': isSelected }">
+                            <div class="date-btn-wrapper" @click="selectDate(index)">
+                                <div class="date-btn" :class="{ 'date-btn-selected': selectedDateIndex === index }">
                                     <div class="date-month">{{ dateInfo.month }}월</div>
                                     <div class="date-day">{{ dateInfo.day }}</div>
                                     <div class="date-weekday">{{ dateInfo.dayOfWeek }}</div>
@@ -282,9 +281,9 @@
         <!-- 모임 생성 버튼 -->
         <v-btn
             class="create-gathering-btn"
-            color="primary"
+            style="background-color: #E8F1FD; color: #1976d2;"
             icon
-            size="large"
+            size="70px"
             @click="showCreateDialog = true"
         >
             <v-icon>mdi-plus</v-icon>
@@ -426,7 +425,7 @@ export default{
             }
         },
         selectedDateMeetings() {
-            if (this.meetingsByDate.length === 0 || this.selectedDateIndex >= this.meetingsByDate.length) {
+            if (this.meetingsByDate.length === 0 || this.selectedDateIndex === null || this.selectedDateIndex < 0 || this.selectedDateIndex >= this.meetingsByDate.length) {
                 return [];
             }
             
@@ -571,6 +570,11 @@ export default{
         getCategoryName(categoryId) {
             const category = this.categories.find(c => c.id === categoryId);
             return category ? category.name : '카테고리 정보 없음';
+        },
+        selectDate(index) {
+            if (index >= 0 && index < this.dateButtons.length) {
+                this.selectedDateIndex = index;
+            }
         }
     }
 }

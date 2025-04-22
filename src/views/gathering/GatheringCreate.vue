@@ -1,11 +1,11 @@
 <template>
     <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+        <v-card flat class="primary fixed-header" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">모임 생성</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">모임 만들기</h1>
             </v-card-text>
         </v-card>
         
@@ -28,8 +28,8 @@
                     <v-row dense>
                         <v-col v-for="category in categories" 
                                :key="category.id" 
-                               cols="4" 
-                               sm="3" 
+                               cols="2" 
+                               sm="6" 
                                md="2" 
                                lg="2"
                                class="pa-1"
@@ -55,7 +55,7 @@
                         <v-chip
                             v-for="subCategory in subCategories"
                             :key="subCategory.id"
-                            :color="selectedSubCategories.includes(subCategory.id) ? 'primary' : ''"
+                            :color="selectedSubCategories.includes(subCategory.id) ? '#E8F1FD' : ''"
                             :variant="selectedSubCategories.includes(subCategory.id) ? 'flat' : 'outlined'"
                             class="ma-1"
                             @click="toggleSubCategory(subCategory.id)"
@@ -68,7 +68,7 @@
                 <!-- 버튼 그룹 -->
                 <div class="d-flex justify-space-between mt-8">
                     <v-btn
-                        variant="outlined"
+                        variant="tonal"
                         @click="handleBackButton"
                     >
                         이전
@@ -76,6 +76,7 @@
                     
                     <v-btn
                         color="primary"
+                        variant="tonal"
                         @click="goToNextStep"
                         :disabled="!selectedCategory || selectedSubCategories.length === 0"
                     >
@@ -86,110 +87,156 @@
             
             <!-- 모임 정보 입력 단계 -->
             <div v-else-if="currentStep === 2">
-                <h2 class="text-h6 font-weight-medium mb-4">모임 정보 입력</h2>
-                
-                <v-form ref="form" v-model="isFormValid" @submit.prevent="createGathering">
-                    <!-- 모임명 입력 -->
-                    <v-text-field
-                        v-model="gatheringData.gatheringName"
-                        label="모임명"
-                        variant="outlined"
-                        :rules="[v => !!v || '모임명을 입력해주세요', v => (v && v.length <= 30) || '모임명은 30자 이내로 입력해주세요']"
-                        counter="30"
-                        class="mb-4"
-                        required
-                    ></v-text-field>
-                    
-                    <!-- 활동지역 입력 -->
-                    <v-text-field
-                        v-model="gatheringData.region"
-                        label="활동지역"
-                        variant="outlined"
-                        :rules="[v => !!v || '활동지역을 입력해주세요']"
-                        placeholder="예: 서울시 강남구, 부산시 해운대구"
-                        class="mb-4"
-                        required
-                    ></v-text-field>
-                    
-                    <!-- 모임 소개 입력 -->
-                    <v-textarea
-                        v-model="gatheringData.introduce"
-                        label="모임 소개"
-                        variant="outlined"
-                        :rules="[v => !!v || '모임 소개를 입력해주세요', v => (v && v.length <= 500) || '모임 소개는 500자 이내로 입력해주세요']"
-                        counter="500"
-                        auto-grow
-                        rows="4"
-                        class="mb-4"
-                        required
-                    ></v-textarea>
-                    
-                    <!-- 정원 입력 -->
-                    <v-slider
-                        v-model="gatheringData.maxPeople"
-                        label="정원"
-                        min="2"
-                        max="100"
-                        step="1"
-                        thumb-label
-                        class="mb-6"
-                    >
-                        <template v-slot:append>
-                            <v-text-field
-                                v-model="gatheringData.maxPeople"
-                                type="number"
-                                style="width: 70px"
-                                density="compact"
-                                variant="outlined"
-                                min="2"
-                                max="100"
-                                hide-details
-                                @update:model-value="validateMaxPeople"
-                            ></v-text-field>
-                        </template>
-                    </v-slider>
-                    
-                    <!-- 선택한 카테고리 정보 표시 -->
-                    <v-card class="mb-6 pa-4" variant="outlined">
-                        <div class="text-subtitle-1 font-weight-medium mb-2">선택한 카테고리</div>
-                        <div class="d-flex align-center mb-2">
-                            <v-chip color="primary" class="mr-2">
+
+                <!-- 선택한 카테고리 정보 표시 -->
+                <v-card class="mb-6 pa-4 category-summary-card" variant="outlined" rounded="lg">
+                        <div class="d-flex align-items-center mb-3">
+                            <v-icon color="primary" class="mr-2">mdi-tag-multiple</v-icon>
+                            <div class="text-subtitle-1 font-weight-medium">선택한 카테고리</div>
+                        </div>
+                        
+                        <div class="d-flex align-center mb-4 ml-2">
+                            <v-chip
+                                color="primary"
+                                variant="flat"
+                                class="mr-2"
+                                size="large"
+                                prepend-icon="mdi-folder"
+                            >
                                 {{ getCategoryName(gatheringData.categoryId) }}
                             </v-chip>
                         </div>
-                        <div class="text-subtitle-1 font-weight-medium mb-2">선택한 상세 카테고리</div>
-                        <div class="d-flex flex-wrap">
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <v-icon color="primary" class="mr-2">mdi-tag</v-icon>
+                            <div class="text-subtitle-1 font-weight-medium">선택한 상세 카테고리</div>
+                        </div>
+                        
+                        <div class="d-flex flex-wrap ml-2">
                             <v-chip 
                                 v-for="subCategoryId in gatheringData.gatheringCategoryDetailIds" 
                                 :key="subCategoryId"
                                 variant="outlined"
                                 color="primary"
                                 class="mr-2 mb-2"
+                                size="small"
                             >
                                 {{ getSubCategoryName(subCategoryId) }}
                             </v-chip>
                         </div>
                     </v-card>
+
+                <div class="form-container">
+                    <h2 class="text-h6 font-weight-medium mb-4 d-flex align-center">
+                        <v-icon color="primary" class="mr-2">mdi-pencil-box-outline</v-icon>
+                        모임 정보 입력
+                    </h2>
                     
-                    <!-- 버튼 그룹 -->
-                    <div class="d-flex justify-space-between mt-8">
-                        <v-btn
-                            variant="outlined"
-                            @click="currentStep = 1"
-                        >
-                            이전
-                        </v-btn>
+                    <v-form ref="form" v-model="isFormValid" @submit.prevent="createGathering" class="form-content">
+                        <!-- 모임명 입력 -->
+                        <div class="form-field">
+                            <v-text-field
+                                v-model="gatheringData.gatheringName"
+                                label="모임명"
+                                variant="outlined"
+                                :rules="[v => !!v || '모임명을 입력해주세요', v => (v && v.length <= 30) || '모임명은 30자 이내로 입력해주세요']"
+                                counter="30"
+                                class="mb-4"
+                                required
+                                prepend-inner-icon="mdi-account-group"
+                                density="comfortable"
+                                bg-color="white"
+                            ></v-text-field>
+                        </div>
                         
-                        <v-btn
-                            color="primary"
-                            type="submit"
-                            :loading="isSubmitting"
-                            :disabled="!isFormValid"
-                        >
-                            모임 생성
-                        </v-btn>
-                    </div>
-                </v-form>
+                        <!-- 활동지역 입력 -->
+                        <div class="form-field">
+                            <v-text-field
+                                v-model="gatheringData.region"
+                                label="활동지역"
+                                variant="outlined"
+                                :rules="[v => !!v || '활동지역을 입력해주세요']"
+                                placeholder="예: 서울시 강남구, 부산시 해운대구"
+                                class="mb-4"
+                                required
+                                prepend-inner-icon="mdi-map-marker"
+                                density="comfortable"
+                                bg-color="white"
+                            ></v-text-field>
+                        </div>
+                        
+                        <!-- 모임 소개 입력 -->
+                        <div class="form-field">
+                            <v-textarea
+                                v-model="gatheringData.introduce"
+                                label="모임 소개"
+                                variant="outlined"
+                                :rules="[v => !!v || '모임 소개를 입력해주세요', v => (v && v.length <= 500) || '모임 소개는 500자 이내로 입력해주세요']"
+                                counter="500"
+                                auto-grow
+                                rows="4"
+                                class="mb-4"
+                                required
+                                prepend-inner-icon="mdi-information-outline"
+                                density="comfortable"
+                                bg-color="white"
+                            ></v-textarea>
+                        </div>
+                        
+                        <!-- 정원 입력 -->
+                        <div class="form-field">
+                            <label class="text-subtitle-2 font-weight-medium d-flex align-center mb-2">
+                                <v-icon size="small" color="primary" class="mr-1">mdi-account-multiple</v-icon>
+                                정원
+                            </label>
+                            <v-slider
+                                v-model="gatheringData.maxPeople"
+                                min="2"
+                                max="100"
+                                step="1"
+                                thumb-label
+                                class="mb-6"
+                                color="primary"
+                                track-color="grey-lighten-3"
+                            >
+                                <template v-slot:append>
+                                    <v-text-field
+                                        v-model="gatheringData.maxPeople"
+                                        type="number"
+                                        style="width: 70px"
+                                        density="compact"
+                                        variant="outlined"
+                                        min="2"
+                                        max="100"
+                                        hide-details
+                                        @update:model-value="validateMaxPeople"
+                                        bg-color="white"
+                                    ></v-text-field>
+                                </template>
+                            </v-slider>
+                        </div>
+                    </v-form>
+                </div>
+
+                <!-- 버튼 그룹 -->
+                <div class="d-flex justify-space-between mt-8">
+                    <v-btn
+                        variant="tonal"
+                        @click="currentStep = 1"
+                    >
+                        이전
+                    </v-btn>
+                    
+                    <v-btn
+                        color="primary"
+                        variant="tonal"
+                        @click="createGathering"
+                        :loading="isSubmitting"
+                        :disabled="!isFormValid"
+                    >
+                        모임 생성
+                    </v-btn>
+                </div>
             </div>
         </div>
     </v-container>
@@ -485,5 +532,48 @@ export default {
     .category-name {
         font-size: 10px;
     }
+}
+
+.category-summary-card {
+    background-color: #f8fafd;
+    border: 1px solid rgba(25, 118, 210, 0.1) !important;
+    transition: all 0.3s ease;
+}
+
+.category-summary-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.form-container {
+    background-color: #f8fafd;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.form-content {
+    padding: 8px;
+}
+
+.form-field {
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+}
+
+.form-field:hover {
+    transform: translateY(-2px);
+}
+
+:deep(.v-field) {
+    border-radius: 8px !important;
+}
+
+:deep(.v-slider .v-slider-thumb) {
+    background-color: var(--v-theme-primary);
+}
+
+:deep(.v-slider .v-slider-track__fill) {
+    background-color: var(--v-theme-primary);
 }
 </style>

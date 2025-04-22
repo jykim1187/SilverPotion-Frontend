@@ -1,23 +1,24 @@
 <template>
     <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+        <v-card flat class="fixed-header" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">추천 정모</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">추천 정모</h1>
             </v-card-text>
         </v-card>
 
         <div class="content-wrapper">
-            <div v-if="loadingMeetings" class="text-center my-4">
+            <div v-if="loadingMeetings" class="text-center my-4 loading-container">
                 <v-progress-circular indeterminate color="primary"></v-progress-circular>
                 <span class="ml-2">정모 정보를 불러오는 중...</span>
             </div>
             
-            <div v-else-if="meetingsByDate.length === 0" class="text-center pa-4">
+            <div v-else-if="meetingsByDate.length === 0" class="text-center pa-4 empty-container">
                 <v-icon size="large" color="grey">mdi-calendar-blank</v-icon>
-                <p class="mt-2">예정된 정모가 없습니다.</p>
+                <p class="mt-2 mb-4">예정된 정모가 없습니다.</p>
+                <v-btn color="primary" variant="tonal" @click="$router.push('/silverpotion/gathering/main')">모임 찾기</v-btn>
             </div>
             
             <div v-else>
@@ -27,30 +28,25 @@
                         v-model="selectedDateIndex"
                         show-arrows
                         center-active
+                        class="date-slide-group"
                     >
                         <v-slide-group-item
                             v-for="(dateInfo, index) in dateButtons"
                             :key="index"
-                            v-slot="{ isSelected, toggle }"
                         >
-                            <v-btn
-                                :color="isSelected ? 'primary' : ''"
-                                :variant="isSelected ? 'flat' : 'outlined'"
-                                class="ma-1"
-                                rounded
-                                @click="toggle"
-                            >
-                                <div class="text-center">
-                                    <div class="text-caption">{{ dateInfo.dayOfWeek }}</div>
-                                    <div class="text-body-2">{{ dateInfo.day }}</div>
+                            <div class="date-btn-wrapper" @click="selectDate(index)">
+                                <div class="date-btn" :class="{ 'date-btn-selected': selectedDateIndex === index }">
+                                    <div class="date-month">{{ dateInfo.month }}월</div>
+                                    <div class="date-day">{{ dateInfo.day }}</div>
+                                    <div class="date-weekday">{{ dateInfo.dayOfWeek }}</div>
                                 </div>
-                            </v-btn>
+                            </div>
                         </v-slide-group-item>
                     </v-slide-group>
                 </div>
                 
                 <!-- 선택된 날짜의 정모 목록 -->
-                <div v-if="selectedDateMeetings.length === 0" class="text-center pa-4 empty-meetings-container">
+                <div v-if="selectedDateMeetings.length === 0" class="text-center pa-4 empty-container">
                     <p>선택한 날짜에 예정된 정모가 없습니다.</p>
                 </div>
                 
@@ -59,15 +55,16 @@
                         <v-list-item 
                             v-for="meeting in selectedDateMeetings" 
                             :key="meeting.meetingId"
-                            class="mb-2"
+                            class="mb-3 meeting-card"
                             @click="goToGatheringDetail(meeting.gatheringId)"
                             :ripple="true"
                             hover
                         >
                             <template v-slot:prepend>
-                                <v-avatar size="50" rounded>
+                                <v-avatar size="60" rounded>
                                     <v-img :src="meeting.imageUrl || require('@/assets/default-gathering.png')" 
-                                           cover
+                                           contain
+                                           bg-color="#f5f5f5"
                                            alt="정모 이미지"></v-img>
                                 </v-avatar>
                             </template>
@@ -144,7 +141,7 @@ export default{
             })).sort((a, b) => new Date(a.date) - new Date(b.date));
         },
         selectedDateMeetings() {
-            if (this.meetingsByDate.length === 0 || this.selectedDateIndex >= this.meetingsByDate.length) {
+            if (this.meetingsByDate.length === 0 || this.selectedDateIndex === null || this.selectedDateIndex < 0 || this.selectedDateIndex >= this.meetingsByDate.length) {
                 return [];
             }
             
@@ -256,6 +253,11 @@ export default{
         },
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
+        },
+        selectDate(index) {
+            if (index >= 0 && index < this.dateButtons.length) {
+                this.selectedDateIndex = index;
+            }
         }
     }
 }
@@ -276,10 +278,85 @@ export default{
 .content-wrapper {
     margin-top: 110px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
     padding: 0 16px;
+    padding-bottom: 80px;
 }
 
 .date-selector {
-    overflow-x: auto;
+    margin-bottom: 20px;
+    overflow: visible;
+}
+
+.date-slide-group {
+    padding: 4px;
+}
+
+.date-btn-wrapper {
+    padding: 8px 4px;
+    cursor: pointer;
+}
+
+.date-btn {
+    width: 60px;
+    height: 70px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.date-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.date-btn-selected {
+    background-color: #e8f0fe;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+.date-btn-selected::before {
+    background-color: var(--v-primary-base, #1976d2);
+}
+
+.date-month {
+    font-size: 10px;
+    color: #757575;
+    margin-bottom: 2px;
+}
+
+.date-day {
+    font-size: 22px;
+    font-weight: 700;
+    color: #212121;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.date-weekday {
+    font-size: 12px;
+    color: #616161;
+    font-weight: 500;
+}
+
+.date-btn-selected .date-day {
+    color: var(--v-primary-base, #1976d2);
+}
+
+.date-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
 }
 
 .attendees-avatars {
@@ -288,7 +365,7 @@ export default{
     max-width: 120px;
 }
 
-.empty-meetings-container {
+.empty-container {
     min-height: 380px;
     display: flex;
     align-items: center;
