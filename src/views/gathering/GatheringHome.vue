@@ -1,221 +1,264 @@
 <template>
-    <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+    <v-container class="gathering-home-container pa-0">
+        <!-- 헤더 -->
+        <v-card flat class="header-card" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">{{ gatheringName }}</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">{{ gatheringName }}</h1>
                 <!-- 모임 메뉴 버튼 -->
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn icon v-bind="props">
+                        <v-btn icon v-bind="props" flat>
                             <v-icon>mdi-dots-vertical</v-icon>
                         </v-btn>
                     </template>
-                    <v-list>
-                        <v-list-item v-if="isGatheringLeader" @click="goToUpdateGathering">
-                            <v-list-item-title>모임 수정</v-list-item-title>
+                    <v-list rounded="lg" elevation="3">
+                        <v-list-item v-if="isGatheringLeader" @click="goToUpdateGathering" class="menu-item">
+                            <v-list-item-title>
+                                <v-icon size="small" class="mr-2">mdi-pencil</v-icon>
+                                모임 수정
+                            </v-list-item-title>
                         </v-list-item>
-                        <v-list-item v-if="isGatheringMember && !isGatheringLeader" @click="showLeaveDialog = true">
-                            <v-list-item-title>모임 탈퇴</v-list-item-title>
+                        <v-list-item v-if="isGatheringMember && !isGatheringLeader" @click="showLeaveDialog = true" class="menu-item">
+                            <v-list-item-title>
+                                <v-icon size="small" class="mr-2">mdi-exit-to-app</v-icon>
+                                모임 탈퇴
+                            </v-list-item-title>
                         </v-list-item>
-                        <v-list-item v-if="isGatheringLeader" @click="showDisbandDialog = true">
-                            <v-list-item-title class="text-error">모임 해체</v-list-item-title>
+                        <v-list-item v-if="isGatheringLeader" @click="showDisbandDialog = true" class="menu-item">
+                            <v-list-item-title class="text-error">
+                                <v-icon size="small" class="mr-2" color="error">mdi-delete</v-icon>
+                                모임 해체
+                            </v-list-item-title>
                         </v-list-item>
-                        <v-list-item @click="showReportDialog = true">
-                            <v-list-item-title>모임 신고</v-list-item-title>
+                        <v-list-item @click="showReportDialog = true" class="menu-item">
+                            <v-list-item-title>
+                                <v-icon size="small" class="mr-2">mdi-flag</v-icon>
+                                모임 신고
+                            </v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-menu>
             </v-card-text>
         </v-card>
 
-        <!-- 탭 메뉴 추가 -->
+        <!-- 탭 메뉴 -->
         <div class="content-wrapper">
-            <v-tabs v-model="activeTab" centered grow class="mt-0 pt-0">
-                <v-tab value="home" class="flex-1">홈</v-tab>
-                <v-tab value="board" class="flex-1">게시판</v-tab>
-                <v-tab value="chat" class="flex-1">채팅</v-tab>
+            <v-tabs 
+                v-model="activeTab" 
+                centered 
+                grow 
+                class="tab-container" 
+                bg-color="#E8F1FD"
+                color="primary"
+            >
+                <v-tab value="home" class="tab-item" color="primary">
+                    <span class="primary--text">홈</span>
+                </v-tab>
+                <v-tab value="board" class="tab-item" color="primary">
+                    <span class="primary--text">게시판</span>
+                </v-tab>
+                <v-tab value="chat" class="tab-item" color="primary">
+                    <span class="primary--text">채팅</span>
+                </v-tab>
             </v-tabs>
 
-            <v-window v-model="activeTab" class="mt-5">
+            <v-window v-model="activeTab" class="mt-12">
+                <!-- 홈 탭 -->
                 <v-window-item value="home">
-                    <div>
+                    <div class="home-content px-4">
                         <!-- 모임 사진 -->
-                        <div class="mb-6">
+                        <div class="mb-6 gathering-image-container">
                             <v-img
-                                :src="gatheringImage || require('@/assets/default-gathering.png')"
-                                max-height="200"
-                                cover
-                                class="rounded-lg"
-                                style="max-width: 100%;"
+                                :src="gatheringImage || require('@/assets/default-gathering-main.png')"
+                                height="200"
+                                :width="380"
+                                class="gathering-image"
+                                contain
+                                position="center"
                             ></v-img>
                         </div>
                         
                         <!-- 모임 정보 -->
-                        <div class="mb-4 position-relative">
-                            <!-- 모임 수정 버튼 (모임장에게만 표시) -->
-                            <v-btn
-                                v-if="isGatheringLeader"
-                                icon="mdi-pencil"
-                                size="small"
-                                color="primary"
-                                class="position-absolute"
-                                style="top: 0; right: 0;"
-                                @click="goToUpdateGathering"
-                            ></v-btn>
-                            
+                        <div class="gathering-info-section">
+                                                        
                             <div class="d-flex flex-wrap gap-2 mb-3">
-                                <v-chip size="small" color="primary" variant="outlined" class="mr-2">
+                                <v-chip size="small" color="primary" variant="outlined" class="info-chip">
                                     <v-icon size="x-small" start>mdi-map-marker</v-icon>
                                     {{ gatheringRegion || '지역 정보 없음' }}
                                 </v-chip>
-                                <v-chip size="small" color="primary" variant="outlined" class="mr-2">
+                                <v-chip size="small" color="primary" variant="outlined" class="info-chip">
                                     <v-icon size="x-small" start>mdi-tag</v-icon>
                                     {{ gatheringCategory || '카테고리 없음' }}
                                 </v-chip>
-                                <v-chip size="small" color="primary" variant="outlined">
+                                <v-chip size="small" color="primary" variant="outlined" class="info-chip">
                                     <v-icon size="x-small" start>mdi-account-multiple</v-icon>
                                     {{ gatheringPeopleCount || 0 }}/{{ gatheringMaxPeople || 0 }}명
                                 </v-chip>
                             </div>
-                            <h2 class="text-h6 font-weight-bold">{{ gatheringName }}</h2>
-                            <p class="text-body-2 mt-1">{{ gatheringIntroduce || '모임 소개가 없습니다.' }}</p>
+                            <h2 class="gathering-title">{{ gatheringName }}</h2>
+                            <p class="gathering-intro">{{ gatheringIntroduce || '모임 소개가 없습니다.' }}</p>
                         </div>
                         
                         <!-- 정기모임 섹션 -->
-                        <div class="mb-6">
-                            <h3 class="text-subtitle-1 font-weight-bold mb-3">정기모임</h3>
-                            
-                            <div v-if="meetings.length === 0" class="text-center pa-4 grey lighten-4 rounded">
-                                <p>예정된 정기모임이 없습니다.</p>
-                            </div>
-                            
-                            <v-card v-for="meeting in sortedMeetings" :key="meeting.meetingId" class="mb-4" variant="outlined">
-                                <div class="d-flex flex-column pa-4">
-                                    <div class="text-caption text-primary mb-1">{{ formatDate(meeting.meetingDate) }}</div>
-                                    
-                                    <!-- 모임명과 참석/취소 버튼을 같은 행에 배치 -->
-                                    <div class="d-flex justify-space-between align-center mb-3">
-                                        <div class="text-subtitle-1 font-weight-bold">{{ meeting.name }}</div>
-                                        
-                                        <!-- 정모 수정 버튼 (정모 생성자에게만 표시) -->
-                                        <div class="d-flex align-center">
-                                            <v-btn
-                                                v-if="isCreator(meeting)"
-                                                icon="mdi-pencil"
-                                                size="small"
-                                                color="primary"
-                                                class="mr-2"
-                                                @click="goToUpdateMeeting(meeting.meetingId)"
-                                            ></v-btn>
-                                            
-                                            <!-- 참석/취소 버튼 -->
-                                            <v-btn
-                                                v-if="!isAttending(meeting) && isGatheringMember"
-                                                color="primary"
-                                                variant="outlined"
-                                                size="small"
-                                                @click="attendMeeting(meeting.meetingId)"
-                                                :disabled="meeting.attendees.length >= meeting.maxPeople"
-                                            >
-                                                참석
-                                            </v-btn>
-                                            <v-btn
-                                                v-if="isAttending(meeting) && !isCreator(meeting)"
-                                                color="error"
-                                                variant="outlined"
-                                                size="small"
-                                                @click="cancelAttendance(meeting.meetingId)"
-                                            >
-                                                취소
-                                            </v-btn>
-                                            <v-btn
-                                                v-if="isAttending(meeting) && isCreator(meeting)"
-                                                color="error"
-                                                variant="outlined"
-                                                size="small"
-                                                @click="showCreatorCancelAlert"
-                                            >
-                                                취소
-                                            </v-btn>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="d-flex flex-wrap">
-                                        <div class="meeting-image mr-4 mb-3">
-                                            <v-img
-                                                :src="meeting.imageUrl || require('@/assets/default-gathering.png')"
-                                                width="120"
-                                                height="120"
-                                                cover
-                                                class="rounded-lg"
-                                            ></v-img>
-                                        </div>
-                                        
-                                        <div class="meeting-info flex-grow-1">
-                                            <div class="d-flex align-center mb-2">
-                                                <v-icon size="small" class="mr-2">mdi-calendar-clock</v-icon>
-                                                <span class="text-body-2">일시: {{ formatDate(meeting.meetingDate) }} {{ meeting.meetingTime }}</span>
-                                            </div>
-                                            <div class="d-flex align-center mb-2">
-                                                <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
-                                                <span class="text-body-2">위치: {{ meeting.place }}</span>
-                                            </div>
-                                            <div class="d-flex align-center mb-2">
-                                                <v-icon size="small" class="mr-2">mdi-currency-krw</v-icon>
-                                                <span class="text-body-2">비용: {{ formatCost(meeting.cost) }}</span>
-                                            </div>
-                                            <div class="d-flex align-center mb-2">
-                                                <v-icon size="small" class="mr-2">mdi-account-group</v-icon>
-                                                <span class="text-body-2">참석: {{ meeting.attendees.length }}/{{ meeting.maxPeople }}명</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 참석자 프로필 이미지 -->
-                                    <div class="mt-3">
-                                        <div class="text-caption mb-2">참석자</div>
-                                        <div class="d-flex flex-wrap">
-                                            <div v-for="(attendee, index) in meeting.attendees" :key="index" class="mr-2 mb-2">
-                                                <v-avatar size="36">
-                                                    <v-img
-                                                        :src="attendee.profileImage || require('@/assets/default-gathering.png')"
-                                                        alt="프로필 이미지"
-                                                    ></v-img>
-                                                </v-avatar>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </v-card>
-                            
-                            <!-- 정모 만들기 버튼 (모임장에게만 표시) -->
-                            <div v-if="isGatheringLeader" class="text-center mt-4">
+                        <section class="section-container">
+                            <div class="d-flex justify-space-between align-center mb-3">
+                                <h3 class="section-title">정기모임</h3>
+
                                 <v-btn
+                                    v-if="isGatheringLeader"
+                                    variant="tonal"
                                     color="primary"
                                     prepend-icon="mdi-plus"
                                     @click="goToCreateMeeting"
+                                    class="create-meeting-btn"
+                                    rounded="lg"
                                 >
                                     정모 만들기
                                 </v-btn>
                             </div>
-                        </div>
+                            
+                            <div v-if="meetings.length === 0" class="empty-container">
+                                <v-icon size="x-large" color="grey-lighten-1">mdi-calendar-blank</v-icon>
+                                <p class="mt-3 text-grey-darken-1">예정된 정기모임이 없습니다.</p>
+                            </div>
+                            
+                            <div v-else>
+                                <div class="meeting-list">
+                                    <v-card 
+                                        v-for="meeting in sortedMeetings" 
+                                        :key="meeting.meetingId"
+                                        class="meeting-card mb-3"
+                                        elevation="1"
+                                        rounded="lg"
+                                    >
+                                        <div class="pa-3">
+                                            <!-- 날짜 및 시간 -->
+                                            <div class="d-flex align-center mb-2">
+                                                <v-icon size="small" color="primary" class="mr-1">mdi-calendar</v-icon>
+                                                <span class="text-body-2 font-weight-medium">{{ formatDate(meeting.meetingDate) }} {{ meeting.meetingTime }}</span>
+                                                
+                                                <v-spacer></v-spacer>
+                                                
+                                                <!-- 수정 버튼 -->
+                                                <v-btn
+                                                    v-if="isCreator(meeting)"
+                                                    icon="mdi-pencil"
+                                                    size="small"
+                                                    color="primary"
+                                                    variant="text"
+                                                    class="mr-1"
+                                                    @click.stop="goToUpdateMeeting(meeting.meetingId)"
+                                                ></v-btn>
+                                            </div>
+                                            
+                                            <div class="d-flex">
+                                                <!-- 정모 이미지 -->
+                                                <div class="meeting-image-container mr-3">
+                                                    <v-img
+                                                        :src="meeting.imageUrl || require('@/assets/default-gathering.png')"
+                                                        cover
+                                                        class="meeting-image"
+                                                    ></v-img>
+                                                </div>
+                                                
+                                                <div class="meeting-content">
+                                                    <!-- 정모 이름 -->
+                                                    <div class="d-flex align-center">
+                                                        <div class="text-h6 font-weight-bold meeting-name">{{ meeting.name }}</div>
+                                                    </div>
+                                                    
+                                                    <!-- 정모 정보 -->
+                                                    <div class="d-flex align-center mt-2 text-body-2">
+                                                        <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
+                                                        <span class="mr-3">{{ meeting.place }}</span>
+                                                        
+                                                        <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
+                                                        <span class="mr-3">{{ meeting.attendees.length }}/{{ meeting.maxPeople }}명</span>
+                                                        
+                                                        <v-icon size="small" class="mr-1">mdi-currency-krw</v-icon>
+                                                        <span>{{ formatCost(meeting.cost) }}</span>
+                                                    </div>
+                                                    
+                                                    <!-- 참석자 프로필과 참석/취소 버튼 -->
+                                                    <div class="mt-2 d-flex align-center justify-space-between">
+                                                        <div class="d-flex align-center">
+                                                            <div class="attendees-avatars d-flex">
+                                                                <v-avatar
+                                                                    v-for="(attendee, index) in meeting.attendees.slice(0, 3)"
+                                                                    :key="index"
+                                                                    size="24"
+                                                                    class="attendee-avatar mr-2"
+                                                                >
+                                                                    <v-img
+                                                                        :src="attendee.profileImage || require('@/assets/default-gathering.png')"
+                                                                        alt="프로필 이미지"
+                                                                    ></v-img>
+                                                                </v-avatar>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 참석/취소 버튼 -->
+                                                        <div>
+                                                            <v-btn
+                                                                v-if="!isAttending(meeting) && isGatheringMember"
+                                                                color="primary"
+                                                                variant="tonal"
+                                                                size="small"
+                                                                @click.stop="attendMeeting(meeting.meetingId)"
+                                                                :disabled="meeting.attendees.length >= meeting.maxPeople"
+                                                                class="action-btn"
+                                                            >
+                                                                참석
+                                                            </v-btn>
+                                                            <v-btn
+                                                                v-if="isAttending(meeting) && !isCreator(meeting)"
+                                                                color="error"
+                                                                variant="tonal"
+                                                                size="small"
+                                                                @click.stop="cancelAttendance(meeting.meetingId)"
+                                                                class="action-btn"
+                                                            >
+                                                                취소
+                                                            </v-btn>
+                                                            <v-btn
+                                                                v-if="isAttending(meeting) && isCreator(meeting)"
+                                                                color="error"
+                                                                variant="tonal"
+                                                                size="small"
+                                                                @click.stop="showDeleteMeetingDialog(meeting.meetingId)"
+                                                                class="action-btn"
+                                                            >
+                                                                취소
+                                                            </v-btn>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </v-card>
+                                </div>
+                            </div>
+                        </section>
                         
                         <!-- 모임 멤버 섹션 -->
-                        <div class="mb-6">
+                        <section class="section-container">
                             <div class="d-flex justify-space-between align-center mb-3">
-                                <h3 class="text-subtitle-1 font-weight-bold">모임 멤버 ({{ gatheringPeopleCount || 0 }})</h3>
+                                <h3 class="section-title">모임 멤버 ({{ gatheringPeopleCount || 0 }})</h3>
                                 
                                 <!-- 멤버 관리 버튼 (모임장에게만 표시) -->
                                 <v-btn
                                     v-if="isGatheringLeader"
                                     color="primary"
-                                    variant="outlined"
+                                    variant="tonal"
                                     size="small"
                                     @click="goToMemberManagement"
+                                    class="manage-members-btn"
+                                    rounded="lg"
                                 >
+                                    <v-icon size="small" class="mr-1">mdi-account-cog</v-icon>
                                     멤버 관리
                                 </v-btn>
                             </div>
@@ -228,61 +271,73 @@
                                 variant="outlined"
                                 density="compact"
                                 hide-details
-                                class="mb-4"
+                                class="mb-4 search-field"
+                                rounded="lg"
                                 @input="searchMembers"
                             ></v-text-field>
                             
                             <!-- 멤버 목록 -->
-                            <v-list v-if="filteredMembers.length > 0">
-                                <v-list-item
+                            <div v-if="filteredMembers.length > 0" class="member-list">
+                                <v-card
                                     v-for="member in filteredMembers"
                                     :key="member.userId"
-                                    class="mb-2 rounded-lg"
+                                    class="member-card mb-2"
+                                    elevation="1"
+                                    rounded="lg"
                                 >
-                                    <template v-slot:prepend>
-                                        <v-avatar size="40">
+                                    <div class="d-flex align-center pa-3">
+                                        <v-avatar size="40" class="mr-3">
                                             <v-img
                                                 :src="member.profileImage || require('@/assets/default-gathering.png')"
                                                 alt="프로필 이미지"
                                             ></v-img>
                                         </v-avatar>
-                                    </template>
-                                    
-                                    <v-list-item-title>{{ member.nickname }}</v-list-item-title>
-                                    <v-list-item-subtitle>가입일: {{ formatDate(member.createdTime) }}</v-list-item-subtitle>
-                                    
-                                    <template v-slot:append>
+                                        
+                                        <div class="member-info">
+                                            <div class="font-weight-medium">{{ member.nickname }}</div>
+                                            <div class="text-caption text-grey">가입일: {{ formatDate(member.createdTime) }}</div>
+                                        </div>
+                                        
+                                        <v-spacer></v-spacer>
+                                        
                                         <v-btn
                                             v-if="isGatheringMember && member.userId !== currentUserId"
                                             color="primary"
-                                            variant="text"
+                                            variant="tonal"
                                             size="small"
                                             @click="goToChat(member.userId)"
+                                            rounded="lg"
+                                            class="chat-btn"
                                         >
-                                            채팅하기
+                                            <v-icon size="small" class="mr-1">mdi-chat</v-icon>
+                                            채팅
                                         </v-btn>
-                                    </template>
-                                </v-list-item>
-                            </v-list>
-                            
-                            <div v-else class="text-center pa-4 grey lighten-4 rounded">
-                                <p>검색 결과가 없습니다.</p>
+                                    </div>
+                                </v-card>
                             </div>
-                        </div>
+                            
+                            <div v-else class="empty-container">
+                                <v-icon size="x-large" color="grey-lighten-1">mdi-account-search</v-icon>
+                                <p class="mt-3 text-grey-darken-1">검색 결과가 없습니다.</p>
+                            </div>
+                        </section>
                     </div>
                 </v-window-item>
 
+                <!-- 게시판 탭 -->
                 <v-window-item value="board">
                     <GatheringBoard :gatheringId="gatheringId"/>
                 </v-window-item>
 
+                <!-- 채팅 탭 -->
                 <v-window-item value="chat">
-                    <div v-if="isGatheringMember">
-                        채팅 내용
+                    <div v-if="isGatheringMember" class="empty-container">
+                        <v-icon size="x-large" color="grey-lighten-1">mdi-chat</v-icon>
+                        <p class="mt-3 text-grey-darken-1">채팅 기능이 준비 중입니다.</p>
                     </div>
-                    <div v-else class="text-center pa-5">
-                        <v-icon size="large" color="grey">mdi-account-alert</v-icon>
-                        <p class="mt-3">모임원만 이용 가능합니다.</p>
+                    <div v-else class="empty-container">
+                        <v-icon size="x-large" color="grey-lighten-1">mdi-account-alert</v-icon>
+                        <p class="mt-3 text-grey-darken-1">모임원만 이용 가능합니다.</p>
                     </div>
                 </v-window-item>
             </v-window>
@@ -290,12 +345,12 @@
 
         <!-- 모임 탈퇴 확인 다이얼로그 -->
         <v-dialog v-model="showLeaveDialog" max-width="300">
-            <v-card>
-                <v-card-title class="text-h6">모임 탈퇴</v-card-title>
-                <v-card-text>
+            <v-card class="dialog-card">
+                <v-card-title class="dialog-title">모임 탈퇴</v-card-title>
+                <v-card-text class="dialog-content">
                     정말로 모임을 탈퇴하시겠습니까?
                 </v-card-text>
-                <v-card-actions>
+                <v-card-actions class="dialog-actions">
                     <v-spacer></v-spacer>
                     <v-btn color="grey-darken-1" variant="text" @click="showLeaveDialog = false">취소</v-btn>
                     <v-btn color="error" variant="text" @click="leaveGathering">탈퇴</v-btn>
@@ -305,20 +360,21 @@
 
         <!-- 모임 해체 다이얼로그 -->
         <v-dialog v-model="showDisbandDialog" max-width="400">
-            <v-card>
-                <v-card-title class="text-h6">모임 해체</v-card-title>
-                <v-card-text>
+            <v-card class="dialog-card">
+                <v-card-title class="dialog-title">모임 해체</v-card-title>
+                <v-card-text class="dialog-content">
                     <p class="mb-3">정말로 모임을 해체하시겠습니까?</p>
                     <p class="text-caption text-error">이 작업은 되돌릴 수 없으며, 모든 모임 데이터가 삭제됩니다.</p>
                     <v-text-field
                         v-model="disbandConfirmText"
                         label="확인을 위해 '해체'를 입력하세요"
                         variant="outlined"
-                        class="mt-4"
+                        class="mt-4 confirm-field"
+                        rounded="lg"
                         :rules="[v => v === '해체' || '정확히 \'해체\'를 입력해주세요']"
                     ></v-text-field>
                 </v-card-text>
-                <v-card-actions>
+                <v-card-actions class="dialog-actions">
                     <v-spacer></v-spacer>
                     <v-btn color="grey-darken-1" variant="text" @click="showDisbandDialog = false">취소</v-btn>
                     <v-btn 
@@ -335,9 +391,9 @@
 
         <!-- 모임 신고 다이얼로그 -->
         <v-dialog v-model="showReportDialog" max-width="400">
-            <v-card>
-                <v-card-title class="text-h6">모임 신고</v-card-title>
-                <v-card-text>
+            <v-card class="dialog-card">
+                <v-card-title class="dialog-title">모임 신고</v-card-title>
+                <v-card-text class="dialog-content">
                     <v-select
                         v-model="reportSmallCategory"
                         label="신고 사유 선택"
@@ -347,7 +403,8 @@
                         variant="outlined"
                         required
                         :rules="[v => !!v || '신고 사유를 선택해주세요']"
-                        class="mb-4"
+                        class="mb-4 report-field"
+                        rounded="lg"
                     ></v-select>
                     
                     <v-textarea
@@ -357,9 +414,11 @@
                         rows="4"
                         variant="outlined"
                         :rules="[v => !!v || '상세 내용을 입력해주세요']"
+                        class="report-field"
+                        rounded="lg"
                     ></v-textarea>
                 </v-card-text>
-                <v-card-actions>
+                <v-card-actions class="dialog-actions">
                     <v-spacer></v-spacer>
                     <v-btn color="grey-darken-1" variant="text" @click="showReportDialog = false">취소</v-btn>
                     <v-btn color="error" variant="text" @click="reportGathering">신고</v-btn>
@@ -369,11 +428,11 @@
 
         <!-- 알림 다이얼로그 -->
         <v-dialog v-model="showAlert" max-width="300">
-            <v-card>
-                <v-card-text class="text-center pa-4">
+            <v-card class="dialog-card">
+                <v-card-text class="dialog-content text-center pa-4">
                     {{ alertMessage }}
                 </v-card-text>
-                <v-card-actions>
+                <v-card-actions class="dialog-actions">
                     <v-spacer></v-spacer>
                     <v-btn color="primary" variant="text" @click="showAlert = false">확인</v-btn>
                 </v-card-actions>
@@ -382,17 +441,20 @@
 
         <!-- 가입인사 작성 다이얼로그 -->
         <v-dialog v-model="showJoinDialog" max-width="400">
-            <v-card>
-                <v-card-title class="text-h6">가입인사 작성</v-card-title>
-                <v-card-text>
+            <v-card class="dialog-card">
+                <v-card-title class="dialog-title">가입인사 작성</v-card-title>
+                <v-card-text class="dialog-content">
                     <v-textarea
                         v-model="greetingMessage"
                         label="가입인사"
                         hint="모임에 가입하며 남길 인사를 작성해주세요."
                         rows="4"
+                        variant="outlined"
+                        class="greeting-field"
+                        rounded="lg"
                     ></v-textarea>
                 </v-card-text>
-                <v-card-actions>
+                <v-card-actions class="dialog-actions">
                     <v-spacer></v-spacer>
                     <v-btn color="grey-darken-1" variant="text" @click="showJoinDialog = false">취소</v-btn>
                     <v-btn color="primary" variant="text" @click="joinGathering">확인</v-btn>
@@ -400,12 +462,29 @@
             </v-card>
         </v-dialog>
 
+        <!-- 정모 삭제 확인 다이얼로그 -->
+        <v-dialog v-model="showDeleteDialog" max-width="300">
+            <v-card class="dialog-card">
+                <v-card-title class="dialog-title">정모 삭제</v-card-title>
+                <v-card-text class="dialog-content">
+                    정말 해당 정모를 삭제하시겠습니까?
+                </v-card-text>
+                <v-card-actions class="dialog-actions">
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey-darken-1" variant="text" @click="showDeleteDialog = false">취소</v-btn>
+                    <v-btn color="error" variant="text" @click="deleteMeeting">확인</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- 가입하기 버튼 (모임 멤버가 아닌 경우에만 표시) -->
         <v-btn
             v-if="!isGatheringMember"
-            color="primary"
-            class="mb-0 rounded-0 fixed-button"
+            class="join-btn"
             @click="showJoinDialog = true"
+            elevation="3"
+            rounded="lg"
+            style="background-color: #E8F1FD; color: #1976d2;"
         >
             가입하기
         </v-btn>
@@ -454,7 +533,9 @@ export default{
             showJoinDialog: false,
             greetingMessage: '',
             showDisbandDialog: false,
-            disbandConfirmText: ''
+            disbandConfirmText: '',
+            showDeleteDialog: false,
+            meetingIdToDelete: null
         }
     },
     computed: {
@@ -628,10 +709,30 @@ export default{
                 this.showAlert = true;
             }
         },
-        // 정기모임 생성자가 취소 버튼을 눌렀을 때 알림 표시
-        showCreatorCancelAlert() {
-            this.alertMessage = '자신이 만든 정모는 참석 취소할 수 없습니다.';
-            this.showAlert = true;
+        showDeleteMeetingDialog(meetingId) {
+            this.meetingIdToDelete = meetingId;
+            this.showDeleteDialog = true;
+        },
+        async deleteMeeting() {
+            try {
+                await axios.patch(
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/delete/${this.meetingIdToDelete}`
+                );
+                
+                // 성공 메시지 표시
+                this.alertMessage = '정모가 삭제되었습니다.';
+                this.showAlert = true;
+                
+                // 정모 목록 다시 불러오기
+                this.fetchMeetings();
+                
+                // 다이얼로그 닫기
+                this.showDeleteDialog = false;
+            } catch (error) {
+                console.error('정모 삭제 중 오류가 발생했습니다:', error);
+                this.alertMessage = '정모 삭제 중 오류가 발생했습니다.';
+                this.showAlert = true;
+            }
         },
         // 정모 만들기 페이지로 이동
         goToCreateMeeting() {
@@ -717,27 +818,14 @@ export default{
 </script>
 
 <style scoped>
-.flex-1 {
-    flex: 1;
+/* 전체 컨테이너 스타일 */
+.gathering-home-container {
+    padding-bottom: 80px;
+    max-width: 960px;
 }
 
-.gap-2 {
-    gap: 8px;
-}
-
-.position-relative {
-    position: relative;
-}
-
-.position-absolute {
-    position: absolute;
-}
-
-.meeting-image {
-    min-width: 120px;
-}
-
-.fixed-header {
+/* 헤더 스타일 */
+.header-card {
     position: fixed;
     top: 56px; /* 기존 헤더 컴포넌트 높이에 맞게 조정 */
     left: 0;
@@ -748,19 +836,338 @@ export default{
     width: 100%;
 }
 
+/* 콘텐츠 래퍼 */
 .content-wrapper {
-    margin-top: 50px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
-    padding: 0;
+    margin-top: 56px; /* 헤더 높이에 맞게 조정 */
+    padding-bottom: 16px;
 }
 
-.fixed-button {
-    position: fixed;
+/* 탭 스타일링 */
+.tab-container {
+    background-color: white;
+    position: sticky;
+    top: 112px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이 */
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.tab-item {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.primary--text {
+    color: #1976d2 !important;
+}
+
+.v-tab--selected {
+    font-weight: 700;
+}
+
+.v-tab--selected .primary--text {
+    color: #1976d2 !important;
+}
+
+/* 홈 콘텐츠 스타일링 */
+.home-content {
+    padding-top: 16px;
+}
+
+/* 모임 이미지 */
+.gathering-image-container {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.gathering-image {
+    max-width: 380px;
+    height: 200px;
+    object-fit: contain;
+    margin: 0 auto;
+}
+
+/* 모임 정보 섹션 */
+.gathering-info-section {
+    position: relative;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.edit-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-chip {
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.gathering-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.gathering-intro {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* 섹션 스타일링 */
+.section-container {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    position: relative;
+}
+
+.section-container:not(:last-child)::after {
+    content: '';
+    position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    margin: 0 auto;
-    max-width: 768px; /* 앱 컨테이너 크기에 맞게 조정 */
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.04) 50%, rgba(0,0,0,0) 100%);
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333;
+    position: relative;
+    display: inline-block;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 24px;
+    height: 2px;
+    background-color: var(--v-primary-base, #1976d2);
+}
+
+/* 빈 컨테이너 스타일 */
+.empty-container {
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    padding: 32px;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* 정모 카드 스타일링 */
+.meeting-card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.meeting-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.meeting-image-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.meeting-image {
     width: 100%;
-    z-index: 999;
+    height: 100%;
+    object-fit: cover;
+}
+
+.meeting-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.meeting-name {
+    font-size: 1.1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attendees-avatars {
+    display: flex;
+}
+
+.attendee-avatar {
+    border: 1px solid white;
+    margin-left: -8px;
+}
+
+.attendee-avatar:first-child {
+    margin-left: 0;
+}
+
+.action-btn {
+    min-width: 60px;
+    font-weight: 500;
+}
+
+/* 멤버 카드 스타일링 */
+.member-card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.member-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.member-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-btn {
+    min-width: 64px;
+}
+
+/* 검색 필드 스타일링 */
+.search-field {
+    background-color: #f5f5f5;
+    border-radius: 12px;
+}
+
+/* 다이얼로그 스타일링 */
+.dialog-card {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.dialog-title {
+    font-weight: 600;
+    padding-top: 20px;
+    font-size: 1.2rem;
+}
+
+.dialog-content {
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+
+.dialog-actions {
+    padding: 16px;
+}
+
+.confirm-field, .report-field, .greeting-field {
+    margin-top: 8px;
+}
+
+/* 가입하기 버튼 */
+.join-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    min-width: 50%;
+    height: 48px;
+    border-radius: 24px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.join-btn:hover {
+    transform: translateX(-50%) translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* 정모 만들기 버튼 */
+.create-meeting-btn {
+    min-width: 120px;
+    height: 30px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.create-meeting-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 멤버 관리 버튼 */
+.manage-members-btn {
+    min-width: 100px;
+    transition: all 0.3s ease;
+}
+
+.manage-members-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 메뉴 아이템 스타일링 */
+.menu-item {
+    transition: background-color 0.2s ease;
+}
+
+.menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+/* 반응형 스타일링 */
+@media (max-width: 600px) {
+    .gathering-image {
+        height: 140px;
+    }
+    
+    .text-h6 {
+        font-size: 1.1rem !important;
+    }
+    
+    .action-btn {
+        min-width: 56px;
+    }
+}
+
+/* 애니메이션 효과 */
+.v-card, .v-btn {
+    will-change: transform, box-shadow;
+}
+
+/* 유틸리티 클래스 */
+.flex-1 {
+    flex: 1;
+}
+
+.gap-2 {
+    gap: 8px;
 }
 </style>

@@ -1,11 +1,11 @@
 <template>
     <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+        <v-card flat class="fixed-header" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">내 모임</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">내 모임</h1>
             </v-card-text>
         </v-card>
 
@@ -20,7 +20,7 @@
                 <v-btn color="primary" class="mt-4" @click="fetchMyGatherings">다시 시도</v-btn>
             </div>
             
-            <div v-else-if="myGatherings.length === 0" class="text-center pa-4">
+            <div v-else-if="myGatherings.length === 0" class="text-center pa-4 empty-container">
                 <v-icon size="large" color="grey">mdi-account-group</v-icon>
                 <p class="mt-2">참여 중인 모임이 없습니다.</p>
                 <v-btn color="primary" class="mt-4" @click="goToGatheringMain">모임 찾기</v-btn>
@@ -31,16 +31,16 @@
                     <v-list-item 
                         v-for="gathering in myGatherings" 
                         :key="gathering.id"
-                        class="mb-3"
+                        class="mb-3 gathering-card"
                         @click="goToGatheringDetail(gathering.id)"
                         :ripple="true"
                         hover
-                        variant="outlined"
                     >
                         <template v-slot:prepend>
                             <v-avatar size="60" rounded>
                                 <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
-                                       cover
+                                       contain
+                                       bg-color="#f5f5f5"
                                        alt="모임 이미지"></v-img>
                             </v-avatar>
                         </template>
@@ -131,5 +131,83 @@ export default{
 .content-wrapper {
     margin-top: 110px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
     padding: 0 16px;
+    padding-bottom: 80px;
+}
+
+.text-primary {
+    color: #1976d2 !important;
+}
+
+/* 모임 카드 스타일링 */
+.gathering-card {
+    border-radius: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    border: none !important;
+}
+
+.gathering-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* v-list-item 기본 스타일 재정의 */
+:deep(.v-list-item__prepend) {
+    padding-right: 16px;
+}
+
+:deep(.v-list-item) {
+    padding: 12px 16px;
+}
+
+:deep(.v-list) {
+    background-color: transparent;
+    padding: 0;
+}
+
+/* 빈 상태 컨테이너 */
+.empty-container {
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    padding: 32px !important;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 로딩 상태 스타일링 */
+.text-center.my-8 {
+    padding: 24px;
+    border-radius: 12px;
+    background-color: #f9f9f9;
+}
+
+/* 반응형 스타일링 */
+@media (max-width: 600px) {
+    .gathering-card {
+        margin-bottom: 8px;
+    }
+    
+    :deep(.v-list-item__prepend) {
+        padding-right: 12px;
+    }
+    
+    :deep(.v-list-item) {
+        padding: 10px 12px;
+    }
+    
+    .v-avatar {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .text-subtitle-1 {
+        font-size: 0.9rem !important;
+    }
 }
 </style>
