@@ -232,7 +232,7 @@
                             v-for="meeting in selectedDateMeetings.slice(0, 3)" 
                             :key="meeting.meetingId"
                             class="mb-2"
-                            @click="goToMeetingDetail(meeting.gatheringId, meeting.meetingId)"
+                            @click="goToGatheringDetail(meeting.gatheringId)"
                             :ripple="true"
                             hover
                         >
@@ -489,6 +489,9 @@ export default{
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
         },
+        goToMeetingDetail(gatheringId, meetingId) {
+            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
+        },
         goToCreateGathering() {
             this.showCreateDialog = false;
             if (!this.hasMaxGatherings) {
@@ -563,9 +566,6 @@ export default{
             } finally {
                 this.loadingMeetings = false;
             }
-        },
-        goToMeetingDetail(gatheringId, meetingId) {
-            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
         },
         getCategoryName(categoryId) {
             const category = this.categories.find(c => c.id === categoryId);

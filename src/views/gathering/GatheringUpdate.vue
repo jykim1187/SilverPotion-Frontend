@@ -30,12 +30,93 @@
                     
                     <!-- 모임 이미지 업로드 -->
                     <div class="text-center mb-6">
-                        <div class="avatar-container position-relative d-flex justify-center">
-                            <div class="image-preview-container mb-2" @click="triggerFileInput" style="cursor: pointer">
+                        <!-- 이미지 크롭 다이얼로그 -->
+                        <v-dialog
+                            v-model="showCropDialog"
+                            max-width="800px"
+                            persistent
+                            :retain-focus="false"
+                        >
+                            <v-card>
+                                <v-card-title class="text-h6">이미지 자르기</v-card-title>
+                                <v-card-text>
+                                    <div class="crop-container">
+                                        <div class="crop-wrapper" ref="cropWrapper">
+                                            <div 
+                                                class="image-container"
+                                                :style="{
+                                                    transform: `scale(${imageScale}) translate(${imageTranslateX}px, ${imageTranslateY}px)`,
+                                                    transformOrigin: 'top left',
+                                                    position: 'absolute'
+                                                }"
+                                            >
+                                                <img 
+                                                    ref="cropImage" 
+                                                    :src="originalImage" 
+                                                    alt="원본 이미지" 
+                                                    class="crop-original-image"
+                                                    @load="initCropArea"
+                                                    @mousedown="startImageDrag"
+                                                    @touchstart="startImageTouch"
+                                                    :style="{
+                                                        cursor: isImageDragging ? 'grabbing' : 'grab',
+                                                        maxWidth: 'none',
+                                                        maxHeight: 'none'
+                                                    }"
+                                                >
+                                                <!-- 이미지 크기 조절 핸들 (4개 모서리) -->
+                                                <div class="resize-handle image-resize-handle image-resize-handle-nw" @mousedown.stop="startImageResize('nw')" @touchstart.stop="startImageResizeTouch('nw')"></div>
+                                                <div class="resize-handle image-resize-handle image-resize-handle-ne" @mousedown.stop="startImageResize('ne')" @touchstart.stop="startImageResizeTouch('ne')"></div>
+                                                <div class="resize-handle image-resize-handle image-resize-handle-sw" @mousedown.stop="startImageResize('sw')" @touchstart.stop="startImageResizeTouch('sw')"></div>
+                                                <div class="resize-handle image-resize-handle image-resize-handle-se" @mousedown.stop="startImageResize('se')" @touchstart.stop="startImageResizeTouch('se')"></div>
+                                            </div>
+                                            
+                                            <div 
+                                                ref="cropArea" 
+                                                class="crop-area"
+                                                @mousedown.stop="startDrag"
+                                                @touchstart.stop="startTouch"
+                                                :style="{
+                                                    width: cropAreaWidth + 'px',
+                                                    height: cropAreaHeight + 'px',
+                                                    left: cropAreaLeft + 'px',
+                                                    top: cropAreaTop + 'px'
+                                                }"
+                                            >
+                                                <!-- 크롭 영역 크기 조절 핸들 -->
+                                                <div class="resize-handle resize-handle-nw" @mousedown.stop="startResize('nw')" @touchstart.stop="startResizeTouch('nw')"></div>
+                                                <div class="resize-handle resize-handle-ne" @mousedown.stop="startResize('ne')" @touchstart.stop="startResizeTouch('ne')"></div>
+                                                <div class="resize-handle resize-handle-sw" @mousedown.stop="startResize('sw')" @touchstart.stop="startResizeTouch('sw')"></div>
+                                                <div class="resize-handle resize-handle-se" @mousedown.stop="startResize('se')" @touchstart.stop="startResizeTouch('se')"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 이미지 확대/축소 컨트롤 -->
+                                    <div class="zoom-controls">
+                                        <v-btn icon size="small" @click="zoomOut" class="zoom-btn">
+                                            <v-icon>mdi-minus</v-icon>
+                                        </v-btn>
+                                        <span class="zoom-text">{{ Math.round(imageScale * 100) }}%</span>
+                                        <v-btn icon size="small" @click="zoomIn" class="zoom-btn">
+                                            <v-icon>mdi-plus</v-icon>
+                                        </v-btn>
+                                    </div>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-spacer></v-spacer>
+                                    <v-btn color="error" text @click="cancelCrop">취소</v-btn>
+                                    <v-btn color="primary" @click="confirmCrop">확인</v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-dialog>
+
+                        <div class="avatar-container position-relative">
+                            <div class="image-preview-container mb-2 mx-auto" @click="triggerFileInput" style="cursor: pointer">
                                 <v-img 
                                     :src="previewImage || (gatheringData.imageUrl || require('@/assets/default-gathering.png'))" 
-                                    width="380"
-                                    height="200"
+                                    width="300"
+                                    height="158"
                                     cover
                                     alt="모임 이미지"
                                     class="rounded"
@@ -60,94 +141,7 @@
                         </div>
                     </div>
 
-                    <!-- 이미지 크롭 다이얼로그 -->
-                    <v-dialog v-model="showCropDialog" max-width="800px" persistent>
-                        <v-card>
-                            <v-card-title class="text-h6 font-weight-bold">
-                                이미지 편집
-                                <v-spacer></v-spacer>
-                                <v-btn icon @click="cancelCrop">
-                                    <v-icon>mdi-close</v-icon>
-                                </v-btn>
-                            </v-card-title>
-                            
-                            <v-card-text>
-                                <div class="crop-container">
-                                    <div class="crop-wrapper" ref="cropWrapper">
-                                        <div 
-                                            class="image-container"
-                                            :style="{
-                                                transform: `scale(${imageScale}) translate(${imageTranslateX}px, ${imageTranslateY}px)`,
-                                                transformOrigin: 'top left',
-                                                position: 'absolute'
-                                            }"
-                                        >
-                                            <img 
-                                                ref="cropImage" 
-                                                :src="originalImage" 
-                                                alt="원본 이미지" 
-                                                class="crop-original-image"
-                                                @load="initCropArea"
-                                                @mousedown="startImageDrag"
-                                                @touchstart="startImageTouch"
-                                                :style="{
-                                                    cursor: isImageDragging ? 'grabbing' : 'grab',
-                                                    maxWidth: 'none',
-                                                    maxHeight: 'none'
-                                                }"
-                                            >
-                                            <!-- 이미지 크기 조절 핸들 (4개 모서리) -->
-                                            <div class="resize-handle image-resize-handle image-resize-handle-nw" @mousedown.stop="startImageResize('nw')" @touchstart.stop="startImageResizeTouch('nw')"></div>
-                                            <div class="resize-handle image-resize-handle image-resize-handle-ne" @mousedown.stop="startImageResize('ne')" @touchstart.stop="startImageResizeTouch('ne')"></div>
-                                            <div class="resize-handle image-resize-handle image-resize-handle-sw" @mousedown.stop="startImageResize('sw')" @touchstart.stop="startImageResizeTouch('sw')"></div>
-                                            <div class="resize-handle image-resize-handle image-resize-handle-se" @mousedown.stop="startImageResize('se')" @touchstart.stop="startImageResizeTouch('se')"></div>
-                                        </div>
-                                        
-                                        <div 
-                                            ref="cropArea" 
-                                            class="crop-area"
-                                            @mousedown.stop="startDrag"
-                                            @touchstart.stop="startTouch"
-                                            :style="{
-                                                width: cropAreaWidth + 'px',
-                                                height: cropAreaHeight + 'px',
-                                                left: cropAreaLeft + 'px',
-                                                top: cropAreaTop + 'px'
-                                            }"
-                                        >
-                                            <!-- 크롭 영역 크기 조절 핸들 -->
-                                            <div class="resize-handle resize-handle-nw" @mousedown.stop="startResize('nw')" @touchstart.stop="startResizeTouch('nw')"></div>
-                                            <div class="resize-handle resize-handle-ne" @mousedown.stop="startResize('ne')" @touchstart.stop="startResizeTouch('ne')"></div>
-                                            <div class="resize-handle resize-handle-sw" @mousedown.stop="startResize('sw')" @touchstart.stop="startResizeTouch('sw')"></div>
-                                            <div class="resize-handle resize-handle-se" @mousedown.stop="startResize('se')" @touchstart.stop="startResizeTouch('se')"></div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 이미지 확대/축소 컨트롤 -->
-                                    <div class="zoom-controls">
-                                        <v-btn icon size="small" @click="zoomOut" class="zoom-btn">
-                                            <v-icon>mdi-minus</v-icon>
-                                        </v-btn>
-                                        <span class="zoom-text">{{ Math.round(imageScale * 100) }}%</span>
-                                        <v-btn icon size="small" @click="zoomIn" class="zoom-btn">
-                                            <v-icon>mdi-plus</v-icon>
-                                        </v-btn>
-                                    </div>
-                                </div>
-                                
-                                <p class="text-caption mt-2">이미지를 드래그하여 위치를 조정하고, 크롭 영역을 드래그하여 자를 부분을 선택하세요.</p>
-                                <p class="text-caption">이미지 모서리를 드래그하여 이미지 크기를 조절할 수 있습니다.</p>
-                                <p class="text-caption">크롭 영역의 모서리를 드래그하여 크기를 조절할 수 있습니다.</p>
-                            </v-card-text>
-                            
-                            <v-card-actions>
-                                <v-spacer></v-spacer>
-                                <v-btn color="grey" variant="text" @click="cancelCrop">취소</v-btn>
-                                <v-btn color="primary" @click="confirmCrop">적용</v-btn>
-                            </v-card-actions>
-                        </v-card>
-                    </v-dialog>
-
+                    
                     <!-- 모임명 입력 -->
                     <div class="form-field">
                         <v-text-field
@@ -248,47 +242,57 @@ export default{
             },
             imageFile: null,
             previewImage: null,
+            originalImage: null,
+            showCropDialog: false,
             isFormValid: false,
             isSubmitting: false,
             isLoading: true,
             error: null,
-            showCropDialog: false,
-            originalImage: null,
-            imageScale: 1,
-            imageTranslateX: 0,
-            imageTranslateY: 0,
-            cropAreaWidth: 380,
-            cropAreaHeight: 200,
+            
+            // 크롭 영역 관련 데이터
+            cropAreaWidth: 300,
+            cropAreaHeight: 158, // 1.9:1 비율로 변경
             cropAreaLeft: 0,
             cropAreaTop: 0,
+            isDragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            initialLeft: 0,
+            initialTop: 0,
+            imageWidth: 0,
+            imageHeight: 0,
+            imageScale: 1, // 이미지 확대/축소 비율
+            originalImageWidth: 0,
+            originalImageHeight: 0,
+            
+            // 이미지 드래그 관련 데이터
+            imageTranslateX: 0,
+            imageTranslateY: 0,
             isImageDragging: false,
             imageDragStartX: 0,
             imageDragStartY: 0,
             initialImageTranslateX: 0,
             initialImageTranslateY: 0,
-            isImageResizing: false,
-            imageResizeDirection: '',
-            imageResizeStartX: 0,
-            imageResizeStartY: 0,
-            initialImageScale: 1,
-            originalImageWidth: 0,
-            originalImageHeight: 0,
-            imageWidth: 0,
-            imageHeight: 0,
-            isCropAreaDragging: false,
-            cropDragStartX: 0,
-            cropDragStartY: 0,
-            initialCropLeft: 0,
-            initialCropTop: 0,
+            
+            // 크롭 영역 크기 조절 관련 데이터
             isResizing: false,
             resizeDirection: '',
             resizeStartX: 0,
             resizeStartY: 0,
             initialCropWidth: 0,
             initialCropHeight: 0,
-            cropSizeScale: 1,
-            baseCropWidth: 380,
-            baseCropHeight: 200
+            initialCropLeft: 0,
+            initialCropTop: 0,
+            cropSizeScale: 1, // 크롭 영역 크기 스케일
+            baseCropWidth: 300, // 기본 크롭 영역 너비
+            baseCropHeight: 158, // 기본 크롭 영역 높이 (1.9:1 비율)
+            
+            // 이미지 크기 조절 관련 데이터
+            isImageResizing: false,
+            imageResizeDirection: '',
+            imageResizeStartX: 0,
+            imageResizeStartY: 0,
+            initialImageScale: 1,
         }
     },
     methods: {
@@ -299,6 +303,7 @@ export default{
             this.$refs.fileInput.$el.querySelector('input').click();
         },
         validateMaxPeople() {
+            // 숫자 범위 검증 (2~100)
             const value = parseInt(this.gatheringData.maxPeople);
             if (isNaN(value) || value < 2) {
                 this.gatheringData.maxPeople = 2;
@@ -329,6 +334,7 @@ export default{
                 if (response.data.result) {
                     const gatheringData = response.data.result;
                     
+                    // 가져온 데이터로 폼 초기화
                     this.gatheringData = {
                         gatheringName: gatheringData.gatheringName,
                         introduce: gatheringData.introduce,
@@ -350,15 +356,18 @@ export default{
             
             this.isSubmitting = true;
             try {
+                // FormData 객체 생성
                 const formData = new FormData();
                 formData.append('gatheringName', this.gatheringData.gatheringName);
                 formData.append('introduce', this.gatheringData.introduce);
                 formData.append('maxPeople', this.gatheringData.maxPeople);
                 
+                // 이미지 파일이 있는 경우에만 추가
                 if (this.imageFile) {
                     formData.append('imageFile', this.imageFile);
                 }
                 
+                // 모임 수정 API 호출
                 const response = await axios.patch(
                     `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/update/${this.gatheringId}`,
                     formData,
@@ -369,6 +378,7 @@ export default{
                     }
                 );
                 
+                // 성공 시 모임 상세 페이지로 이동
                 if (response.data.status_code === 200) {
                     alert('모임 정보가 수정되었습니다.');
                     this.$router.push(`/silverpotion/gathering/home/${this.gatheringId}`);
@@ -380,30 +390,67 @@ export default{
                 this.isSubmitting = false;
             }
         },
+        initCropArea() {
+            const img = this.$refs.cropImage;
+            const wrapper = this.$refs.cropWrapper;
+            
+            // 원본 이미지 크기 저장
+            this.originalImageWidth = img.naturalWidth;
+            this.originalImageHeight = img.naturalHeight;
+            
+            // 이미지 초기 스케일 계산 (컨테이너에 맞게)
+            const containerWidth = wrapper.offsetWidth;
+            const containerHeight = 500; // 최대 높이
+            
+            // 이미지가 컨테이너에 맞도록 초기 스케일 계산
+            const scaleX = containerWidth / this.originalImageWidth;
+            const scaleY = containerHeight / this.originalImageHeight;
+            this.imageScale = Math.min(scaleX, scaleY, 1); // 1보다 크지 않게
+            
+            // 현재 이미지 크기 계산 (스케일 적용)
+            this.imageWidth = this.originalImageWidth * this.imageScale;
+            this.imageHeight = this.originalImageHeight * this.imageScale;
+            
+            // 크롭 영역 초기화 (1.9:1 비율)
+            this.cropAreaWidth = this.baseCropWidth;
+            this.cropAreaHeight = this.baseCropHeight;
+            this.cropSizeScale = 1;
+            
+            // 크롭 영역을 이미지 중앙에 배치
+            this.cropAreaLeft = (this.imageWidth - this.cropAreaWidth) / 2;
+            this.cropAreaTop = (this.imageHeight - this.cropAreaHeight) / 2;
+            
+            // 이벤트 리스너 추가
+            document.addEventListener('mousemove', this.onDrag);
+            document.addEventListener('mouseup', this.stopDrag);
+            document.addEventListener('mousemove', this.onImageDrag);
+            document.addEventListener('mouseup', this.stopImageDrag);
+            document.addEventListener('touchmove', this.onTouch, { passive: false });
+            document.addEventListener('touchend', this.stopTouch);
+            document.addEventListener('touchmove', this.onImageTouch, { passive: false });
+            document.addEventListener('touchend', this.stopImageTouch);
+        },
         startImageDrag(e) {
             this.isImageDragging = true;
             this.imageDragStartX = e.clientX;
             this.imageDragStartY = e.clientY;
             this.initialImageTranslateX = this.imageTranslateX;
             this.initialImageTranslateY = this.imageTranslateY;
-            
-            document.addEventListener('mousemove', this.onImageDrag);
-            document.addEventListener('mouseup', this.stopImageDrag);
             e.preventDefault();
         },
         onImageDrag(e) {
             if (!this.isImageDragging) return;
             
+            // 드래그 거리 계산
             const dx = e.clientX - this.imageDragStartX;
             const dy = e.clientY - this.imageDragStartY;
             
-            this.imageTranslateX = this.initialImageTranslateX + dx;
-            this.imageTranslateY = this.initialImageTranslateY + dy;
+            // 새 위치 계산
+            this.imageTranslateX = this.initialImageTranslateX + dx / this.imageScale;
+            this.imageTranslateY = this.initialImageTranslateY + dy / this.imageScale;
         },
         stopImageDrag() {
             this.isImageDragging = false;
-            document.removeEventListener('mousemove', this.onImageDrag);
-            document.removeEventListener('mouseup', this.stopImageDrag);
         },
         startImageTouch(e) {
             this.isImageDragging = true;
@@ -411,215 +458,53 @@ export default{
             this.imageDragStartY = e.touches[0].clientY;
             this.initialImageTranslateX = this.imageTranslateX;
             this.initialImageTranslateY = this.imageTranslateY;
-            
-            document.addEventListener('touchmove', this.onImageTouch, { passive: false });
-            document.addEventListener('touchend', this.stopImageTouch);
             e.preventDefault();
         },
         onImageTouch(e) {
             if (!this.isImageDragging) return;
             
+            // 드래그 거리 계산
             const dx = e.touches[0].clientX - this.imageDragStartX;
             const dy = e.touches[0].clientY - this.imageDragStartY;
             
-            this.imageTranslateX = this.initialImageTranslateX + dx;
-            this.imageTranslateY = this.initialImageTranslateY + dy;
-            
-            e.preventDefault();
-        },
-        stopImageTouch() {
-            this.isImageDragging = false;
-            document.removeEventListener('touchmove', this.onImageTouch);
-            document.removeEventListener('touchend', this.stopImageTouch);
-        },
-        startDrag(e) {
-            this.isCropAreaDragging = true;
-            this.cropDragStartX = e.clientX;
-            this.cropDragStartY = e.clientY;
-            this.initialCropLeft = this.cropAreaLeft;
-            this.initialCropTop = this.cropAreaTop;
-            
-            document.addEventListener('mousemove', this.onDrag);
-            document.addEventListener('mouseup', this.stopDrag);
-            e.preventDefault();
-        },
-        onDrag(e) {
-            if (!this.isCropAreaDragging) return;
-            
-            const dx = e.clientX - this.cropDragStartX;
-            const dy = e.clientY - this.cropDragStartY;
-            
-            this.cropAreaLeft = this.initialCropLeft + dx;
-            this.cropAreaTop = this.initialCropTop + dy;
-        },
-        stopDrag() {
-            this.isCropAreaDragging = false;
-            document.removeEventListener('mousemove', this.onDrag);
-            document.removeEventListener('mouseup', this.stopDrag);
-        },
-        startTouch(e) {
-            this.isCropAreaDragging = true;
-            this.cropDragStartX = e.touches[0].clientX;
-            this.cropDragStartY = e.touches[0].clientY;
-            this.initialCropLeft = this.cropAreaLeft;
-            this.initialCropTop = this.cropAreaTop;
-            
-            document.addEventListener('touchmove', this.onTouch, { passive: false });
-            document.addEventListener('touchend', this.stopTouch);
-            e.preventDefault();
-        },
-        onTouch(e) {
-            if (!this.isCropAreaDragging) return;
-            
-            const dx = e.touches[0].clientX - this.cropDragStartX;
-            const dy = e.touches[0].clientY - this.cropDragStartY;
-            
-            this.cropAreaLeft = this.initialCropLeft + dx;
-            this.cropAreaTop = this.initialCropTop + dy;
+            // 새 위치 계산
+            this.imageTranslateX = this.initialImageTranslateX + dx / this.imageScale;
+            this.imageTranslateY = this.initialImageTranslateY + dy / this.imageScale;
             
             e.preventDefault();
         },
         stopTouch() {
-            this.isCropAreaDragging = false;
-            document.removeEventListener('touchmove', this.onTouch);
-            document.removeEventListener('touchend', this.stopTouch);
+            this.isDragging = false;
         },
-        initCropArea() {
-            const img = this.$refs.cropImage;
-            const wrapper = this.$refs.cropWrapper;
-            
-            if (!img || !wrapper) return;
-            
-            // 이미지 원본 크기 저장
-            this.originalImageWidth = img.naturalWidth;
-            this.originalImageHeight = img.naturalHeight;
-            
-            // 이미지 크기 초기화 - 적절한 크기로 조정
-            const wrapperWidth = wrapper.clientWidth;
-            const wrapperHeight = wrapper.clientHeight;
-            
-            // 이미지가 너무 크면 적절한 크기로 조정
-            let scale = 1;
-            
-            // 이미지가 wrapper보다 크면 적절하게 축소
-            if (this.originalImageWidth > wrapperWidth * 0.8 || this.originalImageHeight > wrapperHeight * 0.8) {
-                const scaleX = (wrapperWidth * 0.8) / this.originalImageWidth;
-                const scaleY = (wrapperHeight * 0.8) / this.originalImageHeight;
-                scale = Math.min(scaleX, scaleY); // 더 작은 비율로 조정하여 화면에 맞춤
-            }
-            
-            // 이미지 스케일 설정
-            this.imageScale = scale;
-            
-            // 이미지 크기 업데이트
-            this.imageWidth = this.originalImageWidth * this.imageScale;
-            this.imageHeight = this.originalImageHeight * this.imageScale;
-            
-            // 크롭 영역 크기 조정 (기본 크기의 70%로 줄임)
-            this.cropAreaWidth = this.baseCropWidth * 0.7;
-            this.cropAreaHeight = this.baseCropHeight * 0.7;
-            
-            // 크롭 영역 중앙 배치
-            this.cropAreaLeft = (wrapperWidth - this.cropAreaWidth) / 2;
-            this.cropAreaTop = (wrapperHeight - this.cropAreaHeight) / 2;
-            
-            // 이미지 중앙 배치
-            this.imageTranslateX = (wrapperWidth - this.imageWidth) / 2;
-            this.imageTranslateY = (wrapperHeight - this.imageHeight) / 2;
+        zoomOut() {
+            // 10% 축소
+            const newScale = Math.max(0.1, this.imageScale * 0.9);
+            this.updateImageScale(newScale);
         },
-        removeEventListeners() {
-            document.removeEventListener('mousemove', this.onDrag);
-            document.removeEventListener('mouseup', this.stopDrag);
-            document.removeEventListener('mousemove', this.onImageDrag);
-            document.removeEventListener('mouseup', this.stopImageDrag);
-            document.removeEventListener('touchmove', this.onTouch);
-            document.removeEventListener('touchend', this.stopTouch);
-            document.removeEventListener('touchmove', this.onImageTouch);
-            document.removeEventListener('touchend', this.stopImageTouch);
-            document.removeEventListener('mousemove', this.onResize);
-            document.removeEventListener('mouseup', this.stopResize);
-            document.removeEventListener('touchmove', this.onResizeTouch);
-            document.removeEventListener('touchend', this.stopResizeTouch);
-            document.removeEventListener('mousemove', this.onImageResize);
-            document.removeEventListener('mouseup', this.stopImageResize);
-            document.removeEventListener('touchmove', this.onImageResizeTouch);
-            document.removeEventListener('touchend', this.stopImageResizeTouch);
+        zoomIn() {
+            // 10% 확대
+            const newScale = Math.min(3, this.imageScale * 1.1);
+            this.updateImageScale(newScale);
         },
-        cancelCrop() {
-            this.showCropDialog = false;
+        updateImageScale(newScale) {
+            // 새 이미지 크기 계산
+            const newWidth = this.originalImageWidth * newScale;
+            const newHeight = this.originalImageHeight * newScale;
             
-            // 새 이미지를 선택하다가 취소한 경우에만 imageFile을 null로 설정
-            if (!this.previewImage) {
-                this.imageFile = null;
-            }
+            // 이미지 중심점 계산
+            const centerX = this.imageTranslateX + (this.imageWidth / 2);
+            const centerY = this.imageTranslateY + (this.imageHeight / 2);
             
-            this.imageScale = 1;
-            this.imageTranslateX = 0;
-            this.imageTranslateY = 0;
-            this.cropSizeScale = 1;
+            // 새 위치 계산 (중심점 유지)
+            const newTranslateX = centerX - (newWidth / 2);
+            const newTranslateY = centerY - (newHeight / 2);
             
-            // 이벤트 리스너 제거
-            this.removeEventListeners();
-        },
-        confirmCrop() {
-            try {
-                // 원본 이미지 로드
-                const img = this.$refs.cropImage;
-                
-                // 캔버스 생성
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // 캔버스 크기 설정 (크롭 영역 크기로)
-                canvas.width = this.cropAreaWidth;
-                canvas.height = this.cropAreaHeight;
-                
-                // 소스 영역 계산 (이미지 스케일과 위치 고려)
-                const sourceX = (this.cropAreaLeft - this.imageTranslateX) / this.imageScale;
-                const sourceY = (this.cropAreaTop - this.imageTranslateY) / this.imageScale;
-                const sourceWidth = this.cropAreaWidth / this.imageScale;
-                const sourceHeight = this.cropAreaHeight / this.imageScale;
-                
-                // 크롭된 이미지 그리기
-                ctx.drawImage(
-                    img,
-                    Math.max(0, sourceX), Math.max(0, sourceY), 
-                    Math.min(sourceWidth, img.naturalWidth - sourceX), 
-                    Math.min(sourceHeight, img.naturalHeight - sourceY),
-                    0, 0, canvas.width, canvas.height
-                );
-                
-                // 고품질 PNG로 변환
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        // 원본 파일 이름 유지
-                        const fileName = this.imageFile ? this.imageFile.name : 'cropped-image.png';
-                        const croppedFile = new File([blob], fileName, { type: 'image/png' });
-                        
-                        // 미리보기 이미지 업데이트
-                        const objectUrl = URL.createObjectURL(blob);
-                        this.previewImage = objectUrl;
-                        
-                        // 이미지 파일 업데이트
-                        this.imageFile = croppedFile;
-                        
-                        // 다이얼로그 닫기
-                        this.showCropDialog = false;
-                        
-                        // 이벤트 리스너 제거
-                        this.removeEventListeners();
-                        
-                        // 초기화
-                        this.imageScale = 1;
-                        this.imageTranslateX = 0;
-                        this.imageTranslateY = 0;
-                    }
-                }, 'image/png', 1.0); // 최대 품질로 설정
-            } catch (error) {
-                console.error('이미지 크롭 중 오류 발생:', error);
-                alert('이미지 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
-                this.cancelCrop();
-            }
+            // 값 업데이트
+            this.imageScale = newScale;
+            this.imageWidth = newWidth;
+            this.imageHeight = newHeight;
+            this.imageTranslateX = newTranslateX;
+            this.imageTranslateY = newTranslateY;
         },
         startResize(direction) {
             this.isResizing = true;
@@ -640,39 +525,42 @@ export default{
             
             // 마우스 이동 거리 계산
             const dx = e.clientX - this.resizeStartX;
-            const aspectRatio = this.baseCropWidth / this.baseCropHeight; // 가로세로 비율 계산 (380:200)
             
-            // 비율 유지를 위한 계산
-            let newWidth, newHeight, newLeft = this.initialCropLeft, newTop = this.initialCropTop;
+            // 비율 유지를 위한 계산 (1.9:1)
+            let newWidth, newHeight, newLeft, newTop;
             
             // 방향에 따라 다르게 처리
             switch (this.resizeDirection) {
                 case 'se': // 우측 하단
                     newWidth = this.initialCropWidth + dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
+                    newLeft = this.initialCropLeft;
+                    newTop = this.initialCropTop;
                     break;
                 case 'sw': // 좌측 하단
                     newWidth = this.initialCropWidth - dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
                     newLeft = this.initialCropLeft + dx;
+                    newTop = this.initialCropTop;
                     break;
                 case 'ne': // 우측 상단
                     newWidth = this.initialCropWidth + dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
+                    newLeft = this.initialCropLeft;
                     newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                     break;
                 case 'nw': // 좌측 상단
                     newWidth = this.initialCropWidth - dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
                     newLeft = this.initialCropLeft + dx;
                     newTop = this.initialCropTop + (this.initialCropHeight - newHeight);
                     break;
             }
             
-            // 최소/최대 크기 제한
+            // 최소 크기 제한
             if (newWidth < 100) {
                 newWidth = 100;
-                newHeight = 100 / aspectRatio;
+                newHeight = newWidth / 1.9;
                 
                 // 위치 조정
                 switch (this.resizeDirection) {
@@ -680,16 +568,19 @@ export default{
                         newLeft = this.initialCropLeft + (this.initialCropWidth - 100);
                         break;
                     case 'ne':
-                        newTop = this.initialCropTop + (this.initialCropHeight - 100 / aspectRatio);
+                        newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                         break;
                     case 'nw':
                         newLeft = this.initialCropLeft + (this.initialCropWidth - 100);
-                        newTop = this.initialCropTop + (this.initialCropHeight - 100 / aspectRatio);
+                        newTop = this.initialCropTop + (this.initialCropHeight - newHeight);
                         break;
                 }
-            } else if (newWidth > 600) {
+            }
+            
+            // 최대 크기 제한
+            if (newWidth > 600) {
                 newWidth = 600;
-                newHeight = 600 / aspectRatio;
+                newHeight = newWidth / 1.9;
                 
                 // 위치 조정
                 switch (this.resizeDirection) {
@@ -697,11 +588,11 @@ export default{
                         newLeft = this.initialCropLeft - (600 - this.initialCropWidth);
                         break;
                     case 'ne':
-                        newTop = this.initialCropTop - (600 / aspectRatio - this.initialCropHeight);
+                        newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                         break;
                     case 'nw':
                         newLeft = this.initialCropLeft - (600 - this.initialCropWidth);
-                        newTop = this.initialCropTop - (600 / aspectRatio - this.initialCropHeight);
+                        newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                         break;
                 }
             }
@@ -739,39 +630,42 @@ export default{
             
             // 터치 이동 거리 계산
             const dx = e.touches[0].clientX - this.resizeStartX;
-            const aspectRatio = this.baseCropWidth / this.baseCropHeight; // 가로세로 비율 계산 (380:200)
             
-            // 비율 유지를 위한 계산
-            let newWidth, newHeight, newLeft = this.initialCropLeft, newTop = this.initialCropTop;
+            // 비율 유지를 위한 계산 (1.9:1)
+            let newWidth, newHeight, newLeft, newTop;
             
             // 방향에 따라 다르게 처리
             switch (this.resizeDirection) {
                 case 'se': // 우측 하단
                     newWidth = this.initialCropWidth + dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
+                    newLeft = this.initialCropLeft;
+                    newTop = this.initialCropTop;
                     break;
                 case 'sw': // 좌측 하단
                     newWidth = this.initialCropWidth - dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
                     newLeft = this.initialCropLeft + dx;
+                    newTop = this.initialCropTop;
                     break;
                 case 'ne': // 우측 상단
                     newWidth = this.initialCropWidth + dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
+                    newLeft = this.initialCropLeft;
                     newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                     break;
                 case 'nw': // 좌측 상단
                     newWidth = this.initialCropWidth - dx;
-                    newHeight = newWidth / aspectRatio; // 비율 유지
+                    newHeight = newWidth / 1.9; // 1.9:1 비율 유지
                     newLeft = this.initialCropLeft + dx;
                     newTop = this.initialCropTop + (this.initialCropHeight - newHeight);
                     break;
             }
             
-            // 최소/최대 크기 제한
+            // 최소 크기 제한
             if (newWidth < 100) {
                 newWidth = 100;
-                newHeight = 100 / aspectRatio;
+                newHeight = newWidth / 1.9;
                 
                 // 위치 조정
                 switch (this.resizeDirection) {
@@ -779,16 +673,19 @@ export default{
                         newLeft = this.initialCropLeft + (this.initialCropWidth - 100);
                         break;
                     case 'ne':
-                        newTop = this.initialCropTop + (this.initialCropHeight - 100 / aspectRatio);
+                        newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                         break;
                     case 'nw':
                         newLeft = this.initialCropLeft + (this.initialCropWidth - 100);
-                        newTop = this.initialCropTop + (this.initialCropHeight - 100 / aspectRatio);
+                        newTop = this.initialCropTop + (this.initialCropHeight - newHeight);
                         break;
                 }
-            } else if (newWidth > 600) {
+            }
+            
+            // 최대 크기 제한
+            if (newWidth > 600) {
                 newWidth = 600;
-                newHeight = 600 / aspectRatio;
+                newHeight = newWidth / 1.9;
                 
                 // 위치 조정
                 switch (this.resizeDirection) {
@@ -796,11 +693,11 @@ export default{
                         newLeft = this.initialCropLeft - (600 - this.initialCropWidth);
                         break;
                     case 'ne':
-                        newTop = this.initialCropTop - (600 / aspectRatio - this.initialCropHeight);
+                        newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                         break;
                     case 'nw':
                         newLeft = this.initialCropLeft - (600 - this.initialCropWidth);
-                        newTop = this.initialCropTop - (600 / aspectRatio - this.initialCropHeight);
+                        newTop = this.initialCropTop - (newHeight - this.initialCropHeight);
                         break;
                 }
             }
@@ -821,52 +718,20 @@ export default{
             document.removeEventListener('touchmove', this.onResizeTouch);
             document.removeEventListener('touchend', this.stopResizeTouch);
         },
-        startImageResize(direction) {
-            this.isImageResizing = true;
-            this.imageResizeDirection = direction;
-            this.imageResizeStartX = event.clientX;
-            this.imageResizeStartY = event.clientY;
-            this.initialImageScale = this.imageScale;
-            
-            document.addEventListener('mousemove', this.onImageResize);
-            document.addEventListener('mouseup', this.stopImageResize);
-            event.preventDefault();
-        },
         onImageResize(e) {
             if (!this.isImageResizing) return;
             
             // 마우스 이동 거리 계산
             const dx = e.clientX - this.imageResizeStartX;
-            const dy = e.clientY - this.imageResizeStartY;
             
-            // 이미지 스케일 계산
-            let newScale = this.initialImageScale;
-            
-            // 방향에 따라 다르게 처리
-            switch (this.imageResizeDirection) {
-                case 'se': // 우측 하단 - 오른쪽/아래로 드래그하면 확대
-                    newScale = this.initialImageScale * (1 + (dx + dy) / 400);
-                    break;
-                case 'sw': // 좌측 하단 - 왼쪽으로 드래그하면 축소, 아래로 드래그하면 확대
-                    newScale = this.initialImageScale * (1 + (-dx + dy) / 400);
-                    break;
-                case 'ne': // 우측 상단 - 오른쪽으로 드래그하면 확대, 위로 드래그하면 축소
-                    newScale = this.initialImageScale * (1 + (dx - dy) / 400);
-                    break;
-                case 'nw': // 좌측 상단 - 왼쪽/위로 드래그하면 축소
-                    newScale = this.initialImageScale * (1 + (-dx - dy) / 400);
-                    break;
-            }
+            // 이미지 스케일 계산 (이동 거리에 따라 조정)
+            let newScale = this.initialImageScale * (1 + dx * 0.005);
             
             // 최소/최대 스케일 제한
             newScale = Math.max(0.1, Math.min(3, newScale));
             
             // 이미지 스케일 업데이트
-            this.imageScale = newScale;
-            
-            // 이미지 크기 업데이트
-            this.imageWidth = this.originalImageWidth * this.imageScale;
-            this.imageHeight = this.originalImageHeight * this.imageScale;
+            this.updateImageScale(newScale);
         },
         stopImageResize() {
             this.isImageResizing = false;
@@ -889,36 +754,15 @@ export default{
             
             // 터치 이동 거리 계산
             const dx = e.touches[0].clientX - this.imageResizeStartX;
-            const dy = e.touches[0].clientY - this.imageResizeStartY;
             
-            // 이미지 스케일 계산
-            let newScale = this.initialImageScale;
-            
-            // 방향에 따라 다르게 처리
-            switch (this.imageResizeDirection) {
-                case 'se': // 우측 하단 - 오른쪽/아래로 드래그하면 확대
-                    newScale = this.initialImageScale * (1 + (dx + dy) / 400);
-                    break;
-                case 'sw': // 좌측 하단 - 왼쪽으로 드래그하면 축소, 아래로 드래그하면 확대
-                    newScale = this.initialImageScale * (1 + (-dx + dy) / 400);
-                    break;
-                case 'ne': // 우측 상단 - 오른쪽으로 드래그하면 확대, 위로 드래그하면 축소
-                    newScale = this.initialImageScale * (1 + (dx - dy) / 400);
-                    break;
-                case 'nw': // 좌측 상단 - 왼쪽/위로 드래그하면 축소
-                    newScale = this.initialImageScale * (1 + (-dx - dy) / 400);
-                    break;
-            }
+            // 이미지 스케일 계산 (이동 거리에 따라 조정)
+            let newScale = this.initialImageScale * (1 + dx * 0.005);
             
             // 최소/최대 스케일 제한
             newScale = Math.max(0.1, Math.min(3, newScale));
             
             // 이미지 스케일 업데이트
-            this.imageScale = newScale;
-            
-            // 이미지 크기 업데이트
-            this.imageWidth = this.originalImageWidth * this.imageScale;
-            this.imageHeight = this.originalImageHeight * this.imageScale;
+            this.updateImageScale(newScale);
             
             e.preventDefault();
         },
@@ -927,45 +771,157 @@ export default{
             document.removeEventListener('touchmove', this.onImageResizeTouch);
             document.removeEventListener('touchend', this.stopImageResizeTouch);
         },
-        zoomIn() {
-            // 10% 확대
-            const newScale = Math.min(3, this.imageScale * 1.1);
-            this.updateImageScale(newScale);
+        removeEventListeners() {
+            document.removeEventListener('mousemove', this.onDrag);
+            document.removeEventListener('mouseup', this.stopDrag);
+            document.removeEventListener('mousemove', this.onImageDrag);
+            document.removeEventListener('mouseup', this.stopImageDrag);
+            document.removeEventListener('touchmove', this.onTouch);
+            document.removeEventListener('touchend', this.stopTouch);
+            document.removeEventListener('touchmove', this.onImageTouch);
+            document.removeEventListener('touchend', this.stopImageTouch);
+            document.removeEventListener('mousemove', this.onResize);
+            document.removeEventListener('mouseup', this.stopResize);
+            document.removeEventListener('touchmove', this.onResizeTouch);
+            document.removeEventListener('touchend', this.stopResizeTouch);
+            document.removeEventListener('mousemove', this.onImageResize);
+            document.removeEventListener('mouseup', this.stopImageResize);
+            document.removeEventListener('touchmove', this.onImageResizeTouch);
+            document.removeEventListener('touchend', this.stopImageResizeTouch);
         },
-        zoomOut() {
-            // 10% 축소
-            const newScale = Math.max(0.1, this.imageScale * 0.9);
-            this.updateImageScale(newScale);
+        cancelCrop() {
+            this.showCropDialog = false;
+            this.imageFile = null;
+            this.originalImage = null;
+            this.removeEventListeners();
         },
-        updateImageScale(newScale) {
-            // 새 이미지 크기 계산
-            const newWidth = this.originalImageWidth * newScale;
-            const newHeight = this.originalImageHeight * newScale;
+        confirmCrop() {
+            // 캔버스 생성
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
             
-            // 이미지 중심점 계산
-            const centerX = this.imageTranslateX + (this.imageWidth / 2);
-            const centerY = this.imageTranslateY + (this.imageHeight / 2);
+            // 캔버스 크기 설정 (최종 이미지 크기, 1.9:1 비율)
+            canvas.width = 300;
+            canvas.height = 158;
             
-            // 새 위치 계산 (중심점 유지)
-            const newTranslateX = centerX - (newWidth / 2);
-            const newTranslateY = centerY - (newHeight / 2);
+            // 이미지 객체 생성
+            const img = this.$refs.cropImage;
             
-            // 값 업데이트
-            this.imageScale = newScale;
-            this.imageWidth = newWidth;
-            this.imageHeight = newHeight;
-            this.imageTranslateX = newTranslateX;
-            this.imageTranslateY = newTranslateY;
-        }
+            // 크롭 영역 계산
+            const cropX = (this.cropAreaLeft - this.imageTranslateX * this.imageScale) / this.imageScale;
+            const cropY = (this.cropAreaTop - this.imageTranslateY * this.imageScale) / this.imageScale;
+            const cropWidth = this.cropAreaWidth / this.imageScale;
+            const cropHeight = this.cropAreaHeight / this.imageScale;
+            
+            // 이미지 그리기
+            ctx.drawImage(
+                img,
+                cropX, cropY, cropWidth, cropHeight,
+                0, 0, canvas.width, canvas.height
+            );
+            
+            // 캔버스를 Blob으로 변환
+            canvas.toBlob((blob) => {
+                // 파일 객체 생성
+                const croppedFile = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
+                
+                // 미리보기 이미지 설정
+                this.previewImage = URL.createObjectURL(blob);
+                
+                // 파일 입력 업데이트
+                this.imageFile = croppedFile;
+                
+                // 다이얼로그 닫기
+                this.showCropDialog = false;
+                
+                // 이벤트 리스너 제거
+                this.removeEventListeners();
+            }, 'image/jpeg', 0.95);
+        },
+        // 크롭 영역 드래그 관련 메소드
+        startDrag(e) {
+            this.isDragging = true;
+            this.dragStartX = e.clientX || e.touches[0].clientX;
+            this.dragStartY = e.clientY || e.touches[0].clientY;
+            this.initialLeft = this.cropAreaLeft;
+            this.initialTop = this.cropAreaTop;
+            
+            // 이벤트 리스너 추가
+            document.addEventListener('mousemove', this.onDrag);
+            document.addEventListener('mouseup', this.stopDrag);
+            
+            e.preventDefault();
+        },
+        onDrag(e) {
+            if (!this.isDragging) return;
+            
+            // 드래그 거리 계산
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            const dx = clientX - this.dragStartX;
+            const dy = clientY - this.dragStartY;
+            
+            // 새 위치 계산
+            let newLeft = this.initialLeft + dx;
+            let newTop = this.initialTop + dy;
+            
+            // 위치 업데이트 (제한 없이 자유롭게 이동)
+            this.cropAreaLeft = newLeft;
+            this.cropAreaTop = newTop;
+        },
+        stopDrag() {
+            this.isDragging = false;
+            document.removeEventListener('mousemove', this.onDrag);
+            document.removeEventListener('mouseup', this.stopDrag);
+        },
+        // 크롭 영역 터치 관련 메소드
+        startTouch(e) {
+            this.isDragging = true;
+            this.dragStartX = e.touches[0].clientX;
+            this.dragStartY = e.touches[0].clientY;
+            this.initialLeft = this.cropAreaLeft;
+            this.initialTop = this.cropAreaTop;
+            
+            // 이벤트 리스너 추가
+            document.addEventListener('touchmove', this.onTouch, { passive: false });
+            document.addEventListener('touchend', this.stopTouch);
+            
+            e.preventDefault();
+        },
+        onTouch(e) {
+            if (!this.isDragging) return;
+            
+            // 드래그 거리 계산
+            const dx = e.touches[0].clientX - this.dragStartX;
+            const dy = e.touches[0].clientY - this.dragStartY;
+            
+            // 새 위치 계산
+            let newLeft = this.initialLeft + dx;
+            let newTop = this.initialTop + dy;
+            
+            // 위치 업데이트 (제한 없이 자유롭게 이동)
+            this.cropAreaLeft = newLeft;
+            this.cropAreaTop = newTop;
+            
+            e.preventDefault();
+        },
     },
     mounted() {
+        // URL 파라미터에서 모임 ID 가져오기
         this.gatheringId = this.$route.params.gatheringId;
         
         if (this.gatheringId) {
+            // 모임 정보 불러오기
             this.fetchGatheringData();
         } else {
+            // 모임 ID가 없는 경우 이전 페이지로 이동
             this.$router.go(-1);
         }
+    },
+    beforeUnmount() {
+        // 컴포넌트가 제거되기 전에 이벤트 리스너 제거
+        this.removeEventListeners();
     }
 }
 </script>
@@ -973,17 +929,17 @@ export default{
 <style scoped>
 .fixed-header {
     position: fixed;
-    top: 56px;
+    top: 56px; /* 기존 헤더 컴포넌트 높이에 맞게 조정 */
     left: 0;
     right: 0;
     z-index: 999;
-    max-width: 768px;
+    max-width: 768px; /* 앱 컨테이너 크기에 맞게 조정 */
     margin: 0 auto;
     width: 100%;
 }
 
 .content-wrapper {
-    margin-top: 110px;
+    margin-top: 110px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
     padding: 0 16px;
 }
 
@@ -1051,7 +1007,20 @@ export default{
     background-color: var(--v-theme-primary);
 }
 
-/* 이미지 크롭 관련 스타일 */
+.image-preview-container {
+    position: relative;
+    width: 300px;
+    height: 158px; /* 1.9:1 비율로 변경 */
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.mx-auto {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .crop-container {
     position: relative;
     width: 100%;
@@ -1154,24 +1123,11 @@ export default{
     cursor: se-resize;
 }
 
-.image-preview-container {
-    position: relative;
-    width: 380px;
-    height: 200px;
-    overflow: hidden;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.image-preview-container:hover .edit-overlay {
-    opacity: 1;
-}
-
-/* 이미지 확대/축소 컨트롤 스타일 */
+/* 확대/축소 컨트롤 */
 .zoom-controls {
     position: absolute;
-    bottom: 16px;
-    right: 16px;
+    bottom: 20px;
+    left: 16px;
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 20px;
     padding: 4px 12px;
