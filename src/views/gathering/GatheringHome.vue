@@ -326,10 +326,7 @@
 
                 <!-- 게시판 탭 -->
                 <v-window-item value="board">
-                    <div class="empty-container">
-                        <v-icon size="x-large" color="grey-lighten-1">mdi-forum</v-icon>
-                        <p class="mt-3 text-grey-darken-1">게시판 내용이 준비 중입니다.</p>
-                    </div>
+                    <GatheringBoard :gatheringId="gatheringId"/>
                 </v-window-item>
 
                 <!-- 채팅 탭 -->
@@ -496,8 +493,12 @@
 
 <script>
 import axios from 'axios';
+import GatheringBoard from '@/components/GatheringBoard.vue';
 
 export default{
+    components: {
+        GatheringBoard
+    },
     data(){
         return {
             gatheringName: '',
