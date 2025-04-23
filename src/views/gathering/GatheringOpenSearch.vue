@@ -1,11 +1,11 @@
 <template>
     <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+        <v-card flat class="primary fixed-header" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">검색</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">검색</h1>
             </v-card-text>
         </v-card>
 

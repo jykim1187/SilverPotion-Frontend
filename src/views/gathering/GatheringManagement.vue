@@ -1,11 +1,11 @@
 <template>
     <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+        <v-card flat class="primary fixed-header" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">멤버 관리</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">멤버 관리</h1>
             </v-card-text>
         </v-card>
 
@@ -60,7 +60,7 @@
                                 모임장
                             </v-chip>
                         </v-list-item-title>
-                        <v-list-item-subtitle>가입일: {{ formatDate(member.createdTime) }}</v-list-item-subtitle>
+                        <v-list-item-subtitle class="text-caption">가입일: {{ formatDate(member.createdTime) }}</v-list-item-subtitle>
                         
                         <template v-slot:append>
                             <div class="d-flex">
@@ -68,7 +68,7 @@
                                 <v-btn
                                     v-if="member.status === 'WAIT'"
                                     color="success"
-                                    variant="text"
+                                    variant="tonal"
                                     size="small"
                                     class="mr-2"
                                     @click="showApproveDialog(member)"
@@ -81,7 +81,7 @@
                                     <v-btn
                                         v-if="member.userId !== gatheringLeaderId && member.userId !== currentUserId"
                                         color="primary"
-                                        variant="text"
+                                        variant="tonal"
                                         size="small"
                                         class="mr-2"
                                         @click="showTransferDialog(member)"
@@ -91,7 +91,7 @@
                                     <v-btn
                                         v-if="member.userId !== gatheringLeaderId && member.userId !== currentUserId"
                                         color="error"
-                                        variant="text"
+                                        variant="tonal"
                                         size="small"
                                         @click="showKickDialog(member)"
                                     >
