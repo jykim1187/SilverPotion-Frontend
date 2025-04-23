@@ -273,7 +273,7 @@
                 </v-window-item>
 
                 <v-window-item value="board">
-                    <div>게시판 내용</div>
+                    <GatheringBoard :gatheringId="gatheringId"/>
                 </v-window-item>
 
                 <v-window-item value="chat">
@@ -414,8 +414,12 @@
 
 <script>
 import axios from 'axios';
+import GatheringBoard from '@/components/GatheringBoard.vue';
 
 export default{
+    components: {
+        GatheringBoard
+    },
     data(){
         return {
             gatheringName: '',
