@@ -1,37 +1,27 @@
 <template>
     <v-container>
-        <v-card flat class="primary fixed-header" color="primary">
+        <v-card flat class="primary fixed-header" color="#E8F1FD">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-white">모임 검색</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">모임 검색</h1>
             </v-card-text>
         </v-card>
 
         <div class="content-wrapper">
             <!-- 카테고리 선택 영역 -->
             <div class="category-container">
-                <h2 class="text-h6 font-weight-medium mb-4">카테고리 선택</h2>
-                <v-row>
-                    <!-- 첫 번째 줄 (6개) -->
-                    <v-col v-for="(category, index) in categories.slice(0, 6)" :key="index" cols="4" sm="2">
-                        <div 
-                            class="category-item text-center" 
-                            :class="{ 'category-selected': selectedCategory === category.id }"
-                            @click="selectCategory(category.id)"
-                        >
-                            <v-avatar size="40" class="mb-1">
-                                <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
-                            </v-avatar>
-                            <div class="category-name">{{ category.name }}</div>
-                        </div>
-                    </v-col>
-                </v-row>
-                
-                <v-row>
-                    <!-- 두 번째 줄 (6개) -->
-                    <v-col v-for="(category, index) in categories.slice(6)" :key="index + 6" cols="4" sm="2">
+                <h3 class="text-subtitle-1 font-weight-medium mb-2">카테고리</h3>
+                <v-row dense>
+                    <v-col v-for="(category, index) in categories" 
+                           :key="index" 
+                           cols="2" 
+                           sm="6" 
+                           md="2" 
+                           lg="2"
+                           class="pa-1"
+                    >
                         <div 
                             class="category-item text-center" 
                             :class="{ 'category-selected': selectedCategory === category.id }"
@@ -74,38 +64,53 @@
                 </div>
                 
                 <div v-else-if="searchResults.length === 0" class="text-center my-4">
-                    <p>검색 결과가 없습니다.</p>
+                    <v-icon size="large" color="grey">mdi-map-marker-off</v-icon>
+                    <p class="mt-2">검색 결과가 없습니다.</p>
                 </div>
                 
                 <div v-else>
-                    <v-card
-                        v-for="gathering in searchResults"
-                        :key="gathering.id"
-                        class="mb-4"
-                        @click="goToGatheringDetail(gathering.id)"
-                    >
-                        <v-row no-gutters>
-                            <v-col cols="4">
-                                <v-img
-                                    :src="gathering.imageUrl || require('@/assets/default-gathering.png')"
-                                    height="100"
-                                    cover
-                                ></v-img>
-                            </v-col>
-                            <v-col cols="8">
-                                <v-card-text>
-                                    <div class="text-subtitle-1 font-weight-bold">{{ gathering.gatheringName }}</div>
-                                    <div class="text-caption text-grey">{{ gathering.category }}</div>
-                                    <div class="text-caption">
-                                        <v-icon small>mdi-map-marker</v-icon> {{ gathering.region }}
-                                    </div>
-                                    <div class="text-caption">
-                                        <v-icon small>mdi-account-group</v-icon> {{ gathering.peopleCount }}/{{ gathering.maxPeople }}
-                                    </div>
-                                </v-card-text>
-                            </v-col>
-                        </v-row>
-                    </v-card>
+                    <v-list>
+                        <v-list-item 
+                            v-for="gathering in searchResults"
+                            :key="gathering.id"
+                            class="mb-2"
+                            @click="goToGatheringDetail(gathering.id)"
+                            :ripple="true"
+                            hover
+                        >
+                            <template v-slot:prepend>
+                                <v-avatar size="50" rounded>
+                                    <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
+                                           contain
+                                           bg-color="#f5f5f5"
+                                           alt="모임 이미지"></v-img>
+                                </v-avatar>
+                            </template>
+                            
+                            <div>
+                                <div class="d-flex align-center">
+                                    <span class="font-weight-medium">{{ gathering.gatheringName }}</span>
+                                    <v-chip
+                                        size="x-small"
+                                        class="ml-2"
+                                        color="primary"
+                                        variant="outlined"
+                                    >
+                                        {{ gathering.category }}
+                                    </v-chip>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                    <span class="text-caption">{{ gathering.region }}</span>
+                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                    <span class="text-caption">{{ gathering.peopleCount }}/{{ gathering.maxPeople }}명</span>
+                                </div>
+                                <div class="text-caption text-grey mt-1" v-if="gathering.introduce">
+                                    {{ gathering.introduce }}
+                                </div>
+                            </div>
+                        </v-list-item>
+                    </v-list>
                 </div>
             </div>
         </div>
@@ -369,6 +374,10 @@ export default{
     width: 100%;
 }
 
+.text-primary {
+    color: #1976d2 !important;
+}
+
 .content-wrapper {
     margin-top: 110px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
     padding: 0 16px;
@@ -403,5 +412,51 @@ export default{
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.search-results {
+    margin-top: 24px;
+}
+
+.v-list-item {
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.v-list-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.text-subtitle-1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333;
+    position: relative;
+    display: inline-block;
+}
+
+.text-subtitle-1::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 24px;
+    height: 2px;
+    background-color: var(--v-primary-base, #1976d2);
+}
+
+.content-wrapper {
+    margin-top: 56px; /* 헤더 높이에 맞게 조정 */
+    padding: 16px;
+    padding-bottom: 80px;
+}
+
+.sub-category-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
 }
 </style>
