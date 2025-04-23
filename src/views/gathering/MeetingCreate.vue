@@ -126,72 +126,109 @@
                 </div>
 
                 <!-- 정모명 입력 -->
-                <v-text-field
-                    v-model="meeting.name"
-                    label="정모명"
-                    variant="outlined"
-                    :rules="nameRules"
-                    counter="50"
-                    required
-                ></v-text-field>
+                <div class="form-field">
+                    <v-text-field
+                        v-model="meeting.name"
+                        label="정모명"
+                        variant="outlined"
+                        :rules="nameRules"
+                        counter="50"
+                        required
+                        prepend-inner-icon="mdi-calendar-text"
+                        density="comfortable"
+                        bg-color="white"
+                        class="mb-4"
+                    ></v-text-field>
+                </div>
 
                 <!-- 날짜 선택 -->
-                <v-text-field
-                    v-model="meeting.meetingDate"
-                    label="날짜"
-                    variant="outlined"
-                    type="date"
-                    :rules="dateRules"
-                    :min="minDate"
-                    required
-                ></v-text-field>
+                <div class="form-field">
+                    <v-text-field
+                        v-model="meeting.meetingDate"
+                        label="날짜"
+                        variant="outlined"
+                        type="date"
+                        :rules="dateRules"
+                        :min="minDate"
+                        required
+                        prepend-inner-icon="mdi-calendar"
+                        density="comfortable"
+                        bg-color="white"
+                        class="mb-4"
+                    ></v-text-field>
+                </div>
 
                 <!-- 시간 선택 -->
-                <v-text-field
-                    v-model="meeting.meetingTime"
-                    label="시간"
-                    variant="outlined"
-                    type="time"
-                    :rules="timeRules"
-                    required
-                ></v-text-field>
+                <div class="form-field">
+                    <v-text-field
+                        v-model="meeting.meetingTime"
+                        label="시간"
+                        variant="outlined"
+                        type="time"
+                        :rules="timeRules"
+                        required
+                        prepend-inner-icon="mdi-clock-outline"
+                        density="comfortable"
+                        bg-color="white"
+                        class="mb-4"
+                    ></v-text-field>
+                </div>
 
                 <!-- 장소 입력 -->
-                <v-text-field
-                    v-model="meeting.place"
-                    label="장소"
-                    variant="outlined"
-                    :rules="placeRules"
-                    counter="100"
-                    required
-                ></v-text-field>
+                <div class="form-field">
+                    <v-text-field
+                        v-model="meeting.place"
+                        label="장소"
+                        variant="outlined"
+                        :rules="placeRules"
+                        counter="100"
+                        required
+                        prepend-inner-icon="mdi-map-marker"
+                        density="comfortable"
+                        bg-color="white"
+                        class="mb-4"
+                    ></v-text-field>
+                </div>
 
                 <!-- 비용 입력 -->
-                <v-text-field
-                    v-model.number="meeting.cost"
-                    label="비용"
-                    variant="outlined"
-                    type="number"
-                    :rules="costRules"
-                    min="0"
-                    required
-                ></v-text-field>
+                <div class="form-field">
+                    <v-text-field
+                        v-model.number="meeting.cost"
+                        label="비용"
+                        variant="outlined"
+                        type="number"
+                        :rules="costRules"
+                        min="0"
+                        required
+                        prepend-inner-icon="mdi-currency-krw"
+                        density="comfortable"
+                        bg-color="white"
+                        class="mb-4"
+                    ></v-text-field>
+                </div>
 
                 <!-- 최대 인원 입력 -->
-                <v-text-field
-                    v-model.number="meeting.maxPeople"
-                    label="최대 인원"
-                    variant="outlined"
-                    type="number"
-                    :rules="maxPeopleRules"
-                    min="1"
-                    required
-                ></v-text-field>
+                <div class="form-field">
+                    <v-text-field
+                        v-model.number="meeting.maxPeople"
+                        label="최대 인원"
+                        variant="outlined"
+                        type="number"
+                        :rules="maxPeopleRules"
+                        min="1"
+                        required
+                        prepend-inner-icon="mdi-account-group"
+                        density="comfortable"
+                        bg-color="white"
+                        class="mb-4"
+                    ></v-text-field>
+                </div>
 
                 <!-- 생성 버튼 -->
                 <div class="d-flex justify-end mt-6">
                     <v-btn
                         color="primary"
+                        variant="tonal"
                         type="submit"
                         :loading="isSubmitting"
                         :disabled="!valid || isSubmitting"
@@ -317,7 +354,10 @@ export default{
             this.$router.go(-1);
         },
         triggerFileInput() {
-            // 항상 새 이미지 선택 다이얼로그 열기
+            // 파일 입력 초기화 후 클릭
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.$el.querySelector('input').value = '';
+            }
             this.$refs.fileInput.$el.querySelector('input').click();
         },
         handleImageSelected() {
@@ -1046,25 +1086,50 @@ export default{
 
 <style scoped>
 .fixed-header {
-    position: fixed;
-    top: 56px; /* 기존 헤더 컴포넌트 높이에 맞게 조정 */
-    left: 0;
-    right: 0;
-    z-index: 999;
-    max-width: 768px; /* 앱 컨테이너 크기에 맞게 조정 */
-    margin: 0 auto;
-    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .content-wrapper {
-    margin-top: 110px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
-    padding: 0 16px;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.avatar-container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
+.form-container {
+    padding: 16px;
+}
+
+.form-content {
+    padding: 16px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.form-field {
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+}
+
+.form-field:hover {
+    transform: translateY(-2px);
+}
+
+:deep(.v-field) {
+    border-radius: 8px !important;
+}
+
+:deep(.v-slider .v-slider-thumb) {
+    background-color: var(--v-theme-primary);
+}
+
+:deep(.v-slider .v-slider-track__fill) {
+    background-color: var(--v-theme-primary);
 }
 
 .image-preview-container {
@@ -1073,7 +1138,7 @@ export default{
     height: 300px;
     overflow: hidden;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .mx-auto {
@@ -1091,7 +1156,6 @@ export default{
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 8px;
     opacity: 0;
     transition: opacity 0.3s;
 }
@@ -1100,10 +1164,7 @@ export default{
     opacity: 1;
 }
 
-.d-none {
-    display: none;
-}
-
+/* 크롭 관련 스타일 */
 .crop-container {
     position: relative;
     width: 100%;
@@ -1127,40 +1188,6 @@ export default{
 
 .crop-original-image {
     display: block;
-}
-
-.image-resize-handle {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    background-color: rgba(255, 255, 255, 0.8);
-    border: 2px solid #4CAF50;
-    border-radius: 50%;
-    z-index: 20;
-}
-
-.image-resize-handle-nw {
-    top: -12px;
-    left: -12px;
-    cursor: nw-resize;
-}
-
-.image-resize-handle-ne {
-    top: -12px;
-    right: -12px;
-    cursor: ne-resize;
-}
-
-.image-resize-handle-sw {
-    bottom: -12px;
-    left: -12px;
-    cursor: sw-resize;
-}
-
-.image-resize-handle-se {
-    bottom: -12px;
-    right: -12px;
-    cursor: se-resize;
 }
 
 .crop-area {
@@ -1206,11 +1233,45 @@ export default{
     cursor: se-resize;
 }
 
+.image-resize-handle {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 2px solid #4CAF50;
+    border-radius: 50%;
+    z-index: 20;
+}
+
+.image-resize-handle-nw {
+    top: -12px;
+    left: -12px;
+    cursor: nw-resize;
+}
+
+.image-resize-handle-ne {
+    top: -12px;
+    right: -12px;
+    cursor: ne-resize;
+}
+
+.image-resize-handle-sw {
+    bottom: -12px;
+    left: -12px;
+    cursor: sw-resize;
+}
+
+.image-resize-handle-se {
+    bottom: -12px;
+    right: -12px;
+    cursor: se-resize;
+}
+
 /* 확대/축소 컨트롤 */
 .zoom-controls {
     position: absolute;
-    bottom: 20px; /* 60px에서 20px로 변경 */
-    left: 16px; /* right에서 left로 변경 */
+    bottom: 20px;
+    left: 16px;
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 20px;
     padding: 4px 12px;
