@@ -334,11 +334,9 @@ export default {
       const postId = this.getPostId(post);
       console.log(`Navigate to detail for postCategory: ${post.postCategory}, ID: ${postId}`);
       if (post.postCategory === 'vote') {
-         alert(`Vote Detail Page for ${post.id} (Not Implemented Yet)`);
-         // this.$router.push(`/silverpotion/vote/${post.id}?gatheringId=${this.gatheringId}`);
+        this.$router.push(`/silverpotion/vote/${postId}?gatheringId=${this.gatheringId}`);
       } else {
-         alert(`Post Detail Page for ${post.id} (Not Implemented Yet)`);
-         // this.$router.push(`/silverpotion/board/post/${post.id}?gatheringId=${this.gatheringId}`);
+        this.$router.push(`/silverpotion/post/detail/${postId}?gatheringId=${this.gatheringId}`);
       }
     },
     goToCreatePost() {

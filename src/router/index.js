@@ -4,6 +4,7 @@ import GoogleRedirect from "@/components/GoogleRedirect.vue";
 import KakaoRedirect from "@/components/KakaoRedirect.vue";
 import { userRouter } from "./userRouter";
 import { gatheringRouter } from "./gatheringRouter";
+import PostDetail from '@/components/PostDetail.vue'
 
 const routes = [
     ...chatRouter,
@@ -36,7 +37,12 @@ const routes = [
     //     name: 'MyChatPage',
     //     component: MyChatPage
     // }
-
+    {
+        path: '/silverpotion/post/detail/:postId',
+        name: 'PostDetail',
+        component: PostDetail,
+        props: true
+    }
 ]
 
 const router = createRouter({
