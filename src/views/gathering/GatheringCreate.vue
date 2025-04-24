@@ -409,9 +409,10 @@ export default {
                     `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/create`,
                     this.gatheringData
                 );
-                
+                console.log(response);
                 // 성공 시 모임 상세 페이지로 이동
                 if (response.data.result) {
+
                     const gatheringId = response.data.result.gatheringId;
                     this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
                 }

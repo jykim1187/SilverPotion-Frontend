@@ -121,7 +121,7 @@ export default {
                         params: {
                             userId: localStorage.getItem("userId")
                         },
-                        headers: {
+                    headers: {
                             Authorization: `Bearer ${localStorage.getItem("token")}`,
                             "X-User-LoginId": localStorage.getItem("loginId")
                         }

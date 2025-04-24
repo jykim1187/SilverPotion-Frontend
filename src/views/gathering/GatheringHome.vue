@@ -278,7 +278,39 @@
 
                 <v-window-item value="chat">
                     <div v-if="isGatheringMember">
-                        채팅 내용
+                        <v-card class="mt-4">
+                            <v-card-title class="text-center text-h6">
+                                모임 채팅
+                            </v-card-title>
+                            <v-card-text>
+                                <div class="chat-box">
+                                    <div 
+                                        v-for="(msg, index) in messages"
+                                        :key="index"
+                                        :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
+                                    >
+                                        <template v-if="msg.senderId === userId">
+                                            <div class="message-content">
+                                                {{ msg.content }}
+                                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                            </div>
+                                        </template>
+                                        <template v-else>
+                                            <div class="message-content">
+                                                {{ msg.content }}
+                                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <v-text-field
+                                    v-model="newMessage"
+                                    label="메시지 입력"
+                                    @keyup.enter="sendMessage"
+                                />
+                                <v-btn color="primary" block @click="sendMessage">전송</v-btn>
+                            </v-card-text>
+                        </v-card>
                     </div>
                     <div v-else class="text-center pa-5">
                         <v-icon size="large" color="grey">mdi-account-alert</v-icon>
@@ -414,6 +446,7 @@
 
 <script>
 import axios from 'axios';
+import WebSocketManager from '@/WebSocketManager';
 
 export default{
     data(){
@@ -450,7 +483,12 @@ export default{
             showJoinDialog: false,
             greetingMessage: '',
             showDisbandDialog: false,
-            disbandConfirmText: ''
+            disbandConfirmText: '',
+            messages: [],
+            newMessage: "",
+            userId: null,
+            roomId: null,
+            isSubscribed: false
         }
     },
     computed: {
@@ -474,6 +512,11 @@ export default{
         this.fetchGatheringInfo();
         this.fetchGatheringMembers();
         this.fetchMeetings();
+        this.userId = Number(localStorage.getItem("userId"));
+        if (this.isGatheringMember) {
+            this.loadChatRoom();
+            this.connectWebsocket();
+        }
     },
     methods: {
         handleBackButton() {
@@ -708,6 +751,110 @@ export default{
                 this.showAlert = true;
             }
         },
+        async loadChatRoom() {
+            try {
+                const response = await axios.get(
+                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/group`,
+                    {
+                        params: {
+                            title: this.gatheringName,
+                            userId: this.userId
+                        },
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                            "X-User-LoginId": localStorage.getItem("loginId")
+                        }
+                    }
+                );
+                this.roomId = response.data.id;
+                console.log('Chat room loaded:', response.data);
+            } catch (error) {
+                console.error("❌ 채팅방 로드 실패", error);
+            }
+        },
+        
+        connectWebsocket() {
+            if (this.isSubscribed) {
+                console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
+                return;
+            }
+            
+            const loginId = localStorage.getItem("loginId");
+            const topic = `/user/${loginId}/chat`;
+            console.log("📡 replaceSubscribe 호출 예정 topic:", topic);
+            
+            WebSocketManager.replaceSubscribe(topic, (message) => {
+                console.log('📨 Gathering chat message received:', message);
+                console.log('📨 Message details:', {
+                    roomId: message.roomId,
+                    currentRoomId: this.roomId,
+                    content: message.content,
+                    senderId: message.senderId,
+                    currentUserId: this.userId
+                });
+                
+                if (!message) {
+                    console.warn("❌ message is undefined/null");
+                    return;
+                }
+                
+                if (!message.roomId) {
+                    console.warn("⚠️ message.roomId 없음, 전체 메시지:", message);
+                    return;
+                }
+                
+                if (message.roomId == this.roomId) {
+                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
+                    this.messages.push(message);
+                    this.scrollToBottom();
+                } else {
+                    console.log('📪 다른 방 메시지:', message.roomId, '현재 방:', this.roomId);
+                }
+            });
+            
+            this.isSubscribed = true;
+        },
+        
+        sendMessage() {
+            if(this.newMessage.trim() === "") return;
+            
+            const message = {
+                roomId: this.roomId,
+                content: this.newMessage,
+                type: "TEXT",
+                senderId: this.userId,
+                createdAt: new Date().toISOString()
+            };
+            
+            console.log('📤 Sending message:', message);
+            
+            // 메시지를 먼저 로컬에 추가
+            this.messages.push(message);
+            this.scrollToBottom();
+            
+            // WebSocket으로 메시지 전송
+            WebSocketManager.send(
+                `/pub/room/${this.roomId}`,
+                message
+            );
+            
+            this.newMessage = "";
+        },
+        
+        scrollToBottom() {
+            this.$nextTick(() => {
+                const chatBox = this.$el.querySelector(".chat-box");
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        },
+        
+        formatTime(datetime) {
+            if (!datetime) return '';
+            const date = new Date(datetime);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
     },
 }
 </script>
@@ -758,5 +905,59 @@ export default{
     max-width: 768px; /* 앱 컨테이너 크기에 맞게 조정 */
     width: 100%;
     z-index: 999;
+}
+
+.chat-box {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-message {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.sent {
+    align-self: flex-end;
+}
+
+.received {
+    align-self: flex-start;
+}
+
+.message-content {
+    padding: 8px 12px;
+    border-radius: 12px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.sent .message-content {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-bottom-right-radius: 0;
+}
+
+.received .message-content {
+    background-color: #f5f5f5;
+    color: #333;
+    border-bottom-left-radius: 0;
+}
+
+.time {
+    font-size: 0.75rem;
+    color: #888;
+    display: inline-block;
+    white-space: nowrap;
 }
 </style>

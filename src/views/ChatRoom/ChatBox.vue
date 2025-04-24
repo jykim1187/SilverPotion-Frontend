@@ -58,7 +58,7 @@ export default {
     async created() {
         console.log("🔥 채팅방 created() 실행됨");
         this.roomId = this.$route.params.roomId;
-        this.userId = Number(localStorage.getItem("userId"));
+        this.userId = localStorage.getItem("userId");
         this.messages = [];
         this.connectWebsocket();
     },
@@ -83,6 +83,13 @@ export default {
 
             WebSocketManager.replaceSubscribe(topic, (message) => {
                 console.log('📨 ChatRoom용 메시지 수신:', message);
+                console.log('📨 Message details:', {
+                    roomId: message.roomId,
+                    currentRoomId: this.roomId,
+                    content: message.content,
+                    senderId: message.senderId,
+                    currentUserId: this.userId
+                });
                 
                 if (!message) {
                     console.warn("❌ message is undefined/null");
@@ -95,6 +102,11 @@ export default {
                 }
                 
                 if (message.roomId == this.roomId) {
+                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
+                    // 메시지에 senderId가 없으면 현재 사용자의 ID로 설정
+                    if (!message.senderId) {
+                        message.senderId = this.userId;
+                    }
                     this.messages.push(message);
                     this.scrollToBottom();
                 } else {
@@ -110,14 +122,23 @@ export default {
             const message = {
                 roomId: this.roomId,
                 content: this.newMessage,
-                type: "TEXT"
+                type: "TEXT",
+                senderId: this.userId,
+                createdAt: new Date().toISOString()
             };
             
-            console.log('Sending message:', message);
+            console.log('📤 Sending message:', message);
+            
+            // 메시지를 먼저 로컬에 추가
+            this.messages.push(message);
+            this.scrollToBottom();
+            
+            // WebSocket으로 메시지 전송
             WebSocketManager.send(
                 `/pub/room/${this.roomId}`,
                 message
             );
+            
             this.newMessage = "";
         },
         scrollToBottom() {
