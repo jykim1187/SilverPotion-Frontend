@@ -5,6 +5,7 @@ import router from '@/router/index.js'
 import axios from 'axios';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@fortawesome/fontawesome-free/css/all.css'
+
 const app = createApp(App);
 
 axios.interceptors.request.use(

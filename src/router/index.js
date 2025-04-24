@@ -9,6 +9,7 @@ const routes = [
     ...chatRouter,
     ...userRouter,
     ...gatheringRouter,
+    
     {
         path: '/oauth/google/redirect',
         name: 'GoogleRedirect',
