@@ -52,7 +52,8 @@ export default {
             roomId: null,
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
-            isSubscribed: false
+            isSubscribed: false,
+            isSending: false, // ✅ 중복 방지용
         }
     },
     async created() {
@@ -71,7 +72,7 @@ export default {
     },
     methods: {
         connectWebsocket() {
-            console.log("🔧 connectWebsocket 호출됨");
+            console.log("🔧 connectWebsocket 호출됨, 현재 isSubscribed =", this.isSubscribed);
             if (this.isSubscribed){
                 console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
                 return;
@@ -90,7 +91,8 @@ export default {
                     senderId: message.senderId,
                     currentUserId: this.userId
                 });
-                
+                console.log("🧩 현재 roomId:", this.roomId, typeof this.roomId);
+                console.log("🧩 수신된 message.roomId:", message.roomId, typeof message.roomId);
                 if (!message) {
                     console.warn("❌ message is undefined/null");
                     return;
@@ -101,12 +103,13 @@ export default {
                     return;
                 }
                 
-                if (message.roomId == this.roomId) {
-                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
-                    // 메시지에 senderId가 없으면 현재 사용자의 ID로 설정
-                    if (!message.senderId) {
-                        message.senderId = this.userId;
+                if (parseInt(message.roomId) === parseInt(this.roomId)) {
+                    // 내가 방금 보낸 메시지라면 무시 (로컬에서 이미 push 했음)
+                    if (String(message.senderId) === String(this.userId)) {
+                        console.log("🙅 내 메시지는 수신에서 무시함");
+                        return;
                     }
+                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
                     this.messages.push(message);
                     this.scrollToBottom();
                 } else {
@@ -118,7 +121,8 @@ export default {
         },
         sendMessage() {
             if(this.newMessage.trim() === "") return;
-            
+            this.isSending = true; // ✅ 전송 중 플래그 설정
+
             const message = {
                 roomId: this.roomId,
                 content: this.newMessage,
@@ -140,6 +144,9 @@ export default {
             );
             
             this.newMessage = "";
+            setTimeout(() => {
+                this.isSending = false; // ✅ 잠깐 후에 초기화
+            }, 300); // debounce 효과
         },
         scrollToBottom() {
             this.$nextTick(() => {
@@ -156,6 +163,7 @@ export default {
         },
         disconnectWebSocket() {
             const topic = `/user/${this.senderLoginId}/chat`;
+            console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
             WebSocketManager.unsubscribe(topic);
             this.isSubscribed = false;
         },

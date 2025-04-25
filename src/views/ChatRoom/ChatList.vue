@@ -88,22 +88,20 @@ export default {
             console.log('🔄 updateChatRoom called with:', { roomId, message });
             const roomIndex = this.chatRoomList.findIndex(room => room.id == roomId);
             console.log('Found room index:', roomIndex);
-            
+
             if (roomIndex !== -1) {
-                // Vue의 반응성을 100% 보장하는 방식
-                this.$set(this.chatRoomList, roomIndex, {
-                    ...this.chatRoomList[roomIndex],
-                    lastMessageContent: message.content,
-                    lastMessageTime: message.createdAt || new Date().toISOString()
-                });
-                
-                // 채팅방 목록을 최신순으로 정렬
+                this.chatRoomList[roomIndex] = {
+                ...this.chatRoomList[roomIndex],
+                lastMessageContent: message.content,
+                lastMessageTime: message.createdAt || new Date().toISOString()
+                };
+
                 this.chatRoomList.sort((a, b) => {
-                    const timeA = new Date(a.lastMessageTime || a.createdAt);
-                    const timeB = new Date(b.lastMessageTime || b.createdAt);
-                    return timeB - timeA;
+                const timeA = new Date(a.lastMessageTime || a.createdAt);
+                const timeB = new Date(b.lastMessageTime || b.createdAt);
+                return timeB - timeA;
                 });
-                
+
                 console.log('✅ 채팅방 리스트 실시간 갱신됨:', this.chatRoomList);
             } else {
                 console.warn('⚠️ 채팅방을 찾을 수 없음:', roomId);
@@ -121,7 +119,7 @@ export default {
                         params: {
                             userId: localStorage.getItem("userId")
                         },
-                    headers: {
+                        headers: {
                             Authorization: `Bearer ${localStorage.getItem("token")}`,
                             "X-User-LoginId": localStorage.getItem("loginId")
                         }
