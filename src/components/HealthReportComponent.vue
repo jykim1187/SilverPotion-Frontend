@@ -5,19 +5,19 @@
         <div class="logo">
           <v-icon large color="white">mdi-file-document</v-icon>
         </div>
-        <h1 class="user-name-title">{{ userName }} 님의 건강 리포트</h1>
+        <h1  @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 리포트</h1>
       </div>
       
       <!-- 날짜 선택 -->
       <div class="date-picker-section">
         <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
         <div class="date-picker-container" v-show="showDatePicker">
-          <DatePickerRange :type="type" @handleDateChange="handleDateChange" />
+          <DatePickerRange :type="type" @handleDateChange="handleDateChange" :max-date="maxDate" :isHealthData="false" />
         </div>
       </div>
       <div class="date-section">
         <v-chip outlined color="black" class="date-chip">
-          {{ formattedDate }}
+          {{ this.period }}
         </v-chip>
       </div>
     </div>
@@ -28,128 +28,121 @@
         <div class="minimal-title" v-if="type === 'DAY'">일일 건강 리포트</div>
         <div class="minimal-title" v-if="type === 'WEEKAVG'">주간 건강 리포트</div>
         <div class="minimal-title" v-if="type === 'MONTHAVG'">월간 건강 리포트</div>
-        <div class="minimal-subtitle">{{ userName }} | {{ formattedDate }}</div>
+        <div class="minimal-subtitle">{{ userName }} | {{ this.period }}</div>
       </div>
 
       <div class="minimal-divider"></div>
 
       <div class="minimal-section">
         <div class="minimal-section-title">요약</div>
-        <p class="minimal-paragraph">{{ reportData.summary }}</p>
+        <p class="minimal-paragraph">{{ parsedData["전반적인 요약"] }}</p>
       </div>
 
       <div class="minimal-section">
         <div class="minimal-section-title">걸음</div>
-        <p class="minimal-paragraph">{{ reportData.summary }}</p>
+        <p class="minimal-paragraph">{{ parsedData["걸음"] }}</p>
       </div>
 
       <div class="minimal-section">
         <div class="minimal-section-title">심장 박동</div>
-        <p class="minimal-paragraph">{{ reportData.summary }}</p>
+        <p class="minimal-paragraph">{{ parsedData["심박수"] }}</p>
       </div>
 
       <div class="minimal-section">
         <div class="minimal-section-title">소모 칼로리</div>
-        <p class="minimal-paragraph">{{ reportData.summary }}</p>
+        <p class="minimal-paragraph">{{ parsedData["소모칼로리"] }}</p>
       </div>
 
       <div class="minimal-section">
         <div class="minimal-section-title">수면</div>
-        <p class="minimal-paragraph">{{ reportData.summary }}</p>
-      </div>
-
-      <div class="minimal-section">
-        <div class="minimal-section-title">추천 사항</div>
-        <div class="minimal-recommendations">
-          <div class="minimal-recommendation" v-for="(recommendation, index) in reportData.recommendations" :key="index">
-            <span class="minimal-recommendation-number">{{ index + 1 }}</span>
-            <span class="minimal-recommendation-text">{{ recommendation.text }}</span>
-          </div>
-        </div>
+        <p class="minimal-paragraph">{{ parsedData["수면"] }}</p>
       </div>
     </div>
   </div>
+
+  <!-- 사용자 프로필 모달 -->
+  <v-dialog v-model="showUserProfileModal" max-width="450">
+    <v-card>
+      <v-card-actions class="profile-dialog-close">
+        <v-spacer></v-spacer>
+        <v-btn icon @click="showUserProfileModal = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-actions>
+      <v-card-text class="pa-0">
+        <UserProfileComponent 
+          :loginId="loginId" 
+          :userName="userName"
+          :userLongId="userLongId"
+          :parentType="parentType"
+          @start-text-chat="handleStartTextChat"
+          @start-video-chat="handleStartVideoChat"
+        />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
 import DatePickerRange from "@/components/DatePickerRange.vue";
+import UserProfileComponent from "@/components/UserProfileComponet.vue";
+import axios from 'axios';
 
 export default {
   name: 'HealthReportComponent',
   components: {
-    DatePickerRange
+    DatePickerRange,
+    UserProfileComponent
   },
   props: {
     loginId: String,
     type: String,
-    targetDate: String,
     userName: String,
-    userLongId: Number
+    userLongId: Number,
+    targetDate: String,
+    isFirstLoad: Boolean,
   },
   data() {
     return {
-      currentDate: new Date().toISOString().split('T')[0],
+      currentDate: '',
       showDatePicker: false,
-      selectedDesign: 'modern', // 기본 디자인: modern, minimal, colorful
-      reportData: {
-        summary: "최근 건강 데이터를 분석한 결과, 전반적인 건강 상태는 양호합니다. 심박수와 수면 패턴이 안정적이며, 활동량이 적절합니다. 다만 지난 주에 비해 걸음 수가 약간 감소했으니 일상 활동을 조금 더 늘리는 것이 좋겠습니다.",
-        metrics: [
-          { 
-            title: "심박수", 
-            value: "72 BPM", 
-            status: "normal", 
-            statusText: "정상",
-            icon: "mdi-heart-pulse"
-          },
-          { 
-            title: "평균 수면 시간", 
-            value: "7시간 30분", 
-            status: "good", 
-            statusText: "양호",
-            icon: "mdi-sleep"
-          },
-          { 
-            title: "일일 평균 걸음 수", 
-            value: "8,250 걸음", 
-            status: "warning", 
-            statusText: "주의",
-            icon: "mdi-shoe-print"
-          },
-          { 
-            title: "소모 칼로리", 
-            value: "1,850 kcal", 
-            status: "good", 
-            statusText: "양호",
-            icon: "mdi-fire"
-          }
-        ],
-        recommendations: [
-          { 
-            text: "하루 10,000걸음을 목표로 조금 더 걸으시는 것이 좋겠습니다.", 
-            icon: "mdi-walk" 
-          },
-          { 
-            text: "심박수 관리를 위해 규칙적인 유산소 운동을 주 3회 이상 하시기 바랍니다.", 
-            icon: "mdi-heart" 
-          },
-          { 
-            text: "수면의 질을 높이기 위해 취침 전 전자기기 사용을 줄이는 것이 좋습니다.", 
-            icon: "mdi-power-sleep" 
-          },
-          { 
-            text: "수분 섭취량을 늘려 하루 2리터 이상 물을 마시는 것을 권장합니다.", 
-            icon: "mdi-cup-water" 
-          }
-        ]
-      }
+      reportData: "",
+      parsedData: "",
+      showUserProfileModal: false,
+      // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
+      parentType: 'healthData',
+      // 선택된 날짜를 저장할 내부 상태 추가
+      selectedDate: "",
+      period : "",
+      isRequestPending: false, // 요청 중복 방지 플래그 추가
     }
   },
   computed: {
-    formattedDate() {
-      if (!this.targetDate) return '2023-11-20'; // 기본값
-      
-      const date = new Date(this.targetDate);
-      return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+    
+   
+    formattedCurrentDate() {
+      if (!this.selectedDate) return '';
+    
+      if (this.type === 'DAY' && this.isFirstLoad) {
+      const yesterday = new Date(this.selectedDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return `${yesterday.getFullYear()}년 ${yesterday.getMonth() + 1}월 ${yesterday.getDate()}일`;
+    }
+      if(this.type === 'DAY'){
+        const date = new Date(this.selectedDate);
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
+      else if(this.type === 'WEEKAVG'){
+        const date = new Date(this.selectedDate);
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
+      else if(this.type === 'MONTHAVG'){
+        const date = new Date(this.selectedDate);
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+      }
+      else{
+        return '';
+      }
     },
     reportTypeText() {
       switch(this.type) {
@@ -158,51 +151,244 @@ export default {
         case 'MONTHAVG': return '월간';
         default: return '일일';
       }
+    },
+    maxDate() {
+      const today = new Date();
+      
+      // 일일 리포트: 오늘까지 조회 가능 (건강데이터와 동일)
+      if (this.type === 'DAY') {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return yesterday;
+      }
+      // 주간 평균: 저번 주까지만 조회 가능 (건강데이터와 동일)
+      else if (this.type === 'WEEKAVG') {
+        const lastWeek = new Date(today);
+        const dayOfWeek = today.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일
+        const daysToLastSunday = dayOfWeek === 0 ? 7 : dayOfWeek;
+        lastWeek.setDate(today.getDate() - daysToLastSunday);
+        return lastWeek;
+      }
+      // 월간 평균: 이번 달까지만 조회 가능 (건강데이터와 동일)
+      else if (this.type === 'MONTHAVG') {
+        // 월간 평균은 저번 달까지만 선택 가능
+        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        return lastMonth;
+      // const thisMonthFirstDay = new Date();
+      // thisMonthFirstDay.setDate(1);
+      // return thisMonthFirstDay;
+      }
+      
+      return today;
     }
   },
+
   methods: {
+    // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+    formatDateToYYYYMMDD(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    },
+    
+    // 탭 변경 이벤트 처리
+    handleTabChange(event) {
+      // 헬스 리포트 탭으로 변경되었을 때만 처리
+      if (!event.detail.showHealthData) {
+        console.log("헬스 리포트 탭으로 변경됨, 데이터 요청 준비");
+        // 기존 요청 플래그 초기화 (새로운 탭으로 전환되었으므로)
+        this.isRequestPending = false;
+        
+        // 데이터를 다시 요청하지 않고, 컴포넌트가 targetDate 등을 통해
+        // 필요한 데이터를 받고 내부적으로 처리하도록 함
+      }
+    },
+    
     toggleDatePicker() {
       this.showDatePicker = !this.showDatePicker;
     },
     
     handleDateChange(dateRange) {
       if (dateRange && dateRange !== 'NaN-NaN-NaN' && dateRange.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        console.log('선택된 날짜:', dateRange);
+        
+        // DatePickerRange에서 이미 적절한 날짜 변환이 이루어졌으므로 
+        // 그대로 currentDate에 저장하고 UI용 selectedDate도 설정
         this.currentDate = dateRange;
+        
+        // MONTHAVG 타입인 경우 UI 표시를 위해 선택한 월의 1일로 설정
+        if (this.type === 'MONTHAVG') {
+          const date = new Date(dateRange);
+          // 선택된 날짜가 다음달 1일이므로 한 달 이전으로 설정 (UI 표시용)
+          date.setMonth(date.getMonth() - 1);
+          this.selectedDate = this.formatDateToYYYYMMDD(date);
+        } else if (this.type === 'WEEKAVG') {
+          // 선택된 날짜가 다음주 월요일이므로 1주일 이전으로 설정 (UI 표시용)
+          const date = new Date(dateRange);
+          date.setDate(date.getDate() - 7);
+          this.selectedDate = this.formatDateToYYYYMMDD(date);
+        } else if (this.type === 'DAY') {
+          // 선택된 날짜가 다음날이므로 1일 이전으로 설정 (UI 표시용)
+          const date = new Date(dateRange);
+          date.setDate(date.getDate() - 1);
+          this.selectedDate = this.formatDateToYYYYMMDD(date);
+        } else {
+          this.selectedDate = dateRange;
+        }
+        
+        this.$emit('update:isFirstLoad', false);
+
         this.showDatePicker = false;
-        this.fetchReportData();
+        this.fetchReportDataOnce();
       } else {
         console.error('유효하지 않은 날짜 형식:', dateRange);
       }
     },
     
-    fetchReportData() {
-      // 실제 구현 시에는 API로 데이터를 가져옴
-      // 현재는 더미 데이터 사용
-      console.log(`리포트 데이터 가져오기: ${this.loginId}, ${this.type}, ${this.targetDate}`);
-      
-      // 타입에 따라 다른 데이터 표시 (실제로는 API에서 가져온 데이터 사용)
-      if (this.type === 'WEEKAVG') {
-        this.reportData.summary = "주간 건강 데이터를 분석한 결과, 활동량이 증가하고 있습니다. 특히 심박수와 수면의 질이 개선되고 있어 긍정적입니다. 이대로 꾸준히 건강 관리를 계속하시면 좋겠습니다.";
-      } else if (this.type === 'MONTHAVG') {
-        this.reportData.summary = "한 달간의 건강 데이터를 종합했을 때, 전반적인 건강 패턴이 안정적입니다. 월초에 비해 월말로 갈수록 활동량이 증가하고 있으며, 평균 심박수도 정상 범위를 유지하고 있습니다.";
+    // API 호출을 한 번만 수행하는 메소드
+    fetchReportDataOnce() {
+      // API 호출 중복 방지 플래그가 없으면 요청 수행
+      if (!this.isRequestPending) {
+        this.isRequestPending = true;
+        
+        // 데이터 요청
+        this.fetchReportData().finally(() => {
+          // 요청 완료 후 플래그 초기화 (일정 시간 후에)
+          setTimeout(() => {
+            this.isRequestPending = false;
+          }, 500);
+        });
+      } else {
+        console.log("요청이 이미 진행 중입니다");
       }
-    }
+    },
+    
+    async fetchReportData() {
+      // 필수 데이터가 없으면 요청하지 않음
+      if (!this.loginId || !this.type || !this.currentDate) {
+        console.log("필요한 데이터가 없어 리포트 요청을 보내지 않습니다:", {
+          loginId: this.loginId,
+          type: this.type,
+          date: this.currentDate
+        });
+        return;
+      }
+      
+      const dto = {
+        "loginId": this.loginId,
+        "type": this.type,
+        "date": this.currentDate
+      };
+      
+      console.log("리포트 요청 데이터:", dto);
+      
+      try {
+        const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/gptchat/allInOneReport`, dto);
+        console.log("리포트 응답:", response.data.result);
+        this.reportData = response.data.result.text;
+        this.parsedData = JSON.parse(this.reportData);
+        this.period = response.data.result.period;
+      } catch(error) {
+        console.error("리포트 데이터 가져오기 실패:", error);
+      }
+    },
+// 사용자 프로필 표시
+      showUserProfile() {
+      if(this.loginId === localStorage.getItem("loginId")){
+        this.showUserProfileModal = false;
+      }
+      else{
+        this.showUserProfileModal = true;
+        console.log(this.userLongId)
+      }
+    },
+    
+    // 채팅 관련 이벤트 핸들러
+    handleStartTextChat(userId) {
+      console.log(`${userId}와의 1:1 채팅 시작`);
+      // 채팅 페이지로 이동하거나 채팅 기능 실행
+      this.showUserProfileModal = false;
+    },
+    
+    handleStartVideoChat(userId) {
+      console.log(`${userId}와의 화상 채팅 시작`);
+      // 화상 채팅 기능 실행
+      this.showUserProfileModal = false;
+    },
+   
   },
   mounted() {
-    // 부모 컴포넌트에서 전달받은 targetDate 사용
-    this.currentDate = this.targetDate;
-    this.fetchReportData();
+    if (this.targetDate && this.type) {
+      // 처음 마운트 시 targetDate와 type이 있으면 초기화
+      this.currentDate = this.targetDate;
+      this.selectedDate = this.targetDate;
+      
+      // 첫 로드 시 데이터 요청
+      this.fetchReportDataOnce();
+    }
+    
+    // 탭 변경 이벤트 리스너 등록
+    window.addEventListener('tab-changed', this.handleTabChange);
+  },
+  beforeUnmount() {
+    // 컴포넌트 제거 시 이벤트 리스너 제거
+    window.removeEventListener('tab-changed', this.handleTabChange);
   },
   watch: {
     loginId() {
-      this.fetchReportData();
+      if (this.currentDate && this.type) {
+        this.fetchReportDataOnce();
+      }
     },
-    type() {
-      this.fetchReportData();
+    // targetDate 감시
+    targetDate(newVal) {
+      if (newVal && this.type) {
+        // targetDate가 변경되면 currentDate 업데이트
+        console.log("targetDate 변경됨:", newVal);
+        this.currentDate = newVal;
+        this.selectedDate = newVal;
+        // 데이터 요청은 type 변경시에만 하므로 여기서는 하지 않음
+      }
     },
-    targetDate(newDate) {
-      this.currentDate = newDate;
-      this.fetchReportData();
+    // type 감시
+    type(newVal, oldVal) {
+      // 이미 실행 중이거나, oldVal이 없을 때(초기화 중일 때)는 실행하지 않음
+      if (!newVal || (oldVal === undefined || oldVal === '')) {
+        return;
+      }
+      
+      const today = new Date();
+      
+      if (newVal === 'DAY') {
+        // 실시간 - 오늘 날짜로 초기화
+        this.currentDate = this.formatDateToYYYYMMDD(today);
+        this.selectedDate = this.formatDateToYYYYMMDD(today);
+      } 
+      else if (newVal === 'WEEKAVG') {
+        // 주간 평균 - 이번주 월요일로 초기화
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(today);
+        monday.setDate(diff);
+        // 지난주 월요일 계산 (리포트용)
+        const lastMonday = new Date(monday);
+        lastMonday.setDate(monday.getDate());
+        
+        this.currentDate = this.formatDateToYYYYMMDD(lastMonday);
+        this.selectedDate = this.formatDateToYYYYMMDD(lastMonday);
+      }
+      else if (newVal === 'MONTHAVG') {
+        // 월간 평균 - 지난달 1일로 초기화 (리포트용)
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const nextMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 1);
+        
+        this.currentDate = this.formatDateToYYYYMMDD(nextMonth);
+        this.selectedDate = this.formatDateToYYYYMMDD(nextMonth);
+      }
+      
+      // 데이터 로드
+      this.fetchReportDataOnce();
     }
   }
 }
@@ -212,28 +398,32 @@ export default {
 /* 공통 스타일 */
 .health-report {
   background-color: #f5f7fa;
-  padding: 20px;
+  padding: 15px;
   border-radius: 12px;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .report-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 40px;
+  padding: 20px;
   background-color: #f5f5f5;
   border-radius: 12px 12px 0 0;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .title-section {
   display: flex;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background: rgba(59, 73, 171, 0.2);
   border-radius: 50%;
   display: flex;
@@ -242,16 +432,36 @@ export default {
   margin-right: 16px;
 }
 
+/* 사용자 이름 제목 스타일 */
 .user-name-title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #333;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  position: relative;
+  font-size: 1.5rem;
+}
+
+.user-name-title:hover {
+  color: #3f51b5;
+}
+
+.user-name-title::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #3f51b5;
+  transition: width 0.3s ease;
+}
+
+.user-name-title:hover::after {
+  width: 100%;
 }
 
 .date-picker-section {
   position: relative;
-  margin-right: 20px;
+  margin-left: 20px;
   z-index: 9999;
 }
 
@@ -295,24 +505,25 @@ export default {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
 }
 
 /* 미니멀 디자인 스타일 */
 .minimal {
-  padding: 40px;
+  padding: 25px;
   background-color: white;
   color: #333;
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
 }
 
 .minimal-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
 }
 
 .minimal-title {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 300;
   margin-bottom: 8px;
   letter-spacing: 1px;
@@ -327,11 +538,11 @@ export default {
 .minimal-divider {
   height: 1px;
   background-color: #e0e0e0;
-  margin: 30px 0;
+  margin: 25px 0;
 }
 
 .minimal-section {
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .minimal-section-title {
@@ -353,7 +564,7 @@ export default {
 }
 
 .minimal-paragraph {
-  line-height: 1.8;
+  line-height: 1.7;
   font-size: 1rem;
   color: #505050;
 }
@@ -381,45 +592,75 @@ export default {
   color: #505050;
 }
 
+/* 프로필 모달 스타일 */
+.profile-dialog-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
+}
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
-  .modern .metrics-grid,
-  .modern .recommendations-list,
-  .colorful-metrics-container,
-  .colorful-recommendation-list {
-    grid-template-columns: 1fr;
-  }
-  
-  .minimal-metric {
-    width: calc(50% - 10px);
-  }
-  
-  .colorful-header {
-    padding: 30px 20px;
-  }
-  
-  .colorful-title {
-    font-size: 1.8rem;
-  }
-  
-  .modern .metric-value,
-  .minimal-metric-value,
-  .colorful-metric-value {
-    font-size: 1.5rem;
-  }
-  
   .report-header {
     flex-direction: column;
+    align-items: flex-start;
     padding: 16px;
   }
   
   .title-section {
     margin-bottom: 15px;
+    width: 100%;
+  }
+  
+  .date-picker-section {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+  
+  .date-section {
+    margin-top: 10px;
   }
   
   .user-name-title {
+    font-size: 1.3rem;
+  }
+  
+  .minimal {
+    padding: 20px 15px;
+  }
+  
+  .minimal-title {
     font-size: 1.5rem;
+  }
+  
+  .minimal-section-title {
+    font-size: 1.1rem;
+  }
+  
+  .minimal-paragraph {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 480px) {
+  .minimal-title {
+    font-size: 1.3rem;
+  }
+  
+  .date-chip {
+    font-size: 0.8rem;
+    padding: 0 12px;
+  }
+  
+  .logo {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .calendar-icon {
+    font-size: 20px;
   }
 }
 </style>
