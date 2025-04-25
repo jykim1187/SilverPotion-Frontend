@@ -3,17 +3,23 @@
         <!-- 회원 주소 정보 버튼 -->
         <div class="d-flex justify-start">
             <v-card 
-                class="mb-6 pa-3" 
+                class="address-card" 
                 variant="outlined" 
                 hover 
                 @click="goToAddressUpdate"
-                max-width="fit-content"
             >
-                <div v-if="userInfo" class="d-flex align-center">
-                    <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
-                    <span>{{ userInfo.region || '주소 정보가 없습니다. 클릭하여 주소를 설정하세요.' }}</span>
+                <div v-if="userInfo" class="d-flex align-center pa-3">
+                    <v-avatar color="primary" size="36" class="mr-3">
+                        <v-icon color="white">mdi-map-marker</v-icon>
+                    </v-avatar>
+                    <div>
+                        <div class="text-caption text-grey">내 위치</div>
+                        <div class="font-weight-medium">{{ userInfo.region || '주소 정보가 없습니다. 클릭하여 주소를 설정하세요.' }}</div>
+                    </div>
+                    <v-spacer></v-spacer>
+                    <v-icon>mdi-chevron-right</v-icon>
                 </div>
-                <div v-else class="d-flex align-center">
+                <div v-else class="d-flex align-center pa-3">
                     <v-progress-circular indeterminate color="primary" size="16" class="mr-2"></v-progress-circular>
                     <span>주소 정보를 불러오는 중...</span>
                 </div>
@@ -23,25 +29,19 @@
         <!-- 카테고리 제목 -->
         <h2 class="text-h6 font-weight-medium mb-4">모임 카테고리</h2>
 
-        <!-- 카테고리 버튼 -->
+        <!-- 카테고리 버튼 - 그리드 레이아웃으로 변경 -->
         <div class="category-container">
-            <v-row>
-                <!-- 첫 번째 줄 (6개) -->
-                <v-col v-for="(category, index) in categories.slice(0, 6)" :key="index" cols="12" sm="6" md="4" lg="2">
+            <v-row dense>
+                <v-col v-for="(category, index) in categories" 
+                       :key="index" 
+                       cols="2" 
+                       sm="6" 
+                       md="2" 
+                       lg="2"
+                       class="pa-1"
+                >
                     <div class="category-item text-center" @click="goToSearchWithCategory(category)">
-                        <v-avatar size="50" class="mb-1">
-                            <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
-                        </v-avatar>
-                        <div class="category-name">{{ category.name }}</div>
-                    </div>
-                </v-col>
-            </v-row>
-            
-            <v-row>
-                <!-- 두 번째 줄 (6개) -->
-                <v-col v-for="(category, index) in categories.slice(6)" :key="index + 6" cols="12" sm="6" md="4" lg="2">
-                    <div class="category-item text-center" @click="goToSearchWithCategory(category)">
-                        <v-avatar size="50" class="mb-1">
+                        <v-avatar size="40" class="mb-1">
                             <v-img :src="require(`@/assets/category/${category.image}.png`)" alt="카테고리 이미지"></v-img>
                         </v-avatar>
                         <div class="category-name">{{ category.name }}</div>
@@ -102,12 +102,12 @@
                             >
                                 {{ gathering.category }}
                             </v-chip>
-                            <div class="d-flex align-center ml-3">
-                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                                <span class="text-caption">{{ gathering.region }}</span>
-                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                <span class="text-caption">{{ gathering.peopleCount }}/{{ gathering.maxPeople }}명</span>
-                            </div>
+                        </div>
+                        <div class="d-flex align-center mt-1">
+                            <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                            <span class="text-caption">{{ gathering.region }}</span>
+                            <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                            <span class="text-caption">{{ gathering.peopleCount }}/{{ gathering.maxPeople }}명</span>
                         </div>
                     </div>
                 </v-list-item>
@@ -118,7 +118,7 @@
         <div class="mt-8">
             <div class="d-flex justify-space-between align-center mb-4">
                 <h2 class="text-h6 font-weight-medium">추천 모임</h2>
-                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/search')">
+                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/recommendGathering')">
                     더보기 <v-icon>mdi-chevron-right</v-icon>
                 </v-btn>
             </div>
@@ -162,12 +162,12 @@
                                 >
                                     {{ gathering.category || getCategoryName(gathering.categoryId) }}
                                 </v-chip>
-                                <div class="d-flex align-center ml-3">
-                                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                                    <span class="text-caption">{{ gathering.region }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                    <span class="text-caption">{{ gathering.peopleCount || 0 }}/{{ gathering.maxPeople || '제한없음' }}명</span>
-                                </div>
+                            </div>
+                            <div class="d-flex align-center mt-1">
+                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                <span class="text-caption">{{ gathering.region }}</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                <span class="text-caption">{{ gathering.peopleCount || 0 }}/{{ gathering.maxPeople || '제한없음' }}명</span>
                             </div>
                             <div class="text-caption text-grey mt-1" v-if="gathering.introduce">
                                 {{ gathering.introduce }}
@@ -204,24 +204,19 @@
                         v-model="selectedDateIndex"
                         show-arrows
                         center-active
+                        class="date-slide-group"
                     >
                         <v-slide-group-item
                             v-for="(dateInfo, index) in dateButtons"
                             :key="index"
-                            v-slot="{ isSelected, toggle }"
                         >
-                            <v-btn
-                                :color="isSelected ? 'primary' : ''"
-                                :variant="isSelected ? 'flat' : 'outlined'"
-                                class="ma-1"
-                                rounded
-                                @click="toggle"
-                            >
-                                <div class="text-center">
-                                    <div class="text-caption">{{ dateInfo.dayOfWeek }}</div>
-                                    <div class="text-body-2">{{ dateInfo.day }}</div>
+                            <div class="date-btn-wrapper" @click="selectDate(index)">
+                                <div class="date-btn" :class="{ 'date-btn-selected': selectedDateIndex === index }">
+                                    <div class="date-month">{{ dateInfo.month }}월</div>
+                                    <div class="date-day">{{ dateInfo.day }}</div>
+                                    <div class="date-weekday">{{ dateInfo.dayOfWeek }}</div>
                                 </div>
-                            </v-btn>
+                            </div>
                         </v-slide-group-item>
                     </v-slide-group>
                 </div>
@@ -237,7 +232,7 @@
                             v-for="meeting in selectedDateMeetings.slice(0, 3)" 
                             :key="meeting.meetingId"
                             class="mb-2"
-                            @click="goToMeetingDetail(meeting.gatheringId, meeting.meetingId)"
+                            @click="goToGatheringDetail(meeting.gatheringId)"
                             :ripple="true"
                             hover
                         >
@@ -251,6 +246,10 @@
                             
                             <div>
                                 <div class="d-flex align-center">
+                                    <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+                                    <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
                                     <span class="font-weight-medium">{{ meeting.name }}</span>
                                     <v-chip
                                         size="x-small"
@@ -260,16 +259,14 @@
                                     >
                                         {{ meeting.category || '카테고리 정보 없음' }}
                                     </v-chip>
-                                    <div class="d-flex align-center ml-3">
-                                        <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
-                                        <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
-                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-map-marker</v-icon>
-                                        <span class="text-caption">{{ meeting.place }}</span>
-                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
-                                        <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
-                                        <span class="text-caption">{{ meeting.cost }}원</span>
-                                    </div>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                    <span class="text-caption">{{ meeting.place }}</span>
+                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                    <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
+                                    <span class="text-caption">{{ meeting.cost }}원</span>
                                 </div>
                                 <div class="text-caption text-grey mt-1">
                                     <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
@@ -284,9 +281,9 @@
         <!-- 모임 생성 버튼 -->
         <v-btn
             class="create-gathering-btn"
-            color="primary"
+            style="background-color: #E8F1FD; color: #1976d2;"
             icon
-            size="large"
+            size="70px"
             @click="showCreateDialog = true"
         >
             <v-icon>mdi-plus</v-icon>
@@ -390,32 +387,49 @@ export default{
                 meetings
             })).sort((a, b) => new Date(a.date) - new Date(b.date));
         },
+        dateButtons() {
+            // 정모가 있는 날짜만 버튼으로 표시
+            if (this.meetingsByDate.length === 0) {
+                // 정모가 없는 경우 오늘부터 7일간 표시
+                const today = new Date();
+                const buttons = [];
+                
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    
+                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                    
+                    buttons.push({
+                        date: this.formatDateForApi(date),
+                        day: date.getDate(),
+                        dayOfWeek: dayNames[date.getDay()],
+                        month: date.getMonth() + 1
+                    });
+                }
+                
+                return buttons;
+            } else {
+                // 정모가 있는 날짜만 버튼으로 표시
+                return this.meetingsByDate.map(dateGroup => {
+                    const date = new Date(dateGroup.date);
+                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                    
+                    return {
+                        date: dateGroup.date,
+                        day: date.getDate(),
+                        dayOfWeek: dayNames[date.getDay()],
+                        month: date.getMonth() + 1
+                    };
+                });
+            }
+        },
         selectedDateMeetings() {
-            if (this.meetingsByDate.length === 0 || this.selectedDateIndex >= this.meetingsByDate.length) {
+            if (this.meetingsByDate.length === 0 || this.selectedDateIndex === null || this.selectedDateIndex < 0 || this.selectedDateIndex >= this.meetingsByDate.length) {
                 return [];
             }
             
             return this.meetingsByDate[this.selectedDateIndex].meetings;
-        },
-        dateButtons() {
-            const today = new Date();
-            const buttons = [];
-            
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(today);
-                date.setDate(today.getDate() + i);
-                
-                const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-                
-                buttons.push({
-                    date: this.formatDateForApi(date),
-                    day: date.getDate(),
-                    dayOfWeek: dayNames[date.getDay()],
-                    month: date.getMonth() + 1
-                });
-            }
-            
-            return buttons;
         }
     },
     mounted() {
@@ -474,6 +488,9 @@ export default{
         },
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
+        },
+        goToMeetingDetail(gatheringId, meetingId) {
+            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
         },
         goToCreateGathering() {
             this.showCreateDialog = false;
@@ -550,53 +567,302 @@ export default{
                 this.loadingMeetings = false;
             }
         },
-        goToMeetingDetail(gatheringId, meetingId) {
-            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
-        },
         getCategoryName(categoryId) {
             const category = this.categories.find(c => c.id === categoryId);
             return category ? category.name : '카테고리 정보 없음';
+        },
+        selectDate(index) {
+            if (index >= 0 && index < this.dateButtons.length) {
+                this.selectedDateIndex = index;
+            }
         }
     }
 }
 </script>
 
 <style scoped>
-.category-container {
-    margin-top: 10px;
+/* 전체 컨테이너 스타일 */
+.v-container {
+    max-width: 960px;
+    padding-bottom: 80px;
 }
+
+/* 섹션 스타일링 */
+.section-container {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    position: relative;
+}
+
+.section-container:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.04) 50%, rgba(0,0,0,0) 100%);
+}
+
+/* 섹션 제목 스타일 */
+.text-h6 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333;
+    position: relative;
+    display: inline-block;
+}
+
+.text-h6::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 24px;
+    height: 2px;
+    background-color: var(--v-primary-base, #1976d2);
+}
+
+/* 주소 카드 스타일링 */
+.address-card {
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.address-card:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 카테고리 스타일링 */
+.category-container {
+    margin-top: 16px;
+}
+
 .category-item {
     cursor: pointer;
-    padding: 8px;
+    padding: 12px 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    transition: all 0.2s ease;
 }
+
 .category-item:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
+
 .category-name {
     font-size: 12px;
-    margin-top: 4px;
+    margin-top: 8px;
+    text-align: center;
+    word-break: keep-all;
+    color: #424242;
+    font-weight: 500;
 }
-.create-gathering-btn {
-    position: fixed;
-    bottom: calc(24px + var(--v-layout-bottom, 0px));
-    left: calc(50% + 330px); /* 중앙에서 오른쪽으로 100px */
-    transform: translateX(-50%);
-    z-index: 100;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+/* 모임 및 정모 카드 스타일링 */
+.v-list-item {
+    border-radius: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
 }
-.date-selector {
-    overflow-x: auto;
+
+.v-list-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
-.attendees-avatars {
+
+/* 빈 상태 컨테이너 */
+.text-center.pa-4 {
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    padding: 32px !important;
+    min-height: 160px;
     display: flex;
-    flex-wrap: wrap;
-    max-width: 120px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
+
+/* 로딩 상태 스타일링 */
+.text-center.my-4 {
+    padding: 24px;
+    border-radius: 12px;
+    background-color: #f9f9f9;
+}
+
+/* 날짜 선택기 스타일링 - 새 디자인 */
+.date-selector {
+    margin-bottom: 20px;
+    overflow: visible;
+}
+
+.date-slide-group {
+    padding: 4px;
+}
+
+.date-btn-wrapper {
+    padding: 8px 4px;
+    cursor: pointer;
+}
+
+.date-btn {
+    width: 60px;
+    height: 70px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.date-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.date-btn-selected {
+    background-color: #e8f0fe;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+.date-btn-selected::before {
+    background-color: var(--v-primary-base, #1976d2);
+}
+
+.date-month {
+    font-size: 10px;
+    color: #757575;
+    margin-bottom: 2px;
+}
+
+.date-day {
+    font-size: 22px;
+    font-weight: 700;
+    color: #212121;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.date-weekday {
+    font-size: 12px;
+    color: #616161;
+    font-weight: 500;
+}
+
+.date-btn-selected .date-day {
+    color: var(--v-primary-base, #1976d2);
+}
+
+.date-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+/* 빈 정모 컨테이너 */
 .empty-meetings-container {
-    min-height: 380px;
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    padding: 24px;
+    min-height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* 모임 생성 버튼 */
+.create-gathering-btn {
+    position: fixed;
+    bottom: calc(24px + var(--v-layout-bottom, 0px));
+    right: 24px;
+    z-index: 100;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.create-gathering-btn:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* 모바일 화면에서 버튼 위치 조정 */
+@media (max-width: 600px) {
+    .create-gathering-btn {
+        bottom: 16px;
+        right: 16px;
+    }
+    
+    .category-name {
+        font-size: 10px;
+    }
+    
+    .v-container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    
+    .text-h6 {
+        font-size: 1.1rem;
+    }
+    
+    .v-list-item {
+        margin-bottom: 8px;
+    }
+}
+
+/* 태블릿 화면 최적화 */
+@media (min-width: 601px) and (max-width: 960px) {
+    .create-gathering-btn {
+        bottom: 20px;
+        right: 20px;
+    }
+}
+
+/* 애니메이션 효과 */
+.v-list-item, .category-item, .address-card, .v-btn.ma-1 {
+    will-change: transform, box-shadow;
+}
+
+/* 다이얼로그 스타일링 */
+:deep(.v-dialog > .v-card) {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+:deep(.v-card-title) {
+    font-weight: 600;
+    padding-top: 20px;
+}
+
+:deep(.v-card-actions) {
+    padding: 16px;
 }
 </style>

@@ -22,7 +22,7 @@ class WebSocketManager {
       return Promise.resolve(); // 연결되어 있으면 바로 resolve
     }
   
-    const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.loginId}`);
+    const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${localStorage.getItem("loginId")}`);
     this.stompClient = Stomp.over(socket);
   
     this.stompClient.debug = function (str) {
