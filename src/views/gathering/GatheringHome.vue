@@ -570,7 +570,7 @@ export default{
             newMessage: "",
             userId: null,
             roomId: null,
-            isSubscribed: false
+            isSubscribed: false,
             showDeleteDialog: false,
             meetingIdToDelete: null
         }
