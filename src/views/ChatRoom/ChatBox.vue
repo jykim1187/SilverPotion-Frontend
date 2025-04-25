@@ -70,6 +70,7 @@ export default {
         this.page = 0;
         this.hasMore = true;
         await this.loadMessageHistory();
+        this.markAsRead();
         this.connectWebsocket();
     },
     mounted() {
@@ -77,7 +78,8 @@ export default {
         chatBox.addEventListener("scroll", this.onScrollTop);
     },
     beforeRouteLeave(to, from, next) {
-        // this.disconnectWebSocket();
+        this.markAsRead(); // ✅ 나가기 전에 읽음 처리
+        this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
@@ -223,6 +225,26 @@ export default {
             const hours = date.getHours().toString().padStart(2, '0');
             const minutes = date.getMinutes().toString().padStart(2, '0');
             return `${hours}:${minutes}`;
+        },
+        // ✅ 나가기 전에 읽음 처리
+        async markAsRead() {
+            if (!this.messages.length) return;
+
+            const lastMessage = this.messages[this.messages.length - 1];
+            const userId = localStorage.getItem("userId");
+
+            try {
+                await fetch(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${this.roomId}/read?userId=${userId}&messageId=${lastMessage.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        Authorization: `Bearer ${this.token}`,
+                        "X-User-LoginId": this.senderLoginId
+                    }
+                });
+                console.log('📍 메시지 읽음 처리 완료');
+            } catch (error) {
+                console.error('❌ 메시지 읽음 처리 실패', error);
+            }
         },
         disconnectWebSocket() {
             const topic = `/user/${this.senderLoginId}/chat`;
