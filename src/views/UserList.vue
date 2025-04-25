@@ -67,27 +67,7 @@
         });
         
         console.log('Filtered users:', filteredUsers);
-        
-        // 각 사용자의 읽지 않은 메시지 수 조회
-        this.userlist = await Promise.all(filteredUsers.map(async user => {
-          try {
-            const unreadResponse = await axios.get(
-              `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${user.id}/unread-count`,
-              {
-                params: { userId: localStorage.getItem("userId") },
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                  "X-User-LoginId": localStorage.getItem("loginId")
-                }
-              }
-            );
-            console.log(`User ${user.id} unread count:`, unreadResponse.data);
-            return { ...user, unreadCount: unreadResponse.data || 0 };
-          } catch (error) {
-            console.warn(`⚠️ 읽지 않은 메시지 수 조회 실패: ${user.id}`, error);
-            return { ...user, unreadCount: 0 };
-          }
-        }));
+        this.userlist = filteredUsers;
       } catch (error) {
         console.error("❌ 회원 목록 불러오기 실패", error);
         alert("회원 목록을 불러오지 못했습니다.");
@@ -116,27 +96,6 @@
           const roomId = response.data.id;
           console.log(roomId);
           this.$router.push(`/chat/${roomId}`);
-          // 메시지 읽음 처리
-          try {
-            await axios.patch(
-              `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${roomId}/read`,
-              null,
-              {
-                params: {
-                  userId: myId,
-                  messageId: 0 // 가장 최근 메시지 ID로 업데이트
-                },
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                  "X-User-LoginId": localStorage.getItem("loginId")
-                }
-              }
-            );
-          } catch (error) {
-            console.warn("⚠️ 메시지 읽음 처리 실패:", error);
-          }
-
-          
         } catch (error) {
           console.error("❌ 채팅방 생성/이동 실패", error);
           alert("채팅방 생성 중 오류가 발생했습니다.");

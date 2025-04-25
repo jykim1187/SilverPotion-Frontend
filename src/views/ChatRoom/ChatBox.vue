@@ -9,20 +9,22 @@
                     <v-card-text>
                         <div class="chat-box">
                             <div 
-                             v-for="(msg, index) in messages"
-                             :key="index"
-                             :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
+                            v-for="(msg, index) in messages"
+                            :key="index"
+                            :class="['chat-message', isMine(msg.senderId) ? 'sent' : 'received']"
                             >
-                            <template v-if="msg.senderId === userId">
+                            <template v-if="isMine(msg.senderId)">
                                 <div class="message-content">
-                                    {{ msg.content }}
-                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                {{ msg.content }}
+                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
                                 </div>
                             </template>
+
                             <template v-else>
                                 <div class="message-content">
-                                    {{ msg.content }}
-                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                <div class="sender-info">{{ msg.senderNickName }}</div> <!-- ✅ 상대 닉네임 표시 -->
+                                {{ msg.content }}
+                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
                                 </div>
                             </template>
                             </div>
@@ -53,7 +55,10 @@ export default {
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
             isSubscribed: false,
-            isSending: false, // ✅ 중복 방지용
+            isSending: false, 
+            page: 0, // ✅ 현재 페이지
+            hasMore: true, // ✅ 더 불러올 메시지가 있는지 여부
+            loadingHistory: false, // ✅ 중복 로딩 방지
         }
     },
     async created() {
@@ -61,7 +66,15 @@ export default {
         this.roomId = this.$route.params.roomId;
         this.userId = localStorage.getItem("userId");
         this.messages = [];
+
+        this.page = 0;
+        this.hasMore = true;
+        await this.loadMessageHistory();
         this.connectWebsocket();
+    },
+    mounted() {
+        const chatBox = this.$el.querySelector(".chat-box");
+        chatBox.addEventListener("scroll", this.onScrollTop);
     },
     beforeRouteLeave(to, from, next) {
         // this.disconnectWebSocket();
@@ -69,8 +82,58 @@ export default {
     },
     beforeUnmount() {
         this.disconnectWebSocket();
+        const chatBox = this.$el.querySelector(".chat-box");
+        chatBox.removeEventListener("scroll", this.onScrollTop);
     },
     methods: {
+        isMine(senderId) {
+            return String(senderId) === String(this.userId);
+        },
+        onScrollTop(e) {
+            const el = e.target;
+            if (el.scrollTop < 50 && this.hasMore && !this.loadingHistory) {
+            this.page++;
+            this.loadMessageHistory();
+            }
+        },
+        async loadMessageHistory() {
+            this.loadingHistory = true;
+            try {
+                const response = await fetch(
+                `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${this.roomId}/messages?page=${this.page}&size=30`,
+                {
+                    headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    "X-User-LoginId": this.senderLoginId
+                    }
+                }
+                );
+
+                const result = await response.json();
+                const reversed = result.content.reverse(); // 오래된 메시지가 위로 오도록
+
+                if (reversed.length === 0) {
+                this.hasMore = false;
+                return;
+                }
+
+                const chatBox = this.$el.querySelector(".chat-box");
+                const oldScrollHeight = chatBox.scrollHeight;
+
+                this.messages = [...reversed, ...this.messages]; // 위로 붙이기
+
+                this.$nextTick(() => {
+                const newScrollHeight = chatBox.scrollHeight;
+                chatBox.scrollTop = newScrollHeight - oldScrollHeight; // 스크롤 위치 유지
+                });
+
+                console.log(`📄 page ${this.page} 히스토리 불러옴`, reversed.length);
+            } catch (error) {
+                console.error("❌ 채팅 히스토리 불러오기 실패", error);
+            } finally {
+                this.loadingHistory = false;
+            }
+        },
         connectWebsocket() {
             console.log("🔧 connectWebsocket 호출됨, 현재 isSubscribed =", this.isSubscribed);
             if (this.isSubscribed){
