@@ -9,20 +9,22 @@
                     <v-card-text>
                         <div class="chat-box">
                             <div 
-                             v-for="(msg, index) in messages"
-                             :key="index"
-                             :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
+                            v-for="(msg, index) in messages"
+                            :key="index"
+                            :class="['chat-message', isMine(msg.senderId) ? 'sent' : 'received']"
                             >
-                            <template v-if="msg.senderId === userId">
+                            <template v-if="isMine(msg.senderId)">
                                 <div class="message-content">
-                                    {{ msg.content }}
-                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                {{ msg.content }}
+                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
                                 </div>
                             </template>
+
                             <template v-else>
                                 <div class="message-content">
-                                    {{ msg.content }}
-                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                <div class="sender-info">{{ msg.senderNickName }}</div> <!-- ✅ 상대 닉네임 표시 -->
+                                {{ msg.content }}
+                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
                                 </div>
                             </template>
                             </div>
@@ -52,7 +54,11 @@ export default {
             roomId: null,
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
-            isSubscribed: false
+            isSubscribed: false,
+            isSending: false, 
+            page: 0, // ✅ 현재 페이지
+            hasMore: true, // ✅ 더 불러올 메시지가 있는지 여부
+            loadingHistory: false, // ✅ 중복 로딩 방지
         }
     },
     async created() {
@@ -60,18 +66,78 @@ export default {
         this.roomId = this.$route.params.roomId;
         this.userId = localStorage.getItem("userId");
         this.messages = [];
+
+        this.page = 0;
+        this.hasMore = true;
+        await this.loadMessageHistory();
+        this.markAsRead();
         this.connectWebsocket();
     },
+    mounted() {
+        const chatBox = this.$el.querySelector(".chat-box");
+        chatBox.addEventListener("scroll", this.onScrollTop);
+    },
     beforeRouteLeave(to, from, next) {
-        // this.disconnectWebSocket();
+        this.markAsRead(); // ✅ 나가기 전에 읽음 처리
+        this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
         this.disconnectWebSocket();
+        const chatBox = this.$el.querySelector(".chat-box");
+        chatBox.removeEventListener("scroll", this.onScrollTop);
     },
     methods: {
+        isMine(senderId) {
+            return String(senderId) === String(this.userId);
+        },
+        onScrollTop(e) {
+            const el = e.target;
+            if (el.scrollTop < 50 && this.hasMore && !this.loadingHistory) {
+            this.page++;
+            this.loadMessageHistory();
+            }
+        },
+        async loadMessageHistory() {
+            this.loadingHistory = true;
+            try {
+                const response = await fetch(
+                `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${this.roomId}/messages?page=${this.page}&size=30`,
+                {
+                    headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    "X-User-LoginId": this.senderLoginId
+                    }
+                }
+                );
+
+                const result = await response.json();
+                const reversed = result.content.reverse(); // 오래된 메시지가 위로 오도록
+
+                if (reversed.length === 0) {
+                this.hasMore = false;
+                return;
+                }
+
+                const chatBox = this.$el.querySelector(".chat-box");
+                const oldScrollHeight = chatBox.scrollHeight;
+
+                this.messages = [...reversed, ...this.messages]; // 위로 붙이기
+
+                this.$nextTick(() => {
+                const newScrollHeight = chatBox.scrollHeight;
+                chatBox.scrollTop = newScrollHeight - oldScrollHeight; // 스크롤 위치 유지
+                });
+
+                console.log(`📄 page ${this.page} 히스토리 불러옴`, reversed.length);
+            } catch (error) {
+                console.error("❌ 채팅 히스토리 불러오기 실패", error);
+            } finally {
+                this.loadingHistory = false;
+            }
+        },
         connectWebsocket() {
-            console.log("🔧 connectWebsocket 호출됨");
+            console.log("🔧 connectWebsocket 호출됨, 현재 isSubscribed =", this.isSubscribed);
             if (this.isSubscribed){
                 console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
                 return;
@@ -90,7 +156,8 @@ export default {
                     senderId: message.senderId,
                     currentUserId: this.userId
                 });
-                
+                console.log("🧩 현재 roomId:", this.roomId, typeof this.roomId);
+                console.log("🧩 수신된 message.roomId:", message.roomId, typeof message.roomId);
                 if (!message) {
                     console.warn("❌ message is undefined/null");
                     return;
@@ -101,12 +168,13 @@ export default {
                     return;
                 }
                 
-                if (message.roomId == this.roomId) {
-                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
-                    // 메시지에 senderId가 없으면 현재 사용자의 ID로 설정
-                    if (!message.senderId) {
-                        message.senderId = this.userId;
+                if (parseInt(message.roomId) === parseInt(this.roomId)) {
+                    // 내가 방금 보낸 메시지라면 무시 (로컬에서 이미 push 했음)
+                    if (String(message.senderId) === String(this.userId)) {
+                        console.log("🙅 내 메시지는 수신에서 무시함");
+                        return;
                     }
+                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
                     this.messages.push(message);
                     this.scrollToBottom();
                 } else {
@@ -118,7 +186,8 @@ export default {
         },
         sendMessage() {
             if(this.newMessage.trim() === "") return;
-            
+            this.isSending = true; // ✅ 전송 중 플래그 설정
+
             const message = {
                 roomId: this.roomId,
                 content: this.newMessage,
@@ -140,6 +209,9 @@ export default {
             );
             
             this.newMessage = "";
+            setTimeout(() => {
+                this.isSending = false; // ✅ 잠깐 후에 초기화
+            }, 300); // debounce 효과
         },
         scrollToBottom() {
             this.$nextTick(() => {
@@ -154,8 +226,29 @@ export default {
             const minutes = date.getMinutes().toString().padStart(2, '0');
             return `${hours}:${minutes}`;
         },
+        // ✅ 나가기 전에 읽음 처리
+        async markAsRead() {
+            if (!this.messages.length) return;
+
+            const lastMessage = this.messages[this.messages.length - 1];
+            const userId = localStorage.getItem("userId");
+
+            try {
+                await fetch(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${this.roomId}/read?userId=${userId}&messageId=${lastMessage.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        Authorization: `Bearer ${this.token}`,
+                        "X-User-LoginId": this.senderLoginId
+                    }
+                });
+                console.log('📍 메시지 읽음 처리 완료');
+            } catch (error) {
+                console.error('❌ 메시지 읽음 처리 실패', error);
+            }
+        },
         disconnectWebSocket() {
             const topic = `/user/${this.senderLoginId}/chat`;
+            console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
             WebSocketManager.unsubscribe(topic);
             this.isSubscribed = false;
         },
