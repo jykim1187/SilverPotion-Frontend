@@ -2,23 +2,25 @@
   <div class="health-report">
     <div class="report-header">
       <div class="title-section">
-        <div class="logo">
-          <v-icon large color="white">mdi-file-document</v-icon>
+        <div class="user-profile" @click="showUserProfile">
+          <img :src="getUserProfileImage()" class="profile-image" alt="User Profile">
         </div>
-        <h1  @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 리포트</h1>
+        <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 리포트</h1>
       </div>
       
       <!-- 날짜 선택 -->
-      <div class="date-picker-section">
-        <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
-        <div class="date-picker-container" v-show="showDatePicker">
-          <DatePickerRange :type="type" @handleDateChange="handleDateChange" :max-date="maxDate" :isHealthData="false" />
+      <div class="date-controls">
+        <div class="date-picker-section">
+          <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
+          <div class="date-picker-container" v-show="showDatePicker">
+            <DatePickerRange :type="type" @handleDateChange="handleDateChange" :max-date="maxDate" :isHealthData="false" />
+          </div>
         </div>
-      </div>
-      <div class="date-section">
-        <v-chip outlined color="black" class="date-chip">
-          {{ this.period }}
-        </v-chip>
+        <div class="date-section">
+          <v-chip outlined color="black" class="date-chip">
+            {{ this.period }}
+          </v-chip>
+        </div>
       </div>
     </div>
 
@@ -317,6 +319,16 @@ export default {
       this.showUserProfileModal = false;
     },
    
+    // 사용자 프로필 이미지 가져오기
+    getUserProfileImage() {
+      // 기본 프로필 이미지
+      let defaultImage = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(this.userName) + '&background=random&color=fff';
+      
+      // 실제 구현 시에는 사용자 ID를 기반으로 서버에서 이미지를 가져오는 로직 추가
+      // 예: return this.userProfileImage || defaultImage;
+      
+      return defaultImage;
+    },
   },
   mounted() {
     if (this.targetDate && this.type) {
@@ -421,15 +433,32 @@ export default {
   margin-bottom: 10px;
 }
 
-.logo {
-  width: 40px;
-  height: 40px;
-  background: rgba(59, 73, 171, 0.2);
+.user-profile {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
+  overflow: hidden;
+  margin-right: 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+  border: 2px solid white;
+  transition: transform 0.3s ease;
+}
+
+.user-profile:hover {
+  transform: scale(1.05);
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.date-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-right: 16px;
+  gap: 10px;
 }
 
 /* 사용자 이름 제목 스타일 */

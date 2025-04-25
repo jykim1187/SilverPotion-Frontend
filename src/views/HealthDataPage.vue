@@ -1,21 +1,23 @@
 <template>
   <div class="health-data-page">
     <!-- 뷰 전환 버튼을 최상단으로 이동 -->
-    <div class="view-toggle-container">
-      <v-btn 
-        :color="showHealthData ? 'primary' : ''" 
-        :outlined="!showHealthData"
-        class="toggle-btn"
-        @click="showHealthData = true">
-        건강 데이터
-      </v-btn>
-      <v-btn 
-        :color="!showHealthData ? 'primary' : ''" 
-        :outlined="showHealthData"
-        class="toggle-btn"
-        @click="showHealthData = false">
-        건강 리포트
-      </v-btn>
+    <div class="view-toggle-wrapper">
+      <div class="toggle-buttons">
+        <button 
+          class="modern-tab-button" 
+          :class="{ active: showHealthData }"
+          @click="showHealthData = true">
+          <v-icon left>mdi-chart-line</v-icon>
+          건강 데이터
+        </button>
+        <button 
+          class="modern-tab-button" 
+          :class="{ active: !showHealthData }"
+          @click="showHealthData = false">
+          <v-icon left>mdi-file-document-outline</v-icon>
+          건강 리포트
+        </button>
+      </div>
     </div>
 
     <div class="dependents-toggle-section">
@@ -275,22 +277,49 @@ export default {
   min-height: 100vh;
 }
 
-.view-toggle-container {
+.view-toggle-wrapper {
+  margin-bottom: 20px;
   display: flex;
   justify-content: center;
-  gap: 15px;
-  margin-bottom: 20px;
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-btn {
-  min-width: 140px;
+.toggle-buttons {
+  display: flex;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.modern-tab-button {
+  min-width: 150px;
+  padding: 12px 24px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 15px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 30px;
-  height: 42px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+
+.modern-tab-button.active {
+  background: linear-gradient(135deg, #3f51b5, #5c6bc0);
+  color: white;
+  box-shadow: 0 5px 15px rgba(63, 81, 181, 0.3);
+}
+
+.modern-tab-button:hover:not(.active) {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.view-toggle-container {
+  display: none; /* 기존 컨테이너 숨김 */
 }
 
 .dependents-toggle-section {
