@@ -7,14 +7,6 @@
       </v-btn>
       <span class="text-h6 ml-3">투표</span>
       <v-spacer></v-spacer>
-      <v-btn
-        color="primary"
-        prepend-icon="mdi-plus"
-        @click="createPost"
-        class="create-post-btn"
-      >
-        글쓰기
-      </v-btn>
     </div>
 
     <!-- 로딩 표시 -->
@@ -1121,11 +1113,6 @@ export default {
       }
     },
 
-    createPost() {
-      // TODO: 글쓰기 페이지로 이동
-      this.$router.push('/silverpotion/post/create');
-    },
-
     // 대댓글 표시/숨기기 토글
     toggleReplies(commentId) {
       if (this.expandedComments.has(commentId)) {
@@ -1535,9 +1522,5 @@ export default {
   .comment-input-container {
     max-width: 900px;
   }
-}
-
-.create-post-btn {
-  font-weight: 500;
 }
 </style> 

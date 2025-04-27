@@ -140,37 +140,37 @@
             더보기
           </v-btn>
       </div>
-
-      <!-- Floating Action Button and Toggle Menu -->
-      <div class="create-post-wrapper">
-        <div class="toggle-menu" :class="{ 'show-menu': showMenu }" v-if="showMenu">
-          <div class="menu-items">
-            <v-btn
-              v-for="category in postCategories"
-              :key="category.type"
-              @click.stop="createPost(category.type)"
-              class="menu-item"
-              color="primary"
-              variant="text"
-            >
-              {{ category.label }}
-            </v-btn>
-          </div>
-        </div>
-        
-        <v-btn
-          icon="mdi-plus"
-          color="primary"
-          class="post_create_button"
-          @click.stop="toggleMenu"
-          :style="{ transform: showMenu ? 'rotate(45deg)' : 'none' }"
-        ></v-btn>
-      </div>
     </v-list>
 
     <!-- No Posts Message -->
     <div v-else-if="!loading && posts.length === 0" class="text-center pa-5 grey lighten-4 rounded">
       <p>표시할 게시글이 없습니다.</p>
+    </div>
+
+    <!-- Floating Action Button and Toggle Menu -->
+    <div class="create-post-wrapper" v-if="!isVoteDetail">
+      <div class="toggle-menu" :class="{ 'show-menu': showMenu }">
+        <div class="menu-items">
+          <v-btn
+            v-for="category in postCategories"
+            :key="category.type"
+            @click.stop="createPost(category.type)"
+            class="menu-item"
+            color="primary"
+            variant="text"
+          >
+            {{ category.label }}
+          </v-btn>
+        </div>
+      </div>
+      
+      <v-btn
+        icon="mdi-plus"
+        color="primary"
+        class="post_create_button"
+        @click.stop="toggleMenu"
+        :style="{ transform: showMenu ? 'rotate(45deg)' : 'none' }"
+      ></v-btn>
     </div>
 
     <!-- 게시물 메뉴 다이얼로그 -->
@@ -264,9 +264,13 @@ export default {
       postMenuDialog: false,
       deleteConfirmDialog: false,
       selectedPost: null,
+      isVoteDetail: false, // 투표 상세 페이지 여부
     };
   },
   created() {
+    // 현재 경로가 투표 상세 페이지인지 확인
+    this.isVoteDetail = this.$route.path.includes('/silverpotion/post/vote/detail');
+    
     // Load liked posts from localStorage
     const storedLikes = localStorage.getItem('likedPosts');
     if (storedLikes) {
@@ -540,8 +544,13 @@ export default {
       this.showMenu = !this.showMenu;
     },
     
-    closeMenu() {
-      this.showMenu = false;
+    closeMenu(event) {
+      // 메뉴가 열려있고, 클릭된 요소가 메뉴나 버튼이 아닌 경우에만 메뉴를 닫음
+      if (this.showMenu && 
+          !event.target.closest('.toggle-menu') && 
+          !event.target.closest('.post_create_button')) {
+        this.showMenu = false;
+      }
     },
     
     createPost(type) {
@@ -773,7 +782,10 @@ export default {
 }
 
 .create-post-wrapper {
-  position: relative;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
 }
 
 .toggle-menu {
