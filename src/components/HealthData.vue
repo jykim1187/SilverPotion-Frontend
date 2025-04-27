@@ -11,12 +11,12 @@
       <div class="date-picker-section">
         <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
         <div class="date-picker-container" v-show="showDatePicker">
-          <DatePickerRange :type="type" @handleDateChange="handleDateChange" />
+          <DatePickerRange :type="type" @handleDateChange="handleDateChange" :isHealthData="true" />
         </div>
       </div>
       <div class="date-section">
         <v-chip outlined color="black" class="date-chip">
-          {{ currentDate }}
+          {{ myData.period }}
         </v-chip>
       </div>
     </div>
@@ -287,17 +287,27 @@ export default {
   props: {
     loginId: String,
     type: String,
-    targetDate: String,
     userName: String,
-    userLongId: Number
+    userLongId: Number,
+    // targetDate: String,
   },
   components: {
     DatePickerRange,
     UserProfileComponent
   },
   data() {
+    // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+    function formatDateToYYYYMMDD(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
+    const today = new Date();
+    
     return {
-      currentDate: new Date().toISOString().split('T')[0],
+      currentDate: formatDateToYYYYMMDD(today),
       showDatePicker: false,
       myData: {
         step: 0,
@@ -308,7 +318,8 @@ export default {
         totalSleepMinutes : 0,
         deepSleepMinutes : 0,
         lightSleepMinutes : 0,
-        remSleepMinutes : 0
+        remSleepMinutes : 0,
+        period : ''
       },
       showErrorModal : false,
       targetCalory: 2000,
@@ -316,7 +327,8 @@ export default {
       newTargetCalory: 2000,
       showUserProfileModal: false,
       // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
-      parentType: 'healthData'
+      parentType: 'healthData',
+      isRequestPending: false // 요청 중복 방지 플래그 추가
     }
   },
 
@@ -324,29 +336,73 @@ export default {
     // 목표 칼로리 불러오기
     this.loadTargetCalory();
     
-    // 부모 컴포넌트에서 전달받은 targetDate 사용
-    this.currentDate = this.targetDate;
-    console.log(this.userName)
+    // 타입에 따라 초기 날짜 설정
+    this.setInitialDate();
    
-
     // 데이터 불러오기
-    this.fetchData();
+    this.fetchDataOnce();
+    
+    // 탭 변경 이벤트 리스너 등록
+    window.addEventListener('tab-changed', this.handleTabChange);
   },
+  
+  beforeUnmount() {
+    // 컴포넌트 제거 시 이벤트 리스너 제거
+    window.removeEventListener('tab-changed', this.handleTabChange);
+  },
+  
   watch: {
     loginId() {
-      this.fetchData();
+      this.fetchDataOnce();
       this.loadTargetCalory();
     },
-    type() {
-      this.fetchData();
-    },
-    targetDate(newDate) {
-      this.currentDate = newDate;
-      this.fetchData();
+    type(newVal, oldVal) {
+      // 빈 값이거나 초기화 중인 경우 처리하지 않음
+      if (!newVal || (oldVal === undefined || oldVal === '')) {
+        return;
+      }
+      
+      // 타입이 변경되면 그에 맞는 초기 날짜 설정
+      this.setInitialDate();
+      this.fetchDataOnce();
     }
   },
 
   methods: {
+    // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+    formatDateToYYYYMMDD(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    },
+    
+    // 타입에 따라 초기 날짜 설정
+    setInitialDate() {
+      const today = new Date();
+      
+      if (this.type === 'DAY') {
+        // 실시간 선택 시 오늘 날짜로 설정
+        this.currentDate = this.formatDateToYYYYMMDD(today);
+      } 
+      else if (this.type === 'WEEKAVG') {
+        // 이번주 월요일 계산
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 구하기
+        const monday = new Date(today);
+        monday.setDate(diff);
+        
+        // 이번주 월요일로 설정 (그러면 백엔드에서 저번주 데이터를 조회)
+        this.currentDate = this.formatDateToYYYYMMDD(monday);
+      } 
+      else if (this.type === 'MONTHAVG') {
+        // 이번달 1일 계산
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        // 이번달 1일로 설정 (그러면 백엔드에서 저번달 데이터를 조회)
+        this.currentDate = this.formatDateToYYYYMMDD(firstDay);
+      }
+    },
+    
     // 사용자 프로필 표시
     showUserProfile() {
       if(this.loginId === localStorage.getItem("loginId")){
@@ -371,28 +427,70 @@ export default {
       this.showUserProfileModal = false;
     },
     
-    // 컴포넌트 외부에서 사용자가 피보호자 아이디를 클릭했다거나 데이터 타입을 변경했다거나 했을 때 watch를 통해 다시 호출되기 위해서
-    async fetchData(){
-      const dto ={
-        "loginId" : this.loginId,
-        "type" : this.type,
-        "date" : this.currentDate
-      };
-    try{
+    // 탭 변경 이벤트 처리
+    handleTabChange(event) {
+      // 헬스 데이터 탭으로 변경되었을 때만 처리
+      if (event.detail.showHealthData) {
+        console.log("헬스 데이터 탭으로 변경됨, 데이터 요청 준비");
+        // 기존 요청 플래그 초기화 (새로운 탭으로 전환되었으므로)
+        this.isRequestPending = false;
+      }
+    },
     
-      const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/allinone`,dto);
-      this.myData.step = response.data.result.step;
-      this.myData.heartbeat = response.data.result.heartbeat;
-      this.myData.calory = response.data.result.calory;
-      this.myData.activeCalory = response.data.result.activeCalory;
-      this.myData.distance = response.data.result.distance;
-      this.myData.totalSleepMinutes = response.data.result.totalSleepMinutes;
-      this.myData.deepSleepMinutes = response.data.result.deepSleepMinutes;
-      this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
-      this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
-    }catch(error){
-      this.showErrorModal = true;
-    }
+    // API 호출을 한 번만 수행하는 메소드
+    fetchDataOnce() {
+      // API 호출 중복 방지
+      if (!this.isRequestPending) {
+        this.isRequestPending = true;
+        
+        // 데이터 요청
+        this.fetchData().finally(() => {
+          // 요청 완료 후 플래그 초기화 (일정 시간 후에)
+          setTimeout(() => {
+            this.isRequestPending = false;
+          }, 500);
+        });
+      } else {
+        console.log("요청이 이미 진행 중입니다");
+      }
+    },
+    
+    // 컴포넌트 외부에서 사용자가 피보호자 아이디를 클릭했다거나 데이터 타입을 변경했다거나 했을 때 watch를 통해 다시 호출되기 위해서
+    async fetchData() {
+      // 필요한 데이터가 모두 있는지 확인
+      if (!this.loginId || !this.type || !this.currentDate) {
+        console.log("필요한 데이터가 없어 요청을 보내지 않습니다:", { 
+          loginId: this.loginId, 
+          type: this.type, 
+          date: this.currentDate 
+        });
+        return;
+      }
+      
+      const dto = {
+        "loginId": this.loginId,
+        "type": this.type,
+        "date": this.currentDate
+      };
+
+      console.log("건강 데이터 요청:", dto);
+      
+      try {
+        const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/allinone`, dto);
+        this.myData.step = response.data.result.step;
+        this.myData.heartbeat = response.data.result.heartbeat;
+        this.myData.calory = response.data.result.calory;
+        this.myData.activeCalory = response.data.result.activeCalory;
+        this.myData.distance = response.data.result.distance;
+        this.myData.totalSleepMinutes = response.data.result.totalSleepMinutes;
+        this.myData.deepSleepMinutes = response.data.result.deepSleepMinutes;
+        this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
+        this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
+        this.myData.period = response.data.result.period;
+      } catch(error) {
+        console.error("건강 데이터 가져오기 실패:", error);
+        this.showErrorModal = true;
+      }
     },
 
     handleDateChange(dateRange) {
@@ -402,7 +500,7 @@ export default {
       if (dateRange && dateRange !== 'NaN-NaN-NaN' && dateRange.match(/^\d{4}-\d{2}-\d{2}$/)) {
         this.currentDate = dateRange;
         this.showDatePicker = false;
-        this.fetchData();
+        this.fetchDataOnce();
       } else {
         console.error('유효하지 않은 날짜 형식:', dateRange);
         this.showErrorModal = true;
@@ -410,9 +508,7 @@ export default {
     },
 
     toggleDatePicker() {
-      console.log('toggleDatePicker 호출됨');
       this.showDatePicker = !this.showDatePicker;
-      console.log('showDatePicker:', this.showDatePicker);
     },
     
     // 목표 칼로리 저장
@@ -433,14 +529,39 @@ export default {
         this.newTargetCalory = this.targetCalory;
       }
     }
-}
+  },
+  computed: {
+    // 날짜를 '0000년 0월 0일' 형식으로 표시하는 계산된 속성
+    formattedCurrentDate() {
+      if (!this.currentDate) return '';
+      
+      const date = new Date(this.currentDate);
+      
+      if (this.type === 'DAY') {
+        // 일별 데이터는 날짜 표시
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      } 
+      else if (this.type === 'WEEKAVG') {
+        // 주간 평균 데이터는 날짜 표시
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
+      else if (this.type === 'MONTHAVG') {
+        // 월간 데이터는 월까지만 표시
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+      }
+      else {
+        // 기본값
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
+    }
+  }
 }
 </script>
 
 <style scoped>
 .date-picker-section {
   position: relative;
-  margin-right: 20px;
+  margin-left: 20px;
   z-index: 9999;
 }
 
@@ -466,19 +587,23 @@ export default {
   color: #333;
   min-height: 100vh;
   font-family: 'Roboto', sans-serif;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .dashboard-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 40px;
+  padding: 24px 20px;
   background-color: #f5f5f5;
+  flex-wrap: wrap;
 }
 
 .title-section {
   display: flex;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .logo {
@@ -493,7 +618,7 @@ export default {
 }
 
 .title-section h1 {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   color: #333;
@@ -507,7 +632,7 @@ export default {
 }
 
 .dashboard-content {
-  padding: 30px 40px;
+  padding: 20px;
 }
 
 .stats-grid {
@@ -520,7 +645,7 @@ export default {
 .stats-card {
   background: #f9f9f9;
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   overflow: hidden;
   position: relative;
   transition: transform 0.3s, box-shadow 0.3s;
@@ -551,8 +676,8 @@ export default {
 }
 
 .card-badge {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -579,7 +704,7 @@ export default {
 }
 
 .value-number {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 700;
   line-height: 1;
   color: #333;
@@ -705,7 +830,7 @@ export default {
   background: #f9f9f9;
   border-radius: 16px;
   overflow: hidden;
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -934,6 +1059,21 @@ export default {
 }
 
 @media (max-width: 960px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  
+  .date-picker-section {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+  
+  .date-section {
+    margin-top: 10px;
+  }
+  
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -947,10 +1087,57 @@ export default {
   .sleep-total {
     margin-right: 0;
     margin-bottom: 32px;
+    width: 100%;
   }
   
   .sleep-details {
     width: 100%;
+  }
+  
+  .value-number {
+    font-size: 1.8rem;
+  }
+  
+  .total-hours {
+    font-size: 1.8rem;
+  }
+  
+  .total-time-circle {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .card-badge {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .dashboard-content {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-section h1 {
+    font-size: 1.3rem;
+  }
+  
+  .total-time-circle {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .metric-value-wrapper {
+    flex-direction: column;
+  }
+  
+  .metric-percent {
+    margin-top: 5px;
+  }
+  
+  .date-chip {
+    font-size: 0.8rem;
+    padding: 0 12px;
   }
 }
 

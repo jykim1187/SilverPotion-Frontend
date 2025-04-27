@@ -1,5 +1,23 @@
 <template>
   <div class="health-data-page">
+    <!-- 뷰 전환 버튼을 최상단으로 이동 -->
+    <div class="view-toggle-container">
+      <v-btn 
+        :color="showHealthData ? 'primary' : ''" 
+        :outlined="!showHealthData"
+        class="toggle-btn"
+        @click="showHealthData = true">
+        건강 데이터
+      </v-btn>
+      <v-btn 
+        :color="!showHealthData ? 'primary' : ''" 
+        :outlined="showHealthData"
+        class="toggle-btn"
+        @click="showHealthData = false">
+        건강 리포트
+      </v-btn>
+    </div>
+
     <div class="dependents-toggle-section">
       <div class="me-section">
         <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectMyData">내 데이터</v-btn>
@@ -62,31 +80,15 @@
         <v-tab value="MONTHAVG">월간 평균</v-tab>
       </v-tabs>
     </div>
-
-    <!-- 뷰 전환 버튼 -->
-    <div class="view-toggle-container">
-      <v-btn 
-        :color="showHealthData ? 'primary' : ''" 
-        :outlined="!showHealthData"
-        @click="showHealthData = true">
-        건강 데이터
-      </v-btn>
-      <v-btn 
-        :color="!showHealthData ? 'primary' : ''" 
-        :outlined="showHealthData"
-        @click="showHealthData = false">
-        건강 리포트
-      </v-btn>
-    </div>
     
     <!-- 헬스데이터 컴포넌트 호출  -->
     <div class="health-data-container" v-if="showHealthData">
-      <HealthData :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
+      <HealthData :loginId="currentUserId" :type="selectedType"  :userName="selectedUserName" :userLongId="selectedLongId" />
     </div>
     
     <!-- 헬스리포트 컴포넌트 호출 -->
     <div class="health-report-container" v-else>
-      <HealthReportComponent :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" />
+      <HealthReportComponent :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" v-model:isFirstLoad="isFirstLoad" />
     </div>
     
     <!-- 피보호자 연결 요청 모달 -->
@@ -123,7 +125,8 @@ export default {
       showLinkRequestModal2: false,
       selectedUserName: localStorage.getItem('userName'),
       selectedLongId: null,
-      showHealthData: true // 기본적으로 건강 데이터 화면 표시
+      showHealthData: true, // 기본적으로 건강 데이터 화면 표시
+      isFirstLoad: true
     }
   },
  async mounted() {
@@ -149,9 +152,26 @@ export default {
     calculatedDate() {
       const today = new Date();
       
+      // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+      function formatDateToYYYYMMDD(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
       if (this.selectedType === 'DAY') {
-        // 오늘 날짜를 YYYY-MM-DD 형식으로 반환
-        return today.toISOString().split('T')[0];
+        // 실시간 선택 시, 건강 리포트 컴포넌트에는 어제 날짜, 건강 데이터 컴포넌트에는 오늘 날짜를 반환
+        if (!this.showHealthData) {
+          // 건강 리포트용 날짜 (어제)
+          console.log("여기호출");
+          const yesterday = new Date(today);
+          yesterday.setDate(today.getDate());
+          return formatDateToYYYYMMDD(yesterday);
+        } else {
+          // 건강 데이터용 날짜 (오늘)
+          return formatDateToYYYYMMDD(today);
+        }
       } 
       else if (this.selectedType === 'WEEKAVG') {
         // 이번주 월요일 계산
@@ -159,16 +179,66 @@ export default {
         const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 구하기
         const monday = new Date(today);
         monday.setDate(diff);
-        return monday.toISOString().split('T')[0];
+        
+        if (this.showHealthData) {
+          // 건강 데이터용 날짜 (이번주 월요일)
+          const nextMonday = new Date(monday);
+          nextMonday.setDate(nextMonday.getDate() + 7);
+          return formatDateToYYYYMMDD(nextMonday);
+        } else {
+          // 건강 리포트용 날짜 (지난주 월요일)
+          const lastMonday = new Date(monday);
+          lastMonday.setDate(lastMonday.getDate() - 7);
+          return formatDateToYYYYMMDD(lastMonday);
+        }
       } 
       else if (this.selectedType === 'MONTHAVG') {
-        // 이번달 1일 계산
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        return firstDay.toISOString().split('T')[0];
+        // 이번달 1일
+        // const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        if (this.showHealthData) {
+          // 건강 데이터용 날짜 (이번달 1일)
+          const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+          return formatDateToYYYYMMDD(nextMonth);
+        } else {
+          // 건강 리포트용 날짜 (지난달 1일)
+          const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          return formatDateToYYYYMMDD(lastMonth);
+        }
       }
       
-      return today.toISOString().split('T')[0];
+      return formatDateToYYYYMMDD(today);
     }
+  },
+  watch: {
+    // showHealthData가 변경될 때 (건강 데이터/건강 리포트 전환 시)
+    showHealthData() {
+      // selectedType이 비어있거나 변경 중이면 변경 생략
+      if (!this.selectedType) return;
+      
+      // 여기서는 실제로 타입을 바꾸진 않고, 단지 탭 전환 여부 플래그만 설정
+      // 컴포넌트에 플래그를 전달하여 컴포넌트 내부에서 처리하도록 함
+      this.isFirstLoad = this.selectedType === 'DAY';
+      
+      // 기존 로직 대신 이벤트 전달 방식으로 변경
+      this.$nextTick(() => {
+        const event = new CustomEvent('tab-changed', {
+          detail: { 
+            showHealthData: this.showHealthData,
+            selectedType: this.selectedType
+          }
+        });
+        window.dispatchEvent(event);
+      });
+    },
+    selectedType(newVal) {
+      if(newVal === 'DAY'){
+        this.isFirstLoad = true;
+      }
+      else{
+        this.isFirstLoad = false;
+      }
+    },
   },
   methods: {
     selectMyData() {
@@ -203,6 +273,24 @@ export default {
   margin: 0 auto;
   background-color: #f5f7fa;
   min-height: 100vh;
+}
+
+.view-toggle-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-btn {
+  min-width: 140px;
+  font-weight: 500;
+  border-radius: 30px;
+  height: 42px;
 }
 
 .dependents-toggle-section {
@@ -298,13 +386,6 @@ export default {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.view-toggle-container {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 20px;
 }
 
 .health-data-container, .health-report-container {

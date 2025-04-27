@@ -57,11 +57,17 @@ export default {
             showCreateRoomModal: false,
             newRoomTitle: "",
             token: localStorage.getItem("token"),
-            senderLoginId: localStorage.getItem("loginId")
+            senderLoginId: localStorage.getItem("loginId"),
+            unreadCount: 0,
         }
     },
     created() {
     this.loadChatRooms();
+    this.chatRoomList.sort((a, b) => {
+        const timeA = new Date(a.lastMessageTime || a.createdAt);
+        const timeB = new Date(b.lastMessageTime || b.createdAt);
+        return timeB - timeA;
+    });
 
     const loginId = localStorage.getItem("loginId");
     const topic = `/user/${loginId}/chat`;
@@ -82,32 +88,60 @@ export default {
     beforeUnmount() {
         this.disconnectWebSocket();
     },
+    beforeRouteUpdate(to, from, next) {
+        this.roomId = to.params.roomId;
+        this.messages = [];
+        this.page = 0;
+        this.hasMore = true;
+
+        this.loadMessageHistory();
+        this.markAsRead();
+        this.disconnectWebSocket();
+        this.connectWebsocket();
+
+        next();
+    },
     methods: {
         
         updateChatRoom(roomId, message) {
             console.log('🔄 updateChatRoom called with:', { roomId, message });
             const roomIndex = this.chatRoomList.findIndex(room => room.id == roomId);
             console.log('Found room index:', roomIndex);
-            
+
+            const isCurrentRoom = this.isCurrentChatRoom(roomId);
+
             if (roomIndex !== -1) {
-                // Vue의 반응성을 100% 보장하는 방식
-                this.$set(this.chatRoomList, roomIndex, {
-                    ...this.chatRoomList[roomIndex],
+                const room = this.chatRoomList[roomIndex];
+                const updatedUnreadCount = isCurrentRoom ? 0 : (room.unreadCount || 0) + 1;
+
+                this.chatRoomList[roomIndex] = {
+                    ...room,
                     lastMessageContent: message.content,
-                    lastMessageTime: message.createdAt || new Date().toISOString()
-                });
-                
-                // 채팅방 목록을 최신순으로 정렬
-                this.chatRoomList.sort((a, b) => {
-                    const timeA = new Date(a.lastMessageTime || a.createdAt);
-                    const timeB = new Date(b.lastMessageTime || b.createdAt);
-                    return timeB - timeA;
-                });
-                
-                console.log('✅ 채팅방 리스트 실시간 갱신됨:', this.chatRoomList);
+                    lastMessageTime: message.createdAt || new Date().toISOString(),
+                    unreadCount: updatedUnreadCount,
+                };
             } else {
-                console.warn('⚠️ 채팅방을 찾을 수 없음:', roomId);
+                // 🆕 새 채팅방일 경우
+                this.chatRoomList.push({
+                    id: roomId,
+                    title: message.senderNickName || '새 채팅방', // 기본 타이틀
+                    lastMessageContent: message.content,
+                    lastMessageTime: message.createdAt || new Date().toISOString(),
+                    unreadCount: 1, // ✅ 처음 오면 읽지 않은 메시지 1개
+                });
             }
+
+            // 리스트 정렬 (최신순)
+            this.chatRoomList.sort((a, b) => {
+                const timeA = new Date(a.lastMessageTime || a.createdAt);
+                const timeB = new Date(b.lastMessageTime || b.createdAt);
+                return timeB - timeA;
+            });
+
+            console.log('✅ 채팅방 리스트 실시간 갱신됨:', this.chatRoomList);
+        },
+        isCurrentChatRoom(roomId) {
+            return this.$route.path === `/chat/${roomId}`;
         },
         disconnectWebSocket() {
             const topic = `/user/${this.senderLoginId}/chat`;
@@ -129,6 +163,26 @@ export default {
                 );
                 console.log('Chat rooms response:', response.data);
                 this.chatRoomList = response.data;
+                // 안 읽은 메시지 수 추가
+                const withUnread = await Promise.all(this.chatRoomList.map(async (room) => {
+                    try {
+                        const res = await axios.get(
+                            `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${room.id}/unread-count`,
+                            {
+                                params: { userId: localStorage.getItem("userId") },
+                                headers: {
+                                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                                    "X-User-LoginId": localStorage.getItem("loginId")
+                                }
+                            }
+                        );
+                        return { ...room, unreadCount: res.data };
+                    } catch {
+                        return { ...room, unreadCount: 0 }; // 실패 시 0으로 처리
+                    }
+                }));
+                this.chatRoomList = withUnread;
+                console.log('📥 채팅방 + 안 읽은 메시지 수:', withUnread);
             } catch (error) {
                 console.error("❌ 채팅방 목록 불러오기 실패", error);
                 alert("채팅방 목록을 불러오지 못했습니다.");
@@ -182,8 +236,15 @@ export default {
     background-color: #f5f5f5;
 }
 
-.unread-badge {
-    margin-left: 8px;
+.unread-badge .v-badge__badge {
+    font-size: 0.7rem;
+    min-width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .v-list-item-title {
