@@ -690,7 +690,8 @@ export default {
             return {
               id: option.id || 0,
               optionText: option.optionText || '',
-              voteCount: option.answers ? option.answers.length : 0
+              voteCount: option.answers ? option.answers.length : 0,
+              voteRatio: option.voteRatio || 0
             };
           });
           console.log('처리된 투표 옵션 데이터:', processedVoteOptions);
@@ -702,9 +703,9 @@ export default {
         if (processedVoteOptions.length === 0) {
           console.log('투표 옵션이 없어 더미 데이터를 추가합니다.');
           processedVoteOptions = [
-            { id: 1, optionText: '치킨', voteCount: 2 },
-            { id: 2, optionText: '피자', voteCount: 3 },
-            { id: 3, optionText: '햄버거', voteCount: 1 }
+            { id: 1, optionText: '치킨', voteCount: 2, voteRatio: 33.3 },
+            { id: 2, optionText: '피자', voteCount: 3, voteRatio: 50.0 },
+            { id: 3, optionText: '햄버거', voteCount: 1, voteRatio: 16.7 }
           ];
         }
         
@@ -726,26 +727,14 @@ export default {
           isParticipating: result.isParticipating || 'N'
         };
         
-        // 댓글 데이터 설정 - 이제 투표 상세 조회 API에서 제공됨
+        // 댓글 데이터 설정
         this.commentList = result.commentList || [];
         
-        // 댓글 데이터 구조 로깅
-        console.log('댓글 데이터 구조:', this.commentList.map(comment => ({
-          commentId: comment.commentId,
-          userId: comment.userId,
-          content: comment.content,
-          replies: comment.replies ? comment.replies.map(reply => ({
-            commentId: reply.commentId,
-            userId: reply.userId,
-            content: reply.content
-          })) : []
-        })));
+        // 투표 참여 여부 확인
+        await this.checkUserVote();
         
         console.log('처리된 투표 상세 데이터:', this.voteDetail);
         console.log('댓글 목록:', this.commentList);
-        
-        // 이미 투표했는지 확인
-        this.checkUserVote();
       } catch (error) {
         console.error('투표 상세 정보를 가져오는데 실패했습니다:', error);
         alert('투표 상세 정보를 가져오는데 실패했습니다.');
@@ -778,6 +767,7 @@ export default {
         }
         
         this.hasUserVoted = result.hasVoted;
+        this.voteDetail.isParticipating = result.hasVoted ? 'Y' : 'N';
         
         // 이미 투표한 옵션들이 있다면 선택
         if (this.hasUserVoted && result.selectedOptions && Array.isArray(result.selectedOptions)) {
