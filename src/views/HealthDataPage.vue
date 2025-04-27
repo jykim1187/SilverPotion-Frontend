@@ -23,19 +23,19 @@
     <div class="dependents-toggle-section">
       <div class="me-section">
         <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectMyData">내 데이터</v-btn>
-        <v-btn small class="add-btn2" icon @click="showLinkRequestModal = true" v-if="dependents.length === 0 && protectors.length === 0">
-              <v-icon small>mdi-plus</v-icon>
-            </v-btn>
       </div>
       
       <div class="lists-container">
-        <!-- 피보호자 목록 섹션 -->
-        <div class="list-section dependents-section" v-if="dependents.length > 0">
+        <!-- 피보호자 목록 섹션 - 항상 표시 -->
+        <div class="list-section dependents-section">
           <div class="list-header">
             <v-icon small color="primary" class="mr-1">mdi-account-child</v-icon>
             <span>피보호자</span>
           </div>
           <div class="list-content">
+            <div v-if="dependents.length === 0" class="empty-list-message">
+              피보호자가 없습니다
+            </div>
             <v-btn 
               v-for="dependent in dependents" 
               :key="dependent.userId" 
@@ -51,13 +51,16 @@
           </div>
         </div>
         
-        <!-- 보호자 목록 섹션 -->
-        <div class="list-section guardians-section" v-if="protectors.length > 0">
+        <!-- 보호자 목록 섹션 - 항상 표시 -->
+        <div class="list-section guardians-section">
           <div class="list-header">
             <v-icon small color="primary" class="mr-1">mdi-account-tie</v-icon>
             <span>보호자</span>
           </div>
           <div class="list-content">
+            <div v-if="protectors.length === 0" class="empty-list-message">
+              보호자가 없습니다
+            </div>
             <v-btn 
               v-for="protector in protectors" 
               :key="protector.userId" 
@@ -319,7 +322,7 @@ export default {
 }
 
 .view-toggle-container {
-  display: none; /* 기존 컨테이너 숨김 */
+  display: none; 
 }
 
 .dependents-toggle-section {
@@ -363,11 +366,20 @@ export default {
   font-size: 0.9rem;
 }
 
+.empty-list-message {
+  color: #9e9e9e;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 4px 0;
+  flex-grow: 1;
+}
+
 .list-content {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  min-height: 40px;
 }
 
 .me-btn, .dependent-btn, .guardian-btn, .add-btn {
@@ -398,15 +410,11 @@ export default {
   height: 30px;
   border-radius: 50%;
   background-color: #e0e0e0;
+  margin-left: auto;
 }
 
 .add-btn2 {
-  min-width: 30px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background-color: #e0e0e0;
-  margin-left: 20px;
+  display: none; /* 이제 필요 없음 */
 }
 
 .period-selection {

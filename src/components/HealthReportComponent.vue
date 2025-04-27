@@ -3,7 +3,7 @@
     <div class="report-header">
       <div class="title-section">
         <div class="user-profile" @click="showUserProfile">
-          <img :src="getUserProfileImage()" class="profile-image" alt="User Profile">
+          <img :src="profileImage" class="profile-image" alt="User Profile">
         </div>
         <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 리포트</h1>
       </div>
@@ -22,6 +22,13 @@
           </v-chip>
         </div>
       </div>
+    </div>
+
+    <!-- 데이터 없음 메시지 -->
+    <div v-if="noDataMessage" class="no-data-message">
+      <v-alert type="info" text>
+        {{ noDataMessage }}
+      </v-alert>
     </div>
 
     <!-- 미니멀 디자인 -->
@@ -63,8 +70,8 @@
   </div>
 
   <!-- 사용자 프로필 모달 -->
-  <v-dialog v-model="showUserProfileModal" max-width="450">
-    <v-card>
+  <v-dialog v-model="showUserProfileModal" max-width="400" content-class="profile-dialog">
+    <v-card flat class="profile-card">
       <v-card-actions class="profile-dialog-close">
         <v-spacer></v-spacer>
         <v-btn icon @click="showUserProfileModal = false">
@@ -106,6 +113,7 @@ export default {
   },
   data() {
     return {
+      profileImage : '',
       currentDate: '',
       showDatePicker: false,
       reportData: "",
@@ -117,6 +125,7 @@ export default {
       selectedDate: "",
       period : "",
       isRequestPending: false, // 요청 중복 방지 플래그 추가
+      noDataMessage: '', // 데이터 없음 메시지
     }
   },
   computed: {
@@ -257,9 +266,10 @@ export default {
         // 데이터 요청
         this.fetchReportData().finally(() => {
           // 요청 완료 후 플래그 초기화 (일정 시간 후에)
-          setTimeout(() => {
-            this.isRequestPending = false;
-          }, 500);
+          // setTimeout(() => {
+          //   this.isRequestPending = false;
+          // }, 500);
+          this.isRequestPending = false;
         });
       } else {
         console.log("요청이 이미 진행 중입니다");
@@ -291,12 +301,35 @@ export default {
         this.reportData = response.data.result.text;
         this.parsedData = JSON.parse(this.reportData);
         this.period = response.data.result.period;
+        this.profileImage = response.data.result.imgUrl;
+        this.noDataMessage = ''; // 성공 시 메시지 초기화
       } catch(error) {
         console.error("리포트 데이터 가져오기 실패:", error);
+        
+        // 기본 데이터 설정 (빈 데이터)
+        this.initEmptyData();
+        
+        // 에러 메시지 표시
+        this.noDataMessage = `${this.currentDate} 데이터가 없습니다.`;
       }
     },
-// 사용자 프로필 표시
-      showUserProfile() {
+
+    // 데이터가 없을 때 기본 데이터 설정
+    initEmptyData() {
+      const emptyReportData = {
+        "전반적인 요약": "데이터가 없습니다.",
+        "걸음": "걸음 데이터가 없습니다.",
+        "심박수": "심박수 데이터가 없습니다.",
+        "소모칼로리": "소모 칼로리 데이터가 없습니다.",
+        "수면": "수면 데이터가 없습니다."
+      };
+      
+      this.parsedData = emptyReportData;
+      this.period = this.formattedCurrentDate;
+    },
+
+    // 사용자 프로필 표시
+    showUserProfile() {
       if(this.loginId === localStorage.getItem("loginId")){
         this.showUserProfileModal = false;
       }
@@ -320,14 +353,13 @@ export default {
     },
    
     // 사용자 프로필 이미지 가져오기
-    getUserProfileImage() {
-      // 기본 프로필 이미지
-      let defaultImage = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(this.userName) + '&background=random&color=fff';
-      
-      // 실제 구현 시에는 사용자 ID를 기반으로 서버에서 이미지를 가져오는 로직 추가
-      // 예: return this.userProfileImage || defaultImage;
-      
-      return defaultImage;
+    async getUserProfileImage() {
+      const dto = {
+        "loginId": this.loginId
+      };
+      const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/whatisyourpicture`, dto);
+      console.log('프로필',response);
+      this.profileImage = response.data.result;
     },
   },
   mounted() {
@@ -339,6 +371,8 @@ export default {
       // 첫 로드 시 데이터 요청
       this.fetchReportDataOnce();
     }
+    // 사용자 프로필 이미지 가져오기
+    this.getUserProfileImage();
     
     // 탭 변경 이벤트 리스너 등록
     window.addEventListener('tab-changed', this.handleTabChange);
@@ -627,6 +661,22 @@ export default {
   top: 5px;
   right: 5px;
   z-index: 10;
+}
+
+.profile-card {
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.profile-dialog {
+  border-radius: 8px !important;
+  overflow: visible !important;
+}
+
+.no-data-message {
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 /* 모바일 반응형 */

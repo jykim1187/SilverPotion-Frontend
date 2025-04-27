@@ -138,10 +138,11 @@
   
   .user-profile {
     position: relative;
-    /* width: 400px; */
+    min-width: 400px; 
+    min-height: 350px;
     padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     background-color: white;
     font-family: 'Noto Sans KR', sans-serif;
   }

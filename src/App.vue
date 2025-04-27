@@ -67,6 +67,7 @@ html, body {
   padding-right: 16px !important;
 }
 
+
 @media (max-width: 768px) {
   .main-content {
     margin-top: 50px; /* 모바일에서의 간격 조정 */

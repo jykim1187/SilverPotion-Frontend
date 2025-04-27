@@ -3,7 +3,7 @@
     <div class="dashboard-header">
       <div class="title-section">
         <div class="user-profile" @click="showUserProfile">
-          <img :src="getUserProfileImage()" class="profile-image" alt="User Profile">
+          <img :src="profileImage" class="profile-image" alt="User Profile">
         </div>
         <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 모니터링</h1>
       </div>
@@ -24,6 +24,13 @@
     </div>
     
     <div class="dashboard-content">
+      <!-- 데이터 없음 메시지 -->
+      <div v-if="noDataMessage" class="no-data-message">
+        <v-alert type="info" text>
+          {{ noDataMessage }}
+        </v-alert>
+      </div>
+
       <!-- 주요 건강 지표 카드 -->
       <div class="stats-grid">
         <!-- 걸음 수 -->
@@ -259,8 +266,8 @@
   </v-dialog>
   
   <!-- 사용자 프로필 모달 -->
-  <v-dialog v-model="showUserProfileModal" max-width="450">
-    <v-card>
+  <v-dialog v-model="showUserProfileModal" max-width="400" content-class="profile-dialog">
+    <v-card flat class="profile-card">
       <v-card-actions class="profile-dialog-close">
         <v-spacer></v-spacer>
         <v-btn icon @click="showUserProfileModal = false">
@@ -325,7 +332,9 @@ export default {
         remSleepMinutes : 0,
         period : ''
       },
+      profileImage : '',
       showErrorModal : false,
+      noDataMessage: '',
       targetCalory: 2000,
       showCaloryTargetModal: false,
       newTargetCalory: 2000,
@@ -337,6 +346,8 @@ export default {
   },
 
   async mounted(){
+    // 사용자 프로필 이미지 가져오기
+
     // 목표 칼로리 불러오기
     this.loadTargetCalory();
     
@@ -449,10 +460,7 @@ export default {
         
         // 데이터 요청
         this.fetchData().finally(() => {
-          // 요청 완료 후 플래그 초기화 (일정 시간 후에)
-          setTimeout(() => {
-            this.isRequestPending = false;
-          }, 500);
+          this.isRequestPending = false;
         });
       } else {
         console.log("요청이 이미 진행 중입니다");
@@ -491,10 +499,31 @@ export default {
         this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
         this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
         this.myData.period = response.data.result.period;
+        this.profileImage = response.data.result.imgUrl;
+        this.noDataMessage = '';
+        console.log(response);
       } catch(error) {
         console.error("건강 데이터 가져오기 실패:", error);
-        this.showErrorModal = true;
+        
+        // 데이터 초기화
+        this.resetData();
+        
+        // 에러 모달 대신 메시지 표시
+        this.noDataMessage = `${this.currentDate} 데이터가 없습니다.`;
       }
+    },
+
+    // 데이터 초기화 메소드 추가
+    resetData() {
+      this.myData.step = 0;
+      this.myData.heartbeat = 0;
+      this.myData.calory = 0;
+      this.myData.activeCalory = 0;
+      this.myData.distance = 0;
+      this.myData.totalSleepMinutes = 0;
+      this.myData.deepSleepMinutes = 0;
+      this.myData.lightSleepMinutes = 0;
+      this.myData.remSleepMinutes = 0;
     },
 
     handleDateChange(dateRange) {
@@ -507,7 +536,8 @@ export default {
         this.fetchDataOnce();
       } else {
         console.error('유효하지 않은 날짜 형식:', dateRange);
-        this.showErrorModal = true;
+        this.noDataMessage = '유효하지 않은 날짜 형식입니다.';
+        this.resetData();
       }
     },
 
@@ -532,17 +562,6 @@ export default {
         this.targetCalory = parseInt(savedTargetCalory);
         this.newTargetCalory = this.targetCalory;
       }
-    },
-    
-    // 사용자 프로필 이미지 가져오기
-    getUserProfileImage() {
-      // 기본 프로필 이미지
-      let defaultImage = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(this.userName) + '&background=random&color=fff';
-      
-      // 실제 구현 시에는 사용자 ID를 기반으로 서버에서 이미지를 가져오는 로직 추가
-      // 예: return this.userProfileImage || defaultImage;
-      
-      return defaultImage;
     },
     
     // 심장 박동수에 따른 상태 텍스트 반환
@@ -780,7 +799,6 @@ export default {
   justify-content: space-between;
   margin-bottom: 24px;
 }
-
 .card-badge {
   width: 40px;
   height: 40px;
@@ -1223,6 +1241,7 @@ export default {
   }
 }
 
+
 @media (max-width: 480px) {
   .title-section h1 {
     font-size: 1.3rem;
@@ -1290,13 +1309,7 @@ export default {
   width: 100%;
 }
 
-/* 프로필 모달 스타일 */
-.profile-dialog-close {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 10;
-}
+
 
 /* 심장 박동 상태 스타일 */
 .status-normal {
@@ -1334,6 +1347,33 @@ export default {
   background-color: rgba(255, 152, 0, 0.2);
   color: #FF9800;
 }
+
+/* * * 프로필 모달 스타일 * */ 
+
+.profile-dialog-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
+}
+
+.profile-card {
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.profile-dialog {
+  border-radius: 8px !important;
+  overflow: visible !important;
+}
+
+.no-data-message {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
 </style>
+
 
 
