@@ -20,7 +20,7 @@
     </div>
 
     <!-- Post List -->
-    <v-list v-else-if="posts.length > 0" class="pa-0 bg-transparent">
+    <v-list v-else-if="posts.length > 0" class="pa-0 bg-transparent post-list-wrapper">
       <v-card
         v-for="(post, index) in filteredPosts" 
         :key="post.id + '-' + post.postCategory + '-' + index" 
@@ -42,10 +42,15 @@
           <v-list-item-title class="font-weight-bold text-body-2">{{ post.nickname }}</v-list-item-title>
           <v-list-item-subtitle class="text-caption">{{ formatRelativeDate(post.createdAt) }}</v-list-item-subtitle>
 
+          <!-- 메뉴 버튼 (점 세 개 아이콘) - 모든 게시물에 표시 -->
           <template v-slot:append>
-            <v-btn icon variant="text" size="small">
+            <v-btn 
+              icon 
+              variant="text" 
+              size="small" 
+              @click.stop="openPostMenu(post)"
+            >
               <v-icon>mdi-dots-vertical</v-icon>
-              <!-- TODO: Add Menu for options like edit/delete -->
             </v-btn>
           </template>
         </v-list-item>
@@ -135,6 +140,32 @@
             더보기
           </v-btn>
       </div>
+
+      <!-- Floating Action Button and Toggle Menu -->
+      <div class="create-post-wrapper">
+        <div class="toggle-menu" :class="{ 'show-menu': showMenu }" v-if="showMenu">
+          <div class="menu-items">
+            <v-btn
+              v-for="category in postCategories"
+              :key="category.type"
+              @click.stop="createPost(category.type)"
+              class="menu-item"
+              color="primary"
+              variant="text"
+            >
+              {{ category.label }}
+            </v-btn>
+          </div>
+        </div>
+        
+        <v-btn
+          icon="mdi-plus"
+          color="primary"
+          class="post_create_button"
+          @click.stop="toggleMenu"
+          :style="{ transform: showMenu ? 'rotate(45deg)' : 'none' }"
+        ></v-btn>
+      </div>
     </v-list>
 
     <!-- No Posts Message -->
@@ -142,15 +173,52 @@
       <p>표시할 게시글이 없습니다.</p>
     </div>
 
-    <!-- Floating Action Button to Create Post -->
-    <v-btn
-      icon="mdi-plus"
-      color="primary"
-      position="fixed"
-      location="bottom right"
-      class="ma-4"
-      @click="goToCreatePost"
-    ></v-btn>
+    <!-- 게시물 메뉴 다이얼로그 -->
+    <v-dialog v-model="postMenuDialog" max-width="300" class="post-menu-dialog">
+      <v-card rounded="lg">
+        <v-list density="compact">
+          <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
+          <v-list-item v-if="selectedPost && isMyPost(selectedPost)" @click="confirmDeletePost">
+            <v-list-item-title class="text-center text-red py-3">삭제</v-list-item-title>
+          </v-list-item>
+          <v-divider v-if="selectedPost && isMyPost(selectedPost)"></v-divider>
+          
+          <!-- 다른 메뉴 항목 추가 가능 -->
+          <v-list-item @click="reportPost" v-if="selectedPost && !isMyPost(selectedPost)">
+            <v-list-item-title class="text-center py-3">신고하기</v-list-item-title>
+          </v-list-item>
+          <v-divider v-if="selectedPost && !isMyPost(selectedPost)"></v-divider>
+          
+          <!-- 취소 버튼 -->
+          <v-list-item @click="postMenuDialog = false">
+            <v-list-item-title class="text-center py-3">취소</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-dialog>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <v-dialog v-model="deleteConfirmDialog" max-width="300">
+      <v-card>
+        <v-card-title class="text-h6">게시물 삭제</v-card-title>
+        <v-card-text>
+          <div v-if="selectedPost">
+            <p><strong>유형:</strong> {{ getCategoryText(selectedPost.postCategory) }}</p>
+            <p v-if="selectedPost.title"><strong>제목:</strong> {{ selectedPost.title }}</p>
+            <p class="mt-3 font-weight-bold">이 게시물을 정말 삭제하시겠습니까?</p>
+            <p class="text-caption text-grey mt-2">삭제한 게시물은 복구할 수 없습니다.</p>
+          </div>
+          <div v-else>
+            이 게시물을 정말 삭제하시겠습니까?
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" variant="text" @click="deletePost">삭제</v-btn>
+          <v-btn color="grey" variant="text" @click="deleteConfirmDialog = false">취소</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -187,6 +255,15 @@ export default {
       loading: false,
       likedPosts: new Set(), // Track liked posts
       loginId: localStorage.getItem('loginId') || '', // Get loginId from localStorage
+      showMenu: false,
+      postCategories: [
+        { type: 'free', label: '자유' },
+        { type: 'notice', label: '공지' },
+        { type: 'vote', label: '투표' }
+      ],
+      postMenuDialog: false,
+      deleteConfirmDialog: false,
+      selectedPost: null,
     };
   },
   created() {
@@ -195,6 +272,10 @@ export default {
     if (storedLikes) {
       this.likedPosts = new Set(JSON.parse(storedLikes));
     }
+    
+    // 로그인 ID 확인
+    this.loginId = localStorage.getItem('loginId') || '';
+    console.log('컴포넌트 생성 시 로그인 ID:', this.loginId);
   },
   computed: {
     filteredPosts() {
@@ -223,6 +304,13 @@ export default {
         }
       },
     },
+  },
+  mounted() {
+    // 메뉴 외부 클릭 시 메뉴 닫기
+    document.addEventListener('click', this.closeMenu);
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.closeMenu);
   },
   methods: {
 
@@ -331,16 +419,26 @@ export default {
         }
     },
     goToPostDetail(post) {
+      console.log('post:', post);
       const postId = this.getPostId(post);
+      console.log('getPostId(post):', postId);
+      
+      if (!postId) {
+        console.error('postId가 존재하지 않습니다. post:', post);
+        alert('잘못된 게시글 정보입니다.');
+        return;
+      }
+      
       console.log(`Navigate to detail for postCategory: ${post.postCategory}, ID: ${postId}`);
+      
       if (post.postCategory === 'vote') {
-        this.$router.push(`/silverpotion/vote/${postId}?gatheringId=${this.gatheringId}`);
+        this.$router.push(`/silverpotion/post/vote/detail/${postId}`);
       } else {
-        this.$router.push(`/silverpotion/post/detail/${postId}?gatheringId=${this.gatheringId}`);
+        this.$router.push(`/silverpotion/post/detail/${postId}`);
       }
     },
     goToCreatePost() {
-    //   this.$router.push(`/silverpotion/post/create`);
+      this.$router.push(`/silverpotion/post/create`);
     },
     async toggleLike(post) {
       if (!this.loginId) {
@@ -437,6 +535,199 @@ export default {
       const post = this.posts.find(p => this.getPostId(p) === postId && p.postCategory === postCategory);
       return post && typeof post.likeCount === 'number' ? post.likeCount : 0;
     },
+
+    toggleMenu() {
+      this.showMenu = !this.showMenu;
+    },
+    
+    closeMenu() {
+      this.showMenu = false;
+    },
+    
+    createPost(type) {
+      this.showMenu = false;
+      if (type === 'free') {
+        this.$router.push(`/silverpotion/post/create/free?gatheringId=${this.gatheringId}`);
+      } else if (type === 'notice') {
+        this.$router.push(`/silverpotion/post/create/notice?gatheringId=${this.gatheringId}`);
+      } else if (type === 'vote') {
+        this.$router.push(`/silverpotion/post/create/vote?gatheringId=${this.gatheringId}`);
+      } else {
+        this.$router.push(`/silverpotion/post/create/${type}?gatheringId=${this.gatheringId}`);
+      }
+    },
+
+    // 게시물 메뉴 열기
+    openPostMenu(post) {
+      this.selectedPost = post;
+      console.log('선택된 게시물:', post);
+      console.log('로그인 ID:', this.loginId);
+      console.log('작성자 확인 결과:', this.isPostAuthor(post));
+      this.postMenuDialog = true;
+    },
+    
+    // 게시물 작성자 확인 (본인 글만 삭제 가능)
+    isPostAuthor(post) {
+      if (!post) return false;
+      
+      console.log('게시물 구조:', {
+        writerId: post.writerId,
+        writer: post.writer,
+        nickname: post.nickname,
+        loginId: this.loginId
+      });
+      
+      // 삭제를 실행할 때만 작성자 확인
+      // 우선 삭제 버튼은 모든 게시물에 표시
+      return true;
+    },
+    
+    // 게시물 삭제 확인 다이얼로그 열기
+    confirmDeletePost() {
+      this.postMenuDialog = false;
+      this.deleteConfirmDialog = true;
+    },
+    
+    // 게시물 삭제 실행
+    async deletePost() {
+      if (!this.selectedPost) return;
+      
+      try {
+        const postId = this.getPostId(this.selectedPost);
+        const isVote = this.selectedPost.postCategory === 'vote';
+        
+        // 실제 삭제 실행 전에 작성자 확인
+        if (!this.isAuthorizedToDelete(this.selectedPost)) {
+          alert('본인이 작성한 게시물만 삭제할 수 있습니다.');
+          this.deleteConfirmDialog = false;
+          this.selectedPost = null;
+          return;
+        }
+        
+        let endpoint;
+        if (isVote) {
+          endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/delete/${postId}`;
+        } else {
+          endpoint = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/delete/${postId}`;
+        }
+        
+        // 게시물 삭제 API 호출
+        await axios.post(
+          endpoint,
+          null,
+          {
+            headers: {
+              'X-User-LoginId': this.loginId
+            }
+          }
+        );
+        
+        // 삭제 성공 시 목록에서 제거
+        this.posts = this.posts.filter(p => this.getPostId(p) !== postId);
+        
+        this.deleteConfirmDialog = false;
+        this.selectedPost = null;
+        
+        // 성공 메시지 표시
+        alert('게시물이 삭제되었습니다.');
+      } catch (error) {
+        console.error('게시물 삭제 중 오류가 발생했습니다:', error);
+        alert('게시물 삭제 중 오류가 발생했습니다.');
+      }
+    },
+    
+    // 실제 삭제 권한 확인 (API 호출 전)
+    isAuthorizedToDelete(post) {
+      if (!post || !this.loginId) {
+        console.log('기본 체크 실패: post 없음 또는 로그인 안됨');
+        return false;
+      }
+      
+      console.log('삭제 권한 체크 중:', {
+        post: post,
+        loginId: this.loginId,
+        저장된loginId: localStorage.getItem('loginId'),
+        nickname: post.nickname,
+        저장된nickname: localStorage.getItem('nickName')
+      });
+      
+      // 다양한 경우의 작성자 ID를 확인
+      const writerId = post.writerId || 
+                      (post.writer && post.writer.loginId) ||
+                      post.loginId;
+      
+      if (writerId) {
+        console.log('작성자 ID 비교:', writerId, this.loginId, writerId === this.loginId);
+        return writerId === this.loginId;
+      }
+      
+      // writerId가 없는 경우 nickname 비교 시도
+      if (post.nickname) {
+        const userNickname = localStorage.getItem('nickName');
+        console.log('닉네임 비교:', post.nickname, userNickname, post.nickname === userNickname);
+        if (userNickname && post.nickname === userNickname) {
+          return true;
+        }
+      }
+      
+      // 관리자 권한 확인 (임시로 주석 처리)
+      // const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      
+      // 테스트를 위해 임시로 모든 삭제 허용 (실제 운영 환경에서는 제거)
+      return true;
+    },
+
+    // 자신의 게시물인지 확인
+    isMyPost(post) {
+      if (!post) {
+        console.error('게시물이 없습니다');
+        return false;
+      }
+      
+      // 디버깅용 로그 추가
+      console.log('게시물 정보:', {
+        post: post,
+        postNickname: post.nickname,
+        localStorageNickname: localStorage.getItem('nickName'),
+        loginId: this.loginId,
+        writerId: post.writerId
+      });
+      
+      // 1. 로그인 ID로 확인
+      if (this.loginId && post.writerId) {
+        console.log('로그인 ID 비교:', {
+          로그인ID: this.loginId,
+          작성자ID: post.writerId,
+          일치여부: this.loginId === post.writerId
+        });
+        return this.loginId === post.writerId;
+      }
+      
+      // 2. 닉네임으로 확인
+      const userNickname = localStorage.getItem('nickName');
+      if (post.nickname && userNickname) {
+        console.log('닉네임 비교:', {
+          게시물닉네임: post.nickname,
+          사용자닉네임: userNickname,
+          일치여부: post.nickname === userNickname
+        });
+        return post.nickname === userNickname;
+      }
+      
+      console.warn('작성자 정보를 찾을 수 없습니다:', {
+        postNickname: post.nickname,
+        localStorageNickname: userNickname,
+        loginId: this.loginId,
+        writerId: post.writerId
+      });
+      return false;
+    },
+
+    // 게시물 신고 기능 (향후 구현)
+    reportPost() {
+      alert('신고 기능은 현재 개발 중입니다.');
+      this.postMenuDialog = false;
+    },
   },
 };
 </script>
@@ -474,6 +765,92 @@ export default {
   text-overflow: ellipsis;
   line-height: 1.4;
   max-height: calc(1.4em * 2);
+}
+
+.post-list-wrapper {
+  position: relative; /* 부모 기준으로 위치 고정할 수 있도록 설정 */
+  overflow: auto;
+}
+
+.create-post-wrapper {
+  position: relative;
+}
+
+.toggle-menu {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  z-index: 9998;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+@media (min-width: 769px) {
+  .toggle-menu {
+    right: calc((100vw - 768px) / 2 + 20px);
+  }
+}
+
+.show-menu {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  min-width: 120px;
+}
+
+.menu-item {
+  margin: 4px 0;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background-color: rgba(25, 118, 210, 0.1);
+}
+
+.post_create_button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #1976D2;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  font-size: 28px;
+  z-index: 9999;
+}
+
+@media (min-width: 769px) {
+  .post_create_button {
+    right: calc((100vw - 768px) / 2 + 20px);
+  }
+}
+
+.post_create_button:hover {
+  background-color: #1565C0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 :deep(.v-list-item__prepend) {

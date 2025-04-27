@@ -5,6 +5,10 @@ import KakaoRedirect from "@/components/KakaoRedirect.vue";
 import { userRouter } from "./userRouter";
 import { gatheringRouter } from "./gatheringRouter";
 import PostDetail from '@/components/PostDetail.vue'
+import VoteDetail from '@/components/VoteDetail.vue'
+import FreePostCreate from '@/views/FreePostCreate.vue'
+import NoticePostCreate from '@/views/NoticePostCreate.vue'
+import VotePostCreate from '@/views/VotePostCreate.vue'
 
 const routes = [
     ...chatRouter,
@@ -41,6 +45,36 @@ const routes = [
         path: '/silverpotion/post/detail/:postId',
         name: 'PostDetail',
         component: PostDetail,
+        props: true
+    },
+    {
+        path: '/silverpotion/vote/:voteId',
+        name: 'VoteDetail',
+        component: VoteDetail,
+        props: true
+    },
+    {
+        path: '/silverpotion/post/vote/detail/:voteId',
+        name: 'VoteDetailAlt',
+        component: VoteDetail,
+        props: true
+    },
+    {
+        path: '/silverpotion/post/create/free',
+        name: 'FreePostCreate',
+        component: FreePostCreate,
+        props: true
+    },
+    {
+        path: '/silverpotion/post/create/notice',
+        name: 'NoticePostCreate',
+        component: NoticePostCreate,
+        props: true
+    },
+    {
+        path: '/silverpotion/post/create/vote',
+        name: 'VotePostCreate',
+        component: VotePostCreate,
         props: true
     }
 ]

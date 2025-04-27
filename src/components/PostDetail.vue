@@ -89,41 +89,54 @@
       <!-- 댓글 목록 -->
       <div v-for="comment in commentList" :key="comment.commentId" class="mb-4">
         <div class="d-flex">
-          <v-avatar size="36" class="mr-2">
+          <v-avatar size="40" class="mr-3">
             <v-img :src="comment.profileImage || require('@/assets/default-profile.png')"></v-img>
           </v-avatar>
-          <div class="comment-bubble">
-            <div class="font-weight-bold">{{ comment.nickName }}</div>
-            <div v-if="editingComment !== comment.commentId">{{ comment.content }}</div>
-            <v-textarea
-              v-else
-              v-model="editedCommentContent"
-              rows="2"
-              auto-grow
-              variant="outlined"
-              hide-details
-              density="compact"
-              class="mt-1"
-            ></v-textarea>
-            <div class="text-caption text-medium-emphasis mt-1">
-              {{ formatDate(comment.createdTime) }}
-              <span v-if="comment.isUpdate === 'Y'" class="ml-2">(수정됨)</span>
+          <div class="comment-container flex-grow-1">
+            <div class="d-flex justify-space-between align-start">
+              <div class="comment-bubble">
+                <div v-if="editingComment !== comment.commentId" class="d-flex align-center">
+                  <div class="comment-content">{{ comment.content }}</div>
+                </div>
+                <v-textarea
+                  v-else
+                  v-model="editedCommentContent"
+                  rows="2"
+                  auto-grow
+                  variant="outlined"
+                  hide-details
+                  density="compact"
+                  class="mt-1"
+                ></v-textarea>
+              </div>
+              <span v-if="comment.isLike === 'Y'" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(comment.commentId)">
+                <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
+                <span class="text-caption">{{ comment.likeCount || 0 }}</span>
+              </span>
             </div>
-            <!-- 댓글 수정 버튼 -->
-            <div v-if="editingComment === comment.commentId" class="d-flex justify-end mt-1">
-              <v-btn 
-                variant="text" 
-                size="small" 
-                color="primary" 
-                @click="updateComment(comment.commentId)"
-                :disabled="!editedCommentContent.trim()"
+            <div class="comment-actions d-flex align-center mt-1">
+              <span 
+                class="comment-action-btn"
+                :class="{'comment-action-active': comment.isLike === 'Y'}"
+                @click="toggleCommentLike(comment)"
               >
-                저장
-              </v-btn>
-              <v-btn variant="text" size="small" @click="cancelEdit">취소</v-btn>
+                좋아요
+              </span>
+              <span class="mx-2">·</span>
+              <span class="comment-action-btn" @click="startReply(comment)">
+                답글 달기
+              </span>
+              <span v-if="comment.replies && comment.replies.length > 0" class="mx-2">·</span>
+              <span 
+                v-if="comment.replies && comment.replies.length > 0" 
+                class="comment-action-btn"
+                @click="toggleReplies(comment.commentId)"
+              >
+                {{ expandedComments.has(comment.commentId) ? '답글 숨기기' : `답글 ${comment.replies.length}개 보기` }}
+              </span>
             </div>
           </div>
-          <v-spacer></v-spacer>
+          
           <!-- 댓글 메뉴 (인스타그램 스타일) -->
           <v-btn 
             icon="mdi-dots-horizontal" 
@@ -131,41 +144,9 @@
             density="comfortable" 
             size="small"
             color="grey-darken-2"
-            class="comment-menu-btn"
+            class="comment-menu-btn ms-2"
             @click="openCommentOptions(comment.commentId)"
           ></v-btn>
-        </div>
-        
-        <!-- 좋아요, 답글 버튼 -->
-        <div class="ml-12 d-flex">
-          <v-btn
-            variant="text"
-            size="small"
-            class="pa-0 mr-4"
-            :color="comment.isLike === 'Y' ? 'red' : ''"
-            @click="toggleCommentLike(comment)"
-          >
-            좋아요
-          </v-btn>
-          <v-btn
-            variant="text"
-            size="small"
-            class="pa-0"
-            @click="startReply(comment)"
-          >
-            답글 달기
-          </v-btn>
-          
-          <!-- 답글 보기/숨기기 버튼 (답글이 있을 경우만 표시) -->
-          <v-btn
-            v-if="comment.replies && comment.replies.length > 0"
-            variant="text"
-            size="small"
-            class="pa-0 ml-4"
-            @click="toggleReplies(comment.commentId)"
-          >
-            {{ expandedComments.has(comment.commentId) ? '답글 숨기기' : `답글 ${comment.replies.length}개 보기` }}
-          </v-btn>
         </div>
 
         <!-- 대댓글 작성 -->
@@ -197,35 +178,43 @@
             <v-avatar size="32" class="mr-2">
               <v-img :src="reply.profileImage || require('@/assets/default-profile.png')"></v-img>
             </v-avatar>
-            <div class="comment-bubble">
-              <div class="font-weight-bold">{{ reply.nickName }}</div>
-              <div v-if="editingComment !== reply.commentId">{{ reply.content }}</div>
-              <v-textarea
-                v-else
-                v-model="editedCommentContent"
-                rows="2"
-                auto-grow
-                variant="outlined"
-                hide-details
-                density="compact"
-                class="mt-1"
-              ></v-textarea>
-              <div class="text-caption text-medium-emphasis mt-1">
-                {{ formatDate(reply.createdTime) }}
-                <span v-if="reply.isUpdate === 'Y'" class="ml-2">(수정됨)</span>
+            <div class="comment-container">
+              <div class="d-flex justify-space-between align-start">
+                <div class="comment-bubble">
+                  <div class="d-flex align-center">
+                    <div class="comment-content">
+                      <div class="font-weight-bold">{{ reply.nickName }}</div>
+                      <div v-if="editingComment !== reply.commentId">{{ reply.content }}</div>
+                      <v-textarea
+                        v-else
+                        v-model="editedCommentContent"
+                        rows="2"
+                        auto-grow
+                        variant="outlined"
+                        hide-details
+                        density="compact"
+                        class="mt-1"
+                      ></v-textarea>
+                      <div class="text-caption text-medium-emphasis mt-1">
+                        {{ formatDate(reply.createdTime) }}
+                        <span v-if="reply.isUpdate === 'Y'" class="ml-2">(수정됨)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <span v-if="reply.isLike === 'Y'" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(reply.commentId)">
+                  <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
+                  <span class="text-caption">{{ reply.likeCount || 0 }}</span>
+                </span>
               </div>
-              <!-- 대댓글 수정 버튼 -->
-              <div v-if="editingComment === reply.commentId" class="d-flex justify-end mt-1">
-                <v-btn 
-                  variant="text" 
-                  size="small" 
-                  color="primary" 
-                  @click="updateComment(reply.commentId)"
-                  :disabled="!editedCommentContent.trim()"
+              <div class="comment-actions d-flex align-center mt-1">
+                <span 
+                  class="comment-action-btn"
+                  :class="{'comment-action-active': reply.isLike === 'Y'}"
+                  @click="toggleCommentLike(reply)"
                 >
-                  저장
-                </v-btn>
-                <v-btn variant="text" size="small" @click="cancelEdit">취소</v-btn>
+                  좋아요
+                </span>
               </div>
             </div>
             <v-spacer></v-spacer>
@@ -301,6 +290,55 @@
             <!-- 좋아요 데이터가 없을 경우 -->
             <div v-else class="py-5 text-center">
               <p class="text-body-1 text-medium-emphasis">좋아요 정보를 불러오는 중...</p>
+            </div>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- 댓글 좋아요 목록 다이얼로그 -->
+    <v-dialog v-model="commentLikesDialog" max-width="400">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <span class="text-h6">좋아요</span>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="commentLikesDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="pa-0">
+          <v-list>
+            <!-- 좋아요 데이터가 있을 경우 표시 -->
+            <div v-if="commentLikes.length > 0">
+              <v-list-item v-for="like in commentLikes" :key="like.id" class="py-2">
+                <template v-slot:prepend>
+                  <v-avatar size="40">
+                    <v-img :src="like.profileImg || require('@/assets/default-profile.png')"></v-img>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="font-weight-medium">{{ like.nickName }}</v-list-item-title>
+              </v-list-item>
+              
+              <!-- 더 불러오기 버튼 -->
+              <div v-if="commentLikesPage < commentLikesTotalPages - 1" class="text-center py-2">
+                <v-btn 
+                  variant="text" 
+                  color="primary" 
+                  @click="loadMoreCommentLikes" 
+                  :loading="commentLikesLoading"
+                >
+                  더 보기
+                </v-btn>
+              </div>
+            </div>
+            <!-- 좋아요 데이터가 없을 경우 -->
+            <div v-else-if="commentLikesLoading" class="py-5 text-center">
+              <v-progress-circular indeterminate color="primary"></v-progress-circular>
+              <p class="text-body-1 text-medium-emphasis mt-2">좋아요 정보를 불러오는 중...</p>
+            </div>
+            <div v-else class="py-5 text-center">
+              <p class="text-body-1 text-medium-emphasis">아직 좋아요가 없습니다</p>
             </div>
           </v-list>
         </v-card-text>
@@ -385,6 +423,13 @@ export default {
       // 좋아요 관련 데이터
       likesDialog: false,
       likes: [],
+      // 댓글 좋아요 관련 데이터
+      commentLikesDialog: false,
+      commentLikes: [],
+      currentCommentId: null,
+      commentLikesPage: 0,
+      commentLikesLoading: false,
+      commentLikesTotalPages: 0,
       // 로그인한 사용자 정보
       loginId: localStorage.getItem('loginId')
     };
@@ -497,6 +542,13 @@ export default {
     },
     async toggleCommentLike(comment) {
       try {
+        // 요청 전 현재 상태 기록 (디버깅용)
+        console.log('요청 전 상태:', { 
+          commentId: comment.commentId, 
+          isLike: comment.isLike, 
+          likeCount: comment.likeCount 
+        });
+        
         const loginId = localStorage.getItem('loginId');
         const response = await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/like/${comment.commentId}`,
@@ -508,9 +560,35 @@ export default {
           }
         );
         
+        // 서버 응답 구조 확인을 위한 로그
+        console.log('서버 응답:', response.data);
+        
         const result = response.data.result;
-        comment.isLike = result.liked ? 'Y' : 'N';
-        comment.likeCount = result.likeCount;
+        
+        // 해당 키가 존재하는지 확인하고 업데이트
+        if (result) {
+          // isLike (true/false), count 형태로 반환되는 경우
+          if ('isLike' in result) {
+            comment.isLike = result.isLike ? 'Y' : 'N';
+          } 
+          // liked (true/false), likeCount 형태로 반환되는 경우 
+          else if ('liked' in result) {
+            comment.isLike = result.liked ? 'Y' : 'N';
+          }
+          
+          if ('count' in result) {
+            comment.likeCount = result.count;
+          } else if ('likeCount' in result) {
+            comment.likeCount = result.likeCount;
+          }
+        }
+        
+        // 업데이트 후 상태 기록 (디버깅용)
+        console.log('업데이트 후 상태:', { 
+          commentId: comment.commentId, 
+          isLike: comment.isLike, 
+          likeCount: comment.likeCount 
+        });
       } catch (error) {
         console.error('댓글 좋아요 처리 중 오류가 발생했습니다:', error);
         alert('댓글 좋아요 처리 중 오류가 발생했습니다.');
@@ -692,6 +770,51 @@ export default {
         console.error('좋아요 목록을 가져오는데 실패했습니다:', error);
       }
     },
+
+    // 댓글 좋아요 목록 다이얼로그 표시
+    async showCommentLikesDialog(commentId) {
+      this.commentLikesDialog = true;
+      this.commentLikes = [];
+      this.currentCommentId = commentId;
+      this.commentLikesPage = 0;
+      
+      this.fetchCommentLikes();
+    },
+    
+    // 댓글 좋아요 목록 가져오기
+    async fetchCommentLikes(page = 0) {
+      try {
+        this.commentLikesLoading = true;
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/like/list/${this.currentCommentId}`,
+          {
+            params: {
+              page: page,
+              size: 10
+            },
+            headers: {
+              'X-User-LoginId': localStorage.getItem('loginId')
+            }
+          }
+        );
+        
+        const result = response.data.result;
+        this.commentLikes = result.content || [];
+        this.commentLikesPage = page;
+        this.commentLikesTotalPages = result.totalPages;
+      } catch (error) {
+        console.error('댓글 좋아요 목록을 가져오는데 실패했습니다:', error);
+      } finally {
+        this.commentLikesLoading = false;
+      }
+    },
+    
+    // 댓글 좋아요 목록 더 불러오기
+    loadMoreCommentLikes() {
+      if (this.commentLikesPage < this.commentLikesTotalPages - 1 && !this.commentLikesLoading) {
+        this.fetchCommentLikes(this.commentLikesPage + 1);
+      }
+    },
   }
 };
 </script>
@@ -702,11 +825,45 @@ export default {
   border-radius: 8px;
 }
 
+.comment-container {
+  position: relative;
+  max-width: calc(100% - 60px);
+}
+
+.comment-name-time {
+  margin-bottom: 4px;
+}
+
 .comment-bubble {
-  background-color: #f5f5f5;
-  border-radius: 12px;
+  background-color: #f0f2f5;
+  border-radius: 16px;
   padding: 8px 12px;
-  max-width: 80%;
+  display: inline-block;
+  max-width: calc(100% - 40px); /* 좋아요 아이콘을 위한 공간 확보 */
+  word-break: break-word;
+}
+
+.comment-content {
+  flex-grow: 1;
+}
+
+.comment-actions {
+  font-size: 12px;
+  margin-top: -4px; /* 좋아요 버튼의 수직 위치 조정 */
+}
+
+.comment-action-btn {
+  color: #65676b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comment-action-btn:hover {
+  text-decoration: underline;
+}
+
+.comment-action-active {
+  color: #1877f2;
 }
 
 .comment-input {
@@ -792,5 +949,16 @@ export default {
   overflow: hidden;
   border: 1.5px solid white;
   box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.2);
+}
+
+.comment-like-indicator {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.comment-like-indicator:hover {
+  transform: scale(1.1);
 }
 </style> 
