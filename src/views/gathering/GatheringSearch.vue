@@ -5,11 +5,54 @@
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
                     <v-icon>mdi-chevron-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">모임 검색</h1>
+                <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">검색</h1>
             </v-card-text>
         </v-card>
 
         <div class="content-wrapper">
+            <!-- 검색창 추가 -->
+            <div class="search-container mb-4">
+                <v-form @submit.prevent="searchByKeyword">
+                    <v-text-field
+                        v-model="keyword"
+                        placeholder="모임 또는 정모 검색"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        class="search-field"
+                        prepend-inner-icon="mdi-magnify"
+                        @click:prepend-inner="searchByKeyword"
+                        @keyup.enter="searchByKeyword"
+                        @input="getSuggestions"
+                        @focus="showSuggestions = suggestions.length > 0"
+                        @blur="hideSearchSuggestions"
+                    >
+                        <template v-slot:append>
+                            <v-btn
+                                v-if="keyword"
+                                icon="mdi-close"
+                                variant="text"
+                                size="small"
+                                @click="clearSearch"
+                            ></v-btn>
+                        </template>
+                    </v-text-field>
+                </v-form>
+                
+                <!-- 자동완성 제안 -->
+                <div v-if="showSuggestions" class="suggestions-container">
+                    <div 
+                        v-for="(suggestion, index) in suggestions" 
+                        :key="index"
+                        class="suggestion-item"
+                        @click="selectSuggestion(suggestion)"
+                    >
+                        <v-icon size="small" class="mr-2">mdi-magnify</v-icon>
+                        <span>{{ suggestion }}</span>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 카테고리 선택 영역 -->
             <div class="category-container">
                 <h3 class="text-subtitle-1 font-weight-medium mb-2">카테고리</h3>
@@ -55,8 +98,107 @@
                 </div>
             </div>
             
-            <!-- 검색 결과 영역 -->
-            <div class="search-results mt-6">
+            <!-- 키워드 검색 결과 영역 -->
+            <div v-if="keywordSearchResults.gatherings && keywordSearchResults.gatherings.length > 0" class="mt-6">
+                <h3 class="text-subtitle-1 font-weight-medium mb-2">'{{ keyword }}' 모임 검색 결과</h3>
+                
+                <v-list>
+                    <v-list-item 
+                        v-for="gathering in keywordSearchResults.gatherings" 
+                        :key="`gathering-${gathering.id}`"
+                        class="mb-2"
+                        @click="goToGatheringDetail(gathering.id)"
+                        :ripple="true"
+                        hover
+                    >
+                        <template v-slot:prepend>
+                            <v-avatar size="50" rounded>
+                                <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
+                                       cover
+                                       alt="모임 이미지"></v-img>
+                            </v-avatar>
+                        </template>
+                        
+                        <div>
+                            <div class="d-flex align-center">
+                                <span class="font-weight-medium">{{ gathering.gatheringName }}</span>
+                                <v-chip
+                                    size="x-small"
+                                    class="ml-2"
+                                    color="primary"
+                                    variant="outlined"
+                                >
+                                    {{ gathering.category || getCategoryName(gathering.categoryId) }}
+                                </v-chip>
+                            </div>
+                            <div class="d-flex align-center mt-1">
+                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                <span class="text-caption">{{ gathering.region }}</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                <span class="text-caption">{{ gathering.peopleCount || 0 }}/{{ gathering.maxPeople || '제한없음' }}명</span>
+                            </div>
+                            <div class="text-caption text-grey mt-1" v-if="gathering.introduce">
+                                {{ gathering.introduce }}
+                            </div>
+                        </div>
+                    </v-list-item>
+                </v-list>
+            </div>
+            
+            <!-- 키워드 검색 결과 - 정모 -->
+            <div v-if="keywordSearchResults.meetings && keywordSearchResults.meetings.length > 0" class="mt-4">
+                <h3 class="text-subtitle-1 font-weight-medium mb-2">'{{ keyword }}' 정모 검색 결과</h3>
+                <v-list>
+                    <v-list-item 
+                        v-for="meeting in keywordSearchResults.meetings" 
+                        :key="`meeting-${meeting.id}`"
+                        class="mb-2"
+                        @click="goToMeetingDetail(meeting.gatheringId, meeting.id)"
+                        :ripple="true"
+                        hover
+                    >
+                        <template v-slot:prepend>
+                            <v-avatar size="50" rounded>
+                                <v-img :src="meeting.imageUrl || require('@/assets/default-gathering.png')" 
+                                       cover
+                                       alt="정모 이미지"></v-img>
+                            </v-avatar>
+                        </template>
+                        
+                        <div>
+                            <div class="d-flex align-center">
+                                <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+                                <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                            </div>
+                            <div class="d-flex align-center mt-1">
+                                <span class="font-weight-medium">{{ meeting.name }}</span>
+                                <v-chip
+                                    size="x-small"
+                                    class="ml-2"
+                                    color="primary"
+                                    variant="outlined"
+                                >
+                                    {{ meeting.category || '카테고리 정보 없음' }}
+                                </v-chip>
+                            </div>
+                            <div class="d-flex align-center mt-1">
+                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                <span class="text-caption">{{ meeting.place }}</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                <span class="text-caption">{{ meeting.attendeesCount || 0 }}/{{ meeting.maxPeople }}명</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
+                                <span class="text-caption">{{ meeting.cost }}원</span>
+                            </div>
+                            <div class="text-caption text-grey mt-1">
+                                <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
+                            </div>
+                        </div>
+                    </v-list-item>
+                </v-list>
+            </div>
+            
+            <!-- 카테고리 검색 결과 영역 -->
+            <div v-if="!keyword && (searchResults.length > 0 || isLoading)" class="search-results mt-6">
                 <h3 class="text-subtitle-1 font-weight-medium mb-2">검색 결과</h3>
                 
                 <div v-if="isLoading" class="text-center my-4">
@@ -127,6 +269,11 @@ export default{
             selectedSubCategory: null,
             isLoading: false,
             searchResults: [],
+            keyword: '',
+            keywordSearchResults: {
+                gatherings: [],
+                meetings: []
+            },
             categories: [
                 { id: 1, name: '운동/스포츠', image: 'sports' },
                 { id: 2, name: '책/글', image: 'book' },
@@ -247,7 +394,10 @@ export default{
                     { id: 80, name: '제과제빵' },
                     { id: 81, name: '주류제조/칵테일' }
                 ]
-            }
+            },
+            suggestions: [],
+            showSuggestions: false,
+            suggestionsDebounceTimeout: null,
         }
     },
     computed: {
@@ -281,6 +431,9 @@ export default{
             }
             // 카테고리 변경 시 검색 실행
             this.searchGatherings();
+            // 키워드 검색 결과 초기화
+            this.keyword = '';
+            this.keywordSearchResults = { gatherings: [], meetings: [] };
         },
         selectSubCategory(subCategoryId) {
             if (this.selectedSubCategory === subCategoryId) {
@@ -292,6 +445,9 @@ export default{
             }
             // 상세 카테고리 변경 시 검색 실행
             this.searchGatherings();
+            // 키워드 검색 결과 초기화
+            this.keyword = '';
+            this.keywordSearchResults = { gatherings: [], meetings: [] };
         },
         async searchGatherings() {
             this.isLoading = true;
@@ -329,7 +485,222 @@ export default{
         },
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
-        }
+        },
+        goToMeetingDetail(gatheringId, meetingId) {
+            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
+        },
+        async searchByKeyword() {
+            if (!this.keyword.trim()) return;
+            
+            this.isLoading = true;
+            this.keywordSearchResults = { gatherings: [], meetings: [] };
+            this.showSuggestions = false;
+            
+            try {
+                const response = await axios.post(
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/opensearch`,
+                    {
+                        "gatheringSearchRequest": {
+                            "keyword": this.keyword
+                        },
+                        "meetingSearchRequest": {
+                            "keyword": this.keyword
+                        }
+                    }
+                );
+                
+                if (response.data && response.data.result) {
+                    this.keywordSearchResults = response.data.result;
+                    
+                    // 모임 정보 추가 조회
+                    if (this.keywordSearchResults.gatherings && this.keywordSearchResults.gatherings.length > 0) {
+                        await this.fetchGatheringsDetails();
+                    }
+                    
+                    // 정모 정보 추가 조회
+                    if (this.keywordSearchResults.meetings && this.keywordSearchResults.meetings.length > 0) {
+                        await this.fetchMeetingsDetails();
+                    }
+                }
+                
+                // 카테고리 선택 초기화
+                this.selectedCategory = null;
+                this.selectedSubCategory = null;
+                this.searchResults = [];
+            } catch (error) {
+                console.error('검색 중 오류가 발생했습니다:', error);
+                this.keywordSearchResults = {
+                    gatherings: [],
+                    meetings: []
+                };
+            } finally {
+                this.isLoading = false;
+            }
+        },
+        async getSuggestions() {
+            // 디바운스 처리 - 타이핑이 끝난 후 300ms 후에 API 호출
+            clearTimeout(this.suggestionsDebounceTimeout);
+            
+            if (!this.keyword.trim()) {
+                this.suggestions = [];
+                this.showSuggestions = false;
+                return;
+            }
+            
+            this.suggestionsDebounceTimeout = setTimeout(async () => {
+                try {
+                    const response = await axios.get(
+                        `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/suggest?prefix=${this.keyword}`
+                    );
+                    
+                    if (response.data && response.data.result) {
+                        this.suggestions = response.data.result;
+                        this.showSuggestions = this.suggestions.length > 0;
+                    }
+                } catch (error) {
+                    console.error('자동완성 데이터를 가져오는 중 오류가 발생했습니다:', error);
+                    this.suggestions = [];
+                    this.showSuggestions = false;
+                }
+            }, 300);
+        },
+        selectSuggestion(suggestion) {
+            this.keyword = suggestion;
+            this.showSuggestions = false;
+            this.searchByKeyword();
+        },
+        async fetchGatheringsDetails() {
+            try {
+                // 모임 ID 목록 추출
+                const gatheringIds = this.keywordSearchResults.gatherings.map(g => g.id);
+                
+                // 모임 상세 정보 조회를 위한 병렬 요청
+                const detailsPromises = gatheringIds.map(id => 
+                    axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${id}`)
+                );
+                
+                // 모든 요청 완료 대기
+                const responses = await Promise.all(detailsPromises);
+                
+                // 응답 데이터 처리
+                responses.forEach((response) => {
+                    if (response.data && response.data.result) {
+                        const detailData = response.data.result;
+                        
+                        // 기존 검색 결과에 상세 정보 병합
+                        const gatheringIndex = this.keywordSearchResults.gatherings.findIndex(g => g.id === detailData.id);
+                        if (gatheringIndex !== -1) {
+                            this.keywordSearchResults.gatherings[gatheringIndex] = {
+                                ...this.keywordSearchResults.gatherings[gatheringIndex],
+                                ...detailData,
+                                // 필요한 경우 특정 필드 매핑
+                                memberCount: detailData.memberCount || detailData.peopleCount,
+                                maxPeople: detailData.maxPeople,
+                                region: detailData.region,
+                                introduce: detailData.introduce
+                            };
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('모임 상세 정보 조회 중 오류가 발생했습니다:', error);
+            }
+        },
+        async fetchMeetingsDetails() {
+            try {
+                const updatedMeetings = await Promise.all(
+                    this.keywordSearchResults.meetings.map(async (meeting) => {
+                        try {
+                            const response = await axios.get(
+                                `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/${meeting.id}`
+                            );
+                            
+                            if (response.data && response.data.result) {
+                                // 모임 정보도 함께 조회
+                                const gatheringResponse = await axios.get(
+                                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`
+                                );
+                                
+                                const gatheringInfo = gatheringResponse.data.result || {};
+                                const meetingData = response.data.result;
+                                
+                                // attendees 배열에서 참가자 수 계산
+                                const attendeesCount = meetingData.attendees ? meetingData.attendees.length : 0;
+                                
+                                return {
+                                    ...meeting,
+                                    ...meetingData,
+                                    attendeesCount: attendeesCount,
+                                    gatheringName: gatheringInfo.gatheringName,
+                                    category: gatheringInfo.category
+                                };
+                            }
+                            return meeting;
+                        } catch (error) {
+                            console.error(`정모 정보 조회 실패 (ID: ${meeting.id}):`, error);
+                            return meeting;
+                        }
+                    })
+                );
+                
+                // 업데이트된 정모 정보로 교체
+                this.keywordSearchResults.meetings = updatedMeetings;
+            } catch (error) {
+                console.error('정모 상세 정보 조회 중 오류가 발생했습니다:', error);
+            }
+        },
+        clearSearch() {
+            this.keyword = '';
+            this.keywordSearchResults = { gatherings: [], meetings: [] };
+            // 카테고리 검색 결과 표시
+            this.searchGatherings();
+        },
+        formatDate(dateValue) {
+            if (!dateValue) return '';
+            
+            // 배열 형식인 경우 ([년, 월, 일] 형식)
+            if (Array.isArray(dateValue)) {
+                const [year, month, day] = dateValue;
+                return `${year}년 ${month}월 ${day}일`;
+            }
+            
+            // 문자열 형식인 경우 (YYYY-MM-DD 형식)
+            if (typeof dateValue === 'string') {
+                const parts = dateValue.split('-');
+                if (parts.length === 3) {
+                    return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일`;
+                }
+                return dateValue;
+            }
+            
+            return '';
+        },
+        formatTime(timeValue) {
+            if (!timeValue) return '';
+            
+            // timeValue가 배열인 경우 ([시간, 분] 형식)
+            if (Array.isArray(timeValue)) {
+                const [hours, minutes] = timeValue;
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+            
+            // timeValue가 문자열인 경우 (HH:MM:SS 형식)
+            if (typeof timeValue === 'string') {
+                // HH:MM:SS 형식에서 HH:MM 형식으로 변환
+                return timeValue.substring(0, 5);
+            }
+            
+            return '';
+        },
+        getCategoryName(categoryId) {
+            const category = this.categories.find(c => c.id === categoryId);
+            return category ? category.name : '카테고리 정보 없음';
+        },
+        hideSearchSuggestions() {
+            setTimeout(() => {
+                this.showSuggestions = false;
+            }, 200);
+        },
     },
     mounted() {
         // URL 쿼리 파라미터에서 카테고리 정보 가져오기
@@ -458,5 +829,54 @@ export default{
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 16px;
+}
+
+/* 검색창 스타일 */
+.search-container {
+    margin-bottom: 16px;
+}
+
+.search-field {
+    border-radius: 8px;
+    background-color: #f5f5f5;
+}
+
+.search-field :deep(.v-field__outline) {
+    opacity: 0 !important;
+}
+
+.search-field :deep(.v-field__input) {
+    padding: 8px 12px;
+}
+
+.search-field :deep(.v-field__prepend-inner) {
+    padding-right: 8px;
+}
+
+/* 자동완성 스타일 */
+.suggestions-container {
+    position: absolute;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.suggestion-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.suggestion-item:hover {
+    background-color: #f5f5f5;
+}
+
+.search-container {
+    position: relative;
 }
 </style>

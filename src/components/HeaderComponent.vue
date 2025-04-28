@@ -7,14 +7,14 @@
                         <img src="@/assets/logo.png" alt="Silver Potion" style="height: 28px; width: auto;">
                     </v-btn>
                     
-                    <!-- <v-btn :to="{path:'/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate ml-2">회원목록</v-btn> -->
+                    <v-btn :to="{path:'/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate ml-2">회원목록</v-btn>
                     
                     <v-btn 
                         v-if="isGatheringMainPage" 
                         icon 
                         class="ml-2" 
                         size="small"
-                        :to="{path:'/silverpotion/gathering/opensearch'}"
+                        :to="{path:'/silverpotion/gathering/search'}"
                     >
                         <v-icon size="20">mdi-magnify</v-icon>
                     </v-btn>
@@ -28,9 +28,9 @@
                         <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/create'}" variant="text" class="text-body-2 text-truncate">회원가입</v-btn>
                         <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/login'}" variant="text" class="text-body-2 text-truncate">로그인</v-btn>
                         
-                        <!-- <v-btn v-if="isLogin" :to="{path:'/chat-service/chat/my/rooms'}" icon class="ml-2" size="small">
+                        <v-btn v-if="isLogin" :to="{path:'/chat-service/chat/my/rooms'}" icon class="ml-2" size="small">
                             <v-icon size="20">mdi-message-outline</v-icon>
-                        </v-btn> -->
+                        </v-btn>
                         
                         <v-btn v-if="isLogin" icon class="ml-2" color="grey-darken-3" size="small" variant="text" @click="toggleNotificationsMenu">
                             <v-icon size="24">mdi-bell-ring-outline</v-icon>

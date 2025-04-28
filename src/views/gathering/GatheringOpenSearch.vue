@@ -82,13 +82,15 @@
                                 >
                                     {{ gathering.category || getCategoryName(gathering.categoryId) }}
                                 </v-chip>
-                                <div class="d-flex align-center ml-3">
-                                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                                    <span class="text-caption">{{ gathering.region }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                    <span class="text-caption">{{ gathering.peopleCount || 0 }}/{{ gathering.maxPeople || '제한없음' }}명</span>
-                                    <span class="text-caption text-grey ml-2">{{ gathering.introduce || '모임 소개가 없습니다.' }}</span>
-                                </div>
+                            </div>
+                            <div class="d-flex align-center mt-1">
+                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                <span class="text-caption">{{ gathering.region }}</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                <span class="text-caption">{{ gathering.peopleCount || 0 }}/{{ gathering.maxPeople || '제한없음' }}명</span>
+                            </div>
+                            <div class="text-caption text-grey mt-1" v-if="gathering.introduce">
+                                {{ gathering.introduce }}
                             </div>
                         </div>
                     </v-list-item>
@@ -117,6 +119,10 @@
                         
                         <div>
                             <div class="d-flex align-center">
+                                <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+                                <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                            </div>
+                            <div class="d-flex align-center mt-1">
                                 <span class="font-weight-medium">{{ meeting.name }}</span>
                                 <v-chip
                                     size="x-small"
@@ -126,16 +132,14 @@
                                 >
                                     {{ meeting.category || '카테고리 정보 없음' }}
                                 </v-chip>
-                                <div class="d-flex align-center ml-3">
-                                    <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
-                                    <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-map-marker</v-icon>
-                                    <span class="text-caption">{{ meeting.place }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                    <span class="text-caption">{{ meeting.attendeesCount || 0 }}/{{ meeting.maxPeople }}명</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
-                                    <span class="text-caption">{{ meeting.cost }}원</span>
-                                </div>
+                            </div>
+                            <div class="d-flex align-center mt-1">
+                                <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                                <span class="text-caption">{{ meeting.place }}</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
+                                <span class="text-caption">{{ meeting.attendeesCount || 0 }}/{{ meeting.maxPeople }}명</span>
+                                <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
+                                <span class="text-caption">{{ meeting.cost }}원</span>
                             </div>
                             <div class="text-caption text-grey mt-1">
                                 <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
@@ -348,8 +352,8 @@ export default{
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
         },
-        goToMeetingDetail(gatheringId, meetingId) {
-            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
+        goToMeetingDetail(gatheringId) {
+            this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
         },
         getCategoryName(categoryId) {
             const category = this.categories.find(c => c.id === categoryId);
@@ -362,10 +366,22 @@ export default{
             const day = String(date.getDate()).padStart(2, '0');
             return `${month}/${day}`;
         },
-        formatTime(timeString) {
-            if (!timeString) return '';
-            // HH:MM:SS 형식에서 HH:MM 형식으로 변환
-            return timeString.substring(0, 5);
+        formatTime(timeValue) {
+            if (!timeValue) return '';
+            
+            // timeValue가 배열인 경우 ([시간, 분] 형식)
+            if (Array.isArray(timeValue)) {
+                const [hours, minutes] = timeValue;
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+            
+            // timeValue가 문자열인 경우 (HH:MM:SS 형식)
+            if (typeof timeValue === 'string') {
+                // HH:MM:SS 형식에서 HH:MM 형식으로 변환
+                return timeValue.substring(0, 5);
+            }
+            
+            return '';
         }
     }
 }
