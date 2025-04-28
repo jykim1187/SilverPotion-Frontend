@@ -509,9 +509,47 @@ export default {
         this.resetData();
         
         // 에러 모달 대신 메시지 표시
-        this.noDataMessage = `${this.currentDate} 데이터가 없습니다.`;
+        this.noDataMessage = `${this.myData.period} 데이터가 없습니다.`;
       }
     },
+
+     //날짜를 주차로 변환하는 메소드
+     convertDateToWeek(date1){
+      console.log('날짜',date1)
+      const date = new Date(date1);
+  date.setDate(date.getDate() - 7); // 🔥 전주 월요일로 이동
+
+  // 첫 목요일 구하기
+  const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const firstDayWeekday = firstDayOfMonth.getDay(); // 0: 일 ~ 6: 토
+  const firstThursday = new Date(date.getFullYear(), date.getMonth(),
+    firstDayWeekday <= 4 ? 1 + (4 - firstDayWeekday) : 1 + (7 - firstDayWeekday) + 4
+  );
+
+  // 🔥 첫 목요일 기준으로 year, month 고정!
+  const fixedYear = firstThursday.getFullYear();
+  const fixedMonth = firstThursday.getMonth() + 1;
+
+  // 주차 계산
+  const diffDays = (date - firstThursday) / (1000 * 60 * 60 * 24);
+  const weekNumber = diffDays < 0 ? 1 : Math.floor(diffDays / 7) + 2;
+
+  return `${fixedYear}년 ${fixedMonth}월 ${weekNumber}주차`;
+      },
+
+      // 날짜를 년월로 변환하는 메소드
+        convertDateToYearMonth(date1) {
+          const date = new Date(date1);
+          let year = date.getFullYear();
+          let month = date.getMonth(); // -1 하지 말고 그냥 가져와!
+
+          // 만약 월이 0이면 (1월에서 -1 한 경우), 전년도 12월로 설정
+          if (month === 0) {
+            year -= 1;
+            month = 12;
+          }
+          return `${year}년 ${month}월`;
+        },
 
     // 데이터 초기화 메소드 추가
     resetData() {
@@ -524,8 +562,17 @@ export default {
       this.myData.deepSleepMinutes = 0;
       this.myData.lightSleepMinutes = 0;
       this.myData.remSleepMinutes = 0;
+      if(this.type === 'DAY'){
+        this.myData.period = this.currentDate;
+      }
+      else if(this.type === 'WEEKAVG'){
+        this.myData.period = this.convertDateToWeek(this.currentDate);
+      }
+      else if(this.type === 'MONTHAVG'){
+        this.myData.period = this.convertDateToYearMonth(this.currentDate);
+      }
+      
     },
-
     handleDateChange(dateRange) {
       console.log('선택된 날짜:', dateRange);
       
@@ -644,7 +691,10 @@ export default {
         return '수면 시간이 길어요. 7-9시간이 적정 수면입니다.';
       }
     },
+  
   },
+ 
+  
   computed: {
     // 날짜를 '0000년 0월 0일' 형식으로 표시하는 계산된 속성
     formattedCurrentDate() {
