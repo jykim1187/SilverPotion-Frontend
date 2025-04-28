@@ -139,7 +139,6 @@ export default {
         // 저장
         localStorage.setItem("token", token)
         localStorage.setItem("refreshToken", refreshToken)
-        emitter.emit('loginChanged');
         // 디코딩해서 로그인 ID와 권한 추출 (선택)
         // const role = jwtDecode(token).role
         // const loginId = jwtDecode(token).sub
@@ -149,13 +148,12 @@ export default {
         localStorage.setItem("nickName", response.data.result.nickName)
         localStorage.setItem("profileImage", response.data.result.profileImage)
         localStorage.setItem("userId", response.data.result.userId)
-
-
         // 리디렉션
         console.log("Login 성공! now routing to /");
         WebSocketManager.token = token;
         WebSocketManager.loginId = response.data.result.id;
         WebSocketManager.connect();
+        emitter.emit('loginChanged');
         this.$router.push('/');
       } catch (error) {
         alert('로그인 실패! 아이디 또는 비밀번호를 확인하세요.')

@@ -83,7 +83,6 @@ export default {
     mounted() {
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.addEventListener("scroll", this.onScrollTop);
-        // 컴포넌트가 마운트될 때 웹소켓 연결
         this.connectWebsocket();
     },
     beforeRouteLeave(to, from, next) {
@@ -227,7 +226,7 @@ export default {
         },
         sendMessage() {
             if(this.newMessage.trim() === "") return;
-            this.isSending = true;
+            this.isSending = true; // ✅ 전송 중 플래그 설정
 
             const message = {
                 roomId: this.roomId,
@@ -251,8 +250,6 @@ export default {
             );
             
             this.newMessage = "";
-            this.imageFile = null;
-            
             setTimeout(() => {
                 this.isSending = false; // ✅ 잠깐 후에 초기화
             }, 300); // debounce 효과
@@ -263,7 +260,6 @@ export default {
                 chatBox.scrollTop = chatBox.scrollHeight;
             });
         },
-
         formatTime(datetime) {
             if (!datetime) return '';
             const date = new Date(datetime);
@@ -318,13 +314,6 @@ export default {
     flex-direction: column;
     max-width: 80%;
     word-wrap: break-word;
-}
-.message-image {
-    max-width: 200px;
-    max-height: 200px;
-    margin-top: 8px;
-    border-radius: 8px;
-    object-fit: cover;
 }
 
 .sent {
