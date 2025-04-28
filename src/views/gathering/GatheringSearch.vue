@@ -486,8 +486,8 @@ export default{
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
         },
-        goToMeetingDetail(gatheringId, meetingId) {
-            this.$router.push(`/silverpotion/gathering/home/${gatheringId}/meeting/${meetingId}`);
+        goToMeetingDetail(gatheringId) {
+            this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
         },
         async searchByKeyword() {
             if (!this.keyword.trim()) return;

@@ -167,7 +167,8 @@ export default {
       ];
     },
     async fetchUserProfile() {
-       let loginId = localStorage.getItem("loginId");
+       const loginId = localStorage.getItem("loginId");
+       console.log("fetchUserProfile 실행");
        const UserImgReqDto = {  
         loginId: loginId
        }

@@ -118,7 +118,7 @@
         
         <transition name="fade">
           <div class="side-tooltip" v-if="tooltips.health">
-            건강데이터를 실시간으로 보고싶다면?
+            건강기록을 실시간으로 보고싶다면?
           </div>
         </transition>
       </div>
@@ -167,7 +167,7 @@
         
         <transition name="fade">
           <div class="side-tooltip" v-if="tooltips.gathering">
-            무료함을 소모임으로 풀고싶다면?
+           취미 같이 즐길 사람을 찾는다면?
           </div>
         </transition>
       </div>
