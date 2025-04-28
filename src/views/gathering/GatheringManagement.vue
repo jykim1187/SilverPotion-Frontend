@@ -253,6 +253,14 @@ export default{
         },
         formatDate(dateString) {
             if (!dateString) return '';
+            
+            // 배열 형식인 경우 처리
+            if (Array.isArray(dateString)) {
+                const [year, month, day] = dateString;
+                return `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
+            }
+            
+            // 문자열 형식인 경우 기존 처리 방식 유지
             const date = new Date(dateString);
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');

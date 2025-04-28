@@ -338,11 +338,27 @@ export default{
                 if (response.data.result) {
                     const meetingData = response.data.result;
                     
+                    // 날짜 배열을 문자열로 변환
+                    let formattedDate = '';
+                    if (Array.isArray(meetingData.meetingDate)) {
+                        formattedDate = `${meetingData.meetingDate[0]}-${String(meetingData.meetingDate[1]).padStart(2, '0')}-${String(meetingData.meetingDate[2]).padStart(2, '0')}`;
+                    } else {
+                        formattedDate = meetingData.meetingDate;
+                    }
+                    
+                    // 시간 배열을 문자열로 변환
+                    let formattedTime = '';
+                    if (Array.isArray(meetingData.meetingTime)) {
+                        formattedTime = `${String(meetingData.meetingTime[0]).padStart(2, '0')}:${String(meetingData.meetingTime[1]).padStart(2, '0')}`;
+                    } else {
+                        formattedTime = meetingData.meetingTime;
+                    }
+                    
                     // 가져온 데이터로 폼 초기화
                     this.meetingData = {
                         name: meetingData.name,
-                        meetingDate: meetingData.meetingDate,
-                        meetingTime: meetingData.meetingTime,
+                        meetingDate: formattedDate,
+                        meetingTime: formattedTime,
                         place: meetingData.place,
                         cost: meetingData.cost,
                         imageUrl: meetingData.imageUrl

@@ -378,7 +378,23 @@ export default{
             // 각 날짜별로 정모를 시간순으로 정렬
             Object.keys(groupedMeetings).forEach(date => {
                 groupedMeetings[date].sort((a, b) => {
-                    return a.meetingTime.localeCompare(b.meetingTime);
+                    // meetingTime이 배열인 경우 처리
+                    if (Array.isArray(a.meetingTime) && Array.isArray(b.meetingTime)) {
+                        // 시간을 비교
+                        if (a.meetingTime[0] !== b.meetingTime[0]) {
+                            return a.meetingTime[0] - b.meetingTime[0];
+                        }
+                        // 시간이 같으면 분을 비교
+                        return a.meetingTime[1] - b.meetingTime[1];
+                    }
+                    
+                    // meetingTime이 문자열인 경우 처리
+                    if (typeof a.meetingTime === 'string' && typeof b.meetingTime === 'string') {
+                        return a.meetingTime.localeCompare(b.meetingTime);
+                    }
+                    
+                    // 타입이 다른 경우 안전하게 처리
+                    return 0;
                 });
             });
             
@@ -515,10 +531,22 @@ export default{
             const day = String(date.getDate()).padStart(2, '0');
             return `${month}/${day}`;
         },
-        formatTime(timeString) {
-            if (!timeString) return '';
-            // HH:MM:SS 형식에서 HH:MM 형식으로 변환
-            return timeString.substring(0, 5);
+        formatTime(timeValue) {
+            if (!timeValue) return '';
+            
+            // timeValue가 배열인 경우 ([시간, 분] 형식)
+            if (Array.isArray(timeValue)) {
+                const [hours, minutes] = timeValue;
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+            
+            // timeValue가 문자열인 경우 (HH:MM:SS 형식)
+            if (typeof timeValue === 'string') {
+                // HH:MM:SS 형식에서 HH:MM 형식으로 변환
+                return timeValue.substring(0, 5);
+            }
+            
+            return '';
         },
         formatDateForApi(date) {
             const year = date.getFullYear();
