@@ -6,6 +6,7 @@
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
       <span class="text-h6 ml-3">게시글</span>
+      <v-spacer></v-spacer>
     </div>
 
     <!-- 게시물 상세 정보 -->
@@ -23,9 +24,18 @@
           </div>
         </div>
         <v-spacer></v-spacer>
-        <v-btn icon>
-          <v-icon>mdi-dots-vertical</v-icon>
-        </v-btn>
+        <v-menu>
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props">
+              <v-icon>mdi-dots-vertical</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item @click="showReportDialog = true">
+              <v-list-item-title>신고하기</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </div>
 
       <!-- 게시글 제목과 내용 -->
@@ -404,6 +414,39 @@
         </v-btn>
       </div>
     </div>
+
+    <!-- 신고 다이얼로그 -->
+    <v-dialog v-model="showReportDialog" max-width="400">
+      <v-card>
+        <v-card-title>신고</v-card-title>
+        <v-card-text>
+          <v-select
+            v-model="reportSmallCategory"
+            label="신고 사유 선택"
+            :items="reportCategories"
+            item-title="text"
+            item-value="value"
+            variant="outlined"
+            required
+            :rules="[v => !!v || '신고 사유를 선택해주세요']"
+            class="mb-4"
+          ></v-select>
+          <v-textarea
+            v-model="reportContent"
+            label="상세 내용"
+            hint="신고 사유에 대한 상세 내용을 작성해주세요."
+            rows="4"
+            variant="outlined"
+            :rules="[v => !!v || '상세 내용을 입력해주세요']"
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="showReportDialog = false">취소</v-btn>
+          <v-btn color="error" variant="text" @click="submitReport">신고</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -455,7 +498,18 @@ export default {
       commentLikesLoading: false,
       commentLikesTotalPages: 0,
       // 로그인한 사용자 정보
-      loginId: localStorage.getItem('loginId')
+      loginId: localStorage.getItem('loginId'),
+      showReportDialog: false,
+      reportSmallCategory: '',
+      reportContent: '',
+      reportCategories: [
+        { text: '성적행위', value: 'SEXUAL_CONTENT' },
+        { text: '혐오발언', value: 'HATE_SPEECH' },
+        { text: '사기', value: 'FRAUD' },
+        { text: '폭력', value: 'VIOLENCE' },
+        { text: '불법', value: 'ILLEGAL_ACT' },
+        { text: '따돌림', value: 'BULLYING' }
+      ]
     };
   },
   created() {
@@ -839,6 +893,34 @@ export default {
         this.fetchCommentLikes(this.commentLikesPage + 1);
       }
     },
+
+    async submitReport() {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/report/create`,
+          {
+            referenceId: this.post.postId,
+            reportBigCategory: 'POST',
+            reportSmallCategory: this.reportSmallCategory,
+            content: this.reportContent,
+            reportedId: this.post.userId
+          },
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        alert('신고가 접수되었습니다.');
+        this.showReportDialog = false;
+        this.reportSmallCategory = '';
+        this.reportContent = '';
+        this.$router.push('/silverpotion/gathering/home/1');
+      } catch (error) {
+        alert('신고 처리 중 오류가 발생했습니다.');
+      }
+    }
   }
 };
 </script>
