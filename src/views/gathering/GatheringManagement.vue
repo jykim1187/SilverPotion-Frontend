@@ -198,7 +198,8 @@ export default{
             selectedMember: null,
             showAlert: false,
             alertMessage: '',
-            showApproveMemberDialog: false
+            showApproveMemberDialog: false,
+            roomId: null
         }
     },
     computed: {
@@ -222,7 +223,7 @@ export default{
             try {
                 const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}`);
                 const gatheringData = response.data.result;
-                
+                this.roomId = gatheringData.chatRoomId;
                 this.gatheringLeaderId = gatheringData.leaderId;
                 
                 // 모임장이 아닌 경우 접근 제한
@@ -298,6 +299,20 @@ export default{
                     status: "ACTIVATE"
                 });
                 
+                await axios.post(
+                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/participant`,
+                    {
+                        chatRoomId: this.roomId,
+                        userId: this.selectedMember.userId
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                            "X-User-LoginId": localStorage.getItem("loginId")
+                        }
+                    }
+                );
+
                 this.showApproveMemberDialog = false;
                 this.alertMessage = `${this.selectedMember.nickname}님의 가입이 승인되었습니다.`;
                 this.showAlert = true;

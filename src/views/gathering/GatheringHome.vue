@@ -569,12 +569,17 @@ export default{
             messages: [],
             newMessage: "",
             userId: null,
-            roomId: null,
+            chatRoomId: null,
             isSubscribed: false,
             showDeleteDialog: false,
-            meetingIdToDelete: null
+            meetingIdToDelete: null,
+            roomId: null
         }
     },
+    beforeUnmount() {
+       this.disconnectWebSocket();
+    },
+
     computed: {
         isGatheringLeader() {
             const currentUserId = parseInt(localStorage.getItem('userId'), 10);
@@ -591,15 +596,21 @@ export default{
             });
         }
     },
-    mounted() {
+    mounted: async function() {
         this.gatheringId = this.$route.params.gatheringId;
-        this.fetchGatheringInfo();
-        this.fetchGatheringMembers();
-        this.fetchMeetings();
         this.userId = Number(localStorage.getItem("userId"));
+
+        await this.fetchGatheringInfo();
+        await this.fetchGatheringMembers();
+        await this.fetchMeetings();
+        
         if (this.isGatheringMember) {
-            this.loadChatRoom();
-            this.connectWebsocket();
+            if (this.chatRoomId) {
+                this.roomId = this.chatRoomId;
+                this.connectWebsocket();
+            } else {
+                console.error("❌ chatRoomId가 없습니다.");
+            }
         }
     },
     methods: {
@@ -610,7 +621,7 @@ export default{
             try {
                 const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}`);
                 const gatheringData = response.data.result;
-                
+                console.log('모임 정보:', gatheringData);
                 this.gatheringName = gatheringData.gatheringName;
                 this.gatheringImage = gatheringData.imageUrl;
                 this.gatheringRegion = gatheringData.region;
@@ -619,6 +630,7 @@ export default{
                 this.gatheringMaxPeople = gatheringData.maxPeople;
                 this.gatheringIntroduce = gatheringData.introduce;
                 this.gatheringLeaderId = gatheringData.leaderId;
+                this.chatRoomId = gatheringData.chatRoomId;
             } catch (error) {
                 console.error('모임 정보를 가져오는데 실패했습니다:', error);
             }
@@ -867,28 +879,6 @@ export default{
                 this.showAlert = true;
             }
         },
-        async loadChatRoom() {
-            try {
-                const response = await axios.get(
-                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/group`,
-                    {
-                        params: {
-                            title: this.gatheringName,
-                            userId: this.userId
-                        },
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                            "X-User-LoginId": localStorage.getItem("loginId")
-                        }
-                    }
-                );
-                this.roomId = response.data.id;
-                console.log('Chat room loaded:', response.data);
-            } catch (error) {
-                console.error("❌ 채팅방 로드 실패", error);
-            }
-        },
-        
         connectWebsocket() {
             if (this.isSubscribed) {
                 console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
@@ -930,10 +920,19 @@ export default{
             
             this.isSubscribed = true;
         },
-        
+        disconnectWebSocket() {
+            const topic = `/user/${localStorage.getItem("loginId")}/chat`;
+            console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
+            WebSocketManager.unsubscribe(topic);
+            this.isSubscribed = false;
+        },
         sendMessage() {
-            if(this.newMessage.trim() === "") return;
-            
+            if (!this.roomId) {
+                console.warn("🚫 roomId가 없습니다. WebSocket 연결 확인 필요.");
+                return;
+            }
+            if (this.newMessage.trim() === "") return;
+
             const message = {
                 roomId: this.roomId,
                 content: this.newMessage,
@@ -941,21 +940,17 @@ export default{
                 senderId: this.userId,
                 createdAt: new Date().toISOString()
             };
-            
+
             console.log('📤 Sending message:', message);
-            
-            // 메시지를 먼저 로컬에 추가
-            this.messages.push(message);
-            this.scrollToBottom();
-            
-            // WebSocket으로 메시지 전송
+
             WebSocketManager.send(
                 `/pub/room/${this.roomId}`,
                 message
             );
-            
+
             this.newMessage = "";
         },
+
         
         scrollToBottom() {
             this.$nextTick(() => {
