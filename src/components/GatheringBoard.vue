@@ -338,13 +338,13 @@ export default {
       this.loading = true;
       const pageToFetch = loadMore ? this.currentPage + 1 : 0;
 
-      let apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/list`;
+      let apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/list/${this.gatheringId}`;
       if (this.selectedCategory === 'free') {
-        apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/free/list`;
+        apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/free/list/${this.gatheringId}`;
       } else if (this.selectedCategory === 'notice') {
-        apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/notice/list`;
+        apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/notice/list/${this.gatheringId}`;
       } else if (this.selectedCategory === 'vote') {
-        apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/list`;
+        apiUrl = `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/list/${this.gatheringId}`;
       }
 
       const params = {
@@ -356,7 +356,12 @@ export default {
          
         console.log(`Fetching posts: ${apiUrl} with params:`, params);
 
-        const response = await axios.get(apiUrl, { params });
+        const response = await axios.get(apiUrl, { 
+          params,
+          headers: {
+            'X-User-LoginId': this.loginId
+          }
+        });
         const pageData = response.data.result; 
 
         if (pageData && pageData.content) {
