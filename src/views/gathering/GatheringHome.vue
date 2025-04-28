@@ -138,7 +138,7 @@
                                             <!-- 날짜 및 시간 -->
                                             <div class="d-flex align-center mb-2">
                                                 <v-icon size="small" color="primary" class="mr-1">mdi-calendar</v-icon>
-                                                <span class="text-body-2 font-weight-medium">{{ formatDate(meeting.meetingDate) }} {{ meeting.meetingTime }}</span>
+                                                <span class="text-body-2 font-weight-medium">{{ formatDateTime(meeting.meetingDate, meeting.meetingTime) }}</span>
                                                 
                                                 <v-spacer></v-spacer>
                                                 
@@ -651,13 +651,25 @@ export default{
                 console.error('정기모임 목록을 가져오는데 실패했습니다:', error);
             }
         },
-        formatDate(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}.${month}.${day}`;
+        formatDate(dateValue) {
+            if (!dateValue) return '날짜 정보 없음';
+            
+            // 배열 형태의 날짜 처리 (Java LocalDate 형식)
+            if (Array.isArray(dateValue)) {
+                const [year, month, day] = dateValue;
+                return `${year}년 ${month}월 ${day}일`;
+            }
+            
+            // 문자열 형태의 날짜 처리 (기존 로직)
+            try {
+                const date = new Date(dateValue);
+                if (isNaN(date.getTime())) return '날짜 정보 없음';
+                
+                return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+            } catch (error) {
+                console.error('날짜 변환 오류:', error);
+                return '날짜 정보 없음';
+            }
         },
         formatCost(cost) {
             if (cost === 0) return '무료';
@@ -952,12 +964,47 @@ export default{
             });
         },
         
-        formatTime(datetime) {
-            if (!datetime) return '';
-            const date = new Date(datetime);
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            return `${hours}:${minutes}`;
+        formatTime(timeValue) {
+            if (!timeValue) return '';
+            
+            // 배열 형태의 시간 처리 (Java LocalTime 형식)
+            if (Array.isArray(timeValue)) {
+                const [hour, minute] = timeValue;
+                // 시간과 분을 두 자리 숫자로 포맷팅
+                const formattedHour = hour.toString().padStart(2, '0');
+                const formattedMinute = minute.toString().padStart(2, '0');
+                return `${formattedHour}:${formattedMinute}`;
+            }
+            
+            // 문자열 형태의 시간 처리 (기존 로직)
+            if (typeof timeValue === 'string') {
+                // HH:MM:SS 형식에서 HH:MM 형식으로 변환
+                return timeValue.substring(0, 5);
+            }
+            
+            return '';
+        },
+        formatDateTime(dateValue, timeValue) {
+            if (!dateValue || !timeValue) return '날짜/시간 정보 없음';
+            
+            // 배열 형태의 날짜와 시간 처리
+            if (Array.isArray(dateValue) && Array.isArray(timeValue)) {
+                const [year, month, day] = dateValue;
+                const [hour, minute] = timeValue;
+                
+                return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분`;
+            }
+            
+            // 기존 형식 처리 (문자열 등)
+            try {
+                const dateStr = this.formatDate(dateValue);
+                const timeStr = this.formatTime(timeValue);
+                
+                return `${dateStr} ${timeStr}`;
+            } catch (error) {
+                console.error('날짜/시간 변환 오류:', error);
+                return '날짜/시간 정보 없음';
+            }
         }
     },
 }

@@ -195,7 +195,15 @@ export default{
         async fetchUpcomingMeetings() {
             this.loadingMeetings = true;
             try {
-                const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/upcoming`);
+                const token = localStorage.getItem('accessToken');
+                const response = await axios.get(
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/upcoming`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
                 const meetings = response.data.result || [];
                 
                 // 모임 정보 가져오기
@@ -203,20 +211,50 @@ export default{
                     meetings.map(async (meeting) => {
                         try {
                             const gatheringResponse = await axios.get(
-                                `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`
+                                `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`,
+                                {
+                                    headers: {
+                                        Authorization: `Bearer ${token}`
+                                    }
+                                }
                             );
                             const gatheringInfo = gatheringResponse.data.result;
                             
+                            // 날짜 배열을 문자열로 변환
+                            const formattedDate = meeting.meetingDate ? 
+                                `${meeting.meetingDate[0]}-${String(meeting.meetingDate[1]).padStart(2, '0')}-${String(meeting.meetingDate[2]).padStart(2, '0')}` : 
+                                '';
+                            
+                            // 시간 배열을 문자열로 변환
+                            const formattedTime = meeting.meetingTime ? 
+                                `${String(meeting.meetingTime[0]).padStart(2, '0')}:${String(meeting.meetingTime[1]).padStart(2, '0')}` : 
+                                '';
+                            
                             return {
                                 ...meeting,
+                                meetingDate: formattedDate,
+                                meetingTime: formattedTime,
                                 gatheringName: gatheringInfo.gatheringName,
                                 category: gatheringInfo.category,
                                 region: gatheringInfo.region
                             };
                         } catch (err) {
                             console.error(`모임 정보를 불러오는데 실패했습니다 (ID: ${meeting.gatheringId}):`, err);
+                            
+                            // 날짜 배열을 문자열로 변환
+                            const formattedDate = meeting.meetingDate ? 
+                                `${meeting.meetingDate[0]}-${String(meeting.meetingDate[1]).padStart(2, '0')}-${String(meeting.meetingDate[2]).padStart(2, '0')}` : 
+                                '';
+                            
+                            // 시간 배열을 문자열로 변환
+                            const formattedTime = meeting.meetingTime ? 
+                                `${String(meeting.meetingTime[0]).padStart(2, '0')}:${String(meeting.meetingTime[1]).padStart(2, '0')}` : 
+                                '';
+                            
                             return {
                                 ...meeting,
+                                meetingDate: formattedDate,
+                                meetingTime: formattedTime,
                                 gatheringName: '모임 정보 없음',
                                 category: '카테고리 정보 없음',
                                 region: '지역 정보 없음'
