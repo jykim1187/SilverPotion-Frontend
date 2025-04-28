@@ -108,6 +108,18 @@
                   density="compact"
                   class="mt-1"
                 ></v-textarea>
+                <div v-if="editingComment === comment.commentId" class="d-flex justify-end mt-1">
+                  <v-btn 
+                    variant="text" 
+                    size="small" 
+                    color="primary" 
+                    @click="updateComment(comment.commentId)"
+                    :disabled="!editedCommentContent.trim()"
+                  >
+                    저장
+                  </v-btn>
+                  <v-btn variant="text" size="small" @click="cancelEdit">취소</v-btn>
+                </div>
               </div>
               <span v-if="comment.isLike === 'Y'" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(comment.commentId)">
                 <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
@@ -195,6 +207,18 @@
                         density="compact"
                         class="mt-1"
                       ></v-textarea>
+                      <div v-if="editingComment === reply.commentId" class="d-flex justify-end mt-1">
+                        <v-btn 
+                          variant="text" 
+                          size="small" 
+                          color="primary" 
+                          @click="updateComment(reply.commentId)"
+                          :disabled="!editedCommentContent.trim()"
+                        >
+                          저장
+                        </v-btn>
+                        <v-btn variant="text" size="small" @click="cancelEdit">취소</v-btn>
+                      </div>
                       <div class="text-caption text-medium-emphasis mt-1">
                         {{ formatDate(reply.createdTime) }}
                         <span v-if="reply.isUpdate === 'Y'" class="ml-2">(수정됨)</span>

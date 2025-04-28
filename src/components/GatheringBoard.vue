@@ -183,8 +183,8 @@
           </v-list-item>
           <v-divider v-if="selectedPost && isMyPost(selectedPost)"></v-divider>
           
-          <!-- 다른 메뉴 항목 추가 가능 -->
-          <v-list-item @click="reportPost" v-if="selectedPost && !isMyPost(selectedPost)">
+          <!-- 신고하기 버튼 -->
+          <v-list-item @click="openReportDialog" v-if="selectedPost && !isMyPost(selectedPost)">
             <v-list-item-title class="text-center py-3">신고하기</v-list-item-title>
           </v-list-item>
           <v-divider v-if="selectedPost && !isMyPost(selectedPost)"></v-divider>
@@ -216,6 +216,42 @@
           <v-spacer></v-spacer>
           <v-btn color="error" variant="text" @click="deletePost">삭제</v-btn>
           <v-btn color="grey" variant="text" @click="deleteConfirmDialog = false">취소</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 게시물 신고 다이얼로그 -->
+    <v-dialog v-model="showReportDialog" max-width="400">
+      <v-card class="dialog-card">
+        <v-card-title class="dialog-title">게시물 신고</v-card-title>
+        <v-card-text class="dialog-content">
+          <v-select
+            v-model="reportSmallCategory"
+            label="신고 사유 선택"
+            :items="reportCategories"
+            item-title="text"
+            item-value="value"
+            variant="outlined"
+            required
+            :rules="[v => !!v || '신고 사유를 선택해주세요']"
+            class="mb-4 report-field"
+            rounded="lg"
+          ></v-select>
+          <v-textarea
+            v-model="reportContent"
+            label="상세 내용"
+            hint="신고 사유에 대한 상세 내용을 작성해주세요."
+            rows="4"
+            variant="outlined"
+            :rules="[v => !!v || '상세 내용을 입력해주세요']"
+            class="report-field"
+            rounded="lg"
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions class="dialog-actions">
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="showReportDialog = false">취소</v-btn>
+          <v-btn color="error" variant="text" @click="submitReport">신고</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -265,6 +301,17 @@ export default {
       deleteConfirmDialog: false,
       selectedPost: null,
       isVoteDetail: false, // 투표 상세 페이지 여부
+      showReportDialog: false,
+      reportSmallCategory: '',
+      reportContent: '',
+      reportCategories: [
+        { text: '성적행위', value: 'SEXUAL_CONTENT' },
+        { text: '혐오발언', value: 'HATE_SPEECH' },
+        { text: '사기', value: 'FRAUD' },
+        { text: '폭력', value: 'VIOLENCE' },
+        { text: '불법', value: 'ILLEGAL_ACT' },
+        { text: '따돌림', value: 'BULLYING' }
+      ],
     };
   },
   created() {
@@ -741,6 +788,58 @@ export default {
     reportPost() {
       alert('신고 기능은 현재 개발 중입니다.');
       this.postMenuDialog = false;
+    },
+
+    // 신고 다이얼로그 열기
+    openReportDialog() {
+      this.postMenuDialog = false;
+      this.showReportDialog = true;
+    },
+    
+    // 신고 제출
+    async submitReport() {
+      if (!this.selectedPost || !this.loginId) return;
+      
+      try {
+        const reportData = {
+          referenceId: this.getPostId(this.selectedPost),
+          reportBigCategory: 'POST', // 게시물에서 신고 시 자동으로 POST
+          reportSmallCategory: this.reportSmallCategory,
+          content: this.reportContent,
+          reportedId: this.selectedPost.writerId
+        };
+        
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/report/create`,
+          reportData,
+          {
+            headers: {
+              'X-User-LoginId': this.loginId
+            }
+          }
+        );
+        
+        if (response.status === 201) {
+          alert('신고가 접수되었습니다.');
+          this.showReportDialog = false;
+          this.reportSmallCategory = '';
+          this.reportContent = '';
+          this.$router.push(`/silverpotion/gathering/home/${this.gatheringId}`); // 신고 성공 시 게시판 페이지로 이동
+        }
+      } catch (error) {
+        console.error('신고 처리 중 오류가 발생했습니다:', error);
+        if (error.response && error.response.status === 404) {
+          if (error.response.data.message === 'Self Report') {
+            alert('자신의 게시물은 신고할 수 없습니다.');
+          } else if (error.response.data.message === 'Duplicate Report') {
+            alert('이미 신고한 게시물입니다.');
+          } else {
+            alert('신고 처리 중 오류가 발생했습니다.');
+          }
+        } else {
+          alert('신고 처리 중 오류가 발생했습니다.');
+        }
+      }
     },
   },
 };
