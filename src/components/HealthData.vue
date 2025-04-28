@@ -2,26 +2,35 @@
   <div class="health-dashboard-v5">
     <div class="dashboard-header">
       <div class="title-section">
-        <div class="logo">
-          <v-icon large color="white">mdi-atom</v-icon>
+        <div class="user-profile" @click="showUserProfile">
+          <img :src="profileImage" class="profile-image" alt="User Profile">
         </div>
         <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 모니터링</h1>
       </div>
       <!-- 날짜 선택 -->
-      <div class="date-picker-section">
-        <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
-        <div class="date-picker-container" v-show="showDatePicker">
-          <DatePickerRange :type="type" @handleDateChange="handleDateChange" :isHealthData="true" />
+      <div class="date-controls">
+        <div class="date-picker-section">
+          <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
+          <div class="date-picker-container" v-show="showDatePicker">
+            <DatePickerRange :type="type" @handleDateChange="handleDateChange" :isHealthData="true" />
+          </div>
         </div>
-      </div>
-      <div class="date-section">
-        <v-chip outlined color="black" class="date-chip">
-          {{ myData.period }}
-        </v-chip>
+        <div class="date-section">
+          <v-chip outlined color="black" class="date-chip">
+            {{ myData.period }}
+          </v-chip>
+        </div>
       </div>
     </div>
     
     <div class="dashboard-content">
+      <!-- 데이터 없음 메시지 -->
+      <div v-if="noDataMessage" class="no-data-message">
+        <v-alert type="info" text>
+          {{ noDataMessage }}
+        </v-alert>
+      </div>
+
       <!-- 주요 건강 지표 카드 -->
       <div class="stats-grid">
         <!-- 걸음 수 -->
@@ -59,7 +68,9 @@
           <div class="card-bottom">
             <div class="stat-title">
               <h3>심장 박동</h3>
-              <span class="stat-subtitle">정상 범위</span>
+              <span class="stat-subtitle" :class="getHeartRateStatusClass(myData.heartbeat)">
+                {{ getHeartRateStatus(myData.heartbeat) }}
+              </span>
             </div>
             <div class="stat-chart heartbeat-animation">
               <svg viewBox="0 0 120 30" class="heartbeat">
@@ -153,11 +164,11 @@
                 </div>
               </div>
               <div class="sleep-status">
-                <div class="status-badge">
-                  좋은 수면
+                <div class="status-badge" :class="getSleepStatusClass(myData.totalSleepMinutes)">
+                  {{ getSleepStatus(myData.totalSleepMinutes) }}
                 </div>
                 <div class="status-text">
-                  어제보다 30분 더 많이 주무셨습니다
+                  {{ getSleepDescription(myData.totalSleepMinutes) }}
                 </div>
               </div>
             </div>
@@ -255,8 +266,8 @@
   </v-dialog>
   
   <!-- 사용자 프로필 모달 -->
-  <v-dialog v-model="showUserProfileModal" max-width="450">
-    <v-card>
+  <v-dialog v-model="showUserProfileModal" max-width="400" content-class="profile-dialog">
+    <v-card flat class="profile-card">
       <v-card-actions class="profile-dialog-close">
         <v-spacer></v-spacer>
         <v-btn icon @click="showUserProfileModal = false">
@@ -321,7 +332,9 @@ export default {
         remSleepMinutes : 0,
         period : ''
       },
+      profileImage : '',
       showErrorModal : false,
+      noDataMessage: '',
       targetCalory: 2000,
       showCaloryTargetModal: false,
       newTargetCalory: 2000,
@@ -333,6 +346,8 @@ export default {
   },
 
   async mounted(){
+    // 사용자 프로필 이미지 가져오기
+
     // 목표 칼로리 불러오기
     this.loadTargetCalory();
     
@@ -445,10 +460,7 @@ export default {
         
         // 데이터 요청
         this.fetchData().finally(() => {
-          // 요청 완료 후 플래그 초기화 (일정 시간 후에)
-          setTimeout(() => {
-            this.isRequestPending = false;
-          }, 500);
+          this.isRequestPending = false;
         });
       } else {
         console.log("요청이 이미 진행 중입니다");
@@ -487,10 +499,31 @@ export default {
         this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
         this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
         this.myData.period = response.data.result.period;
+        this.profileImage = response.data.result.imgUrl;
+        this.noDataMessage = '';
+        console.log(response);
       } catch(error) {
         console.error("건강 데이터 가져오기 실패:", error);
-        this.showErrorModal = true;
+        
+        // 데이터 초기화
+        this.resetData();
+        
+        // 에러 모달 대신 메시지 표시
+        this.noDataMessage = `${this.currentDate} 데이터가 없습니다.`;
       }
+    },
+
+    // 데이터 초기화 메소드 추가
+    resetData() {
+      this.myData.step = 0;
+      this.myData.heartbeat = 0;
+      this.myData.calory = 0;
+      this.myData.activeCalory = 0;
+      this.myData.distance = 0;
+      this.myData.totalSleepMinutes = 0;
+      this.myData.deepSleepMinutes = 0;
+      this.myData.lightSleepMinutes = 0;
+      this.myData.remSleepMinutes = 0;
     },
 
     handleDateChange(dateRange) {
@@ -503,7 +536,8 @@ export default {
         this.fetchDataOnce();
       } else {
         console.error('유효하지 않은 날짜 형식:', dateRange);
-        this.showErrorModal = true;
+        this.noDataMessage = '유효하지 않은 날짜 형식입니다.';
+        this.resetData();
       }
     },
 
@@ -528,7 +562,88 @@ export default {
         this.targetCalory = parseInt(savedTargetCalory);
         this.newTargetCalory = this.targetCalory;
       }
-    }
+    },
+    
+    // 심장 박동수에 따른 상태 텍스트 반환
+    getHeartRateStatus(heartRate) {
+      if (!heartRate) return '정보 없음';
+      
+      if (heartRate < 60) {
+        return '낮은 심박수';
+      } else if (heartRate >= 60 && heartRate <= 100) {
+        return '정상 범위';
+      } else if (heartRate > 100 && heartRate <= 120) {
+        return '약간 높음';
+      } else {
+        return '높은 심박수';
+      }
+    },
+    
+    // 심장 박동수에 따른 클래스 반환
+    getHeartRateStatusClass(heartRate) {
+      if (!heartRate) return '';
+      
+      if (heartRate < 60) {
+        return 'status-low';
+      } else if (heartRate >= 60 && heartRate <= 100) {
+        return 'status-normal';
+      } else if (heartRate > 100 && heartRate <= 120) {
+        return 'status-elevated';
+      } else {
+        return 'status-high';
+      }
+    },
+    
+    // 수면 시간에 따른 상태 텍스트 반환
+    getSleepStatus(minutes) {
+      if (!minutes) return '정보 없음';
+      
+      const hours = minutes / 60;
+      
+      if (hours < 6) {
+        return '부족한 수면';
+      } else if (hours >= 6 && hours < 7) {
+        return '조금 부족한 수면';
+      } else if (hours >= 7 && hours <= 9) {
+        return '좋은 수면';
+      } else {
+        return '과도한 수면';
+      }
+    },
+    
+    // 수면 시간에 따른 클래스 반환
+    getSleepStatusClass(minutes) {
+      if (!minutes) return '';
+      
+      const hours = minutes / 60;
+      
+      if (hours < 6) {
+        return 'sleep-insufficient';
+      } else if (hours >= 6 && hours < 7) {
+        return 'sleep-slight-insufficient';
+      } else if (hours >= 7 && hours <= 9) {
+        return 'sleep-good';
+      } else {
+        return 'sleep-excessive';
+      }
+    },
+    
+    // 수면 시간에 따른 설명 텍스트 반환
+    getSleepDescription(minutes) {
+      if (!minutes) return '수면 데이터가 없습니다';
+      
+      const hours = minutes / 60;
+      
+      if (hours < 6) {
+        return '수면이 부족합니다. 7-9시간 수면을 권장합니다.';
+      } else if (hours >= 6 && hours < 7) {
+        return '수면이 조금 부족합니다. 1시간 더 주무세요.';
+      } else if (hours >= 7 && hours <= 9) {
+        return '건강한 수면 시간입니다. 좋은 습관을 유지하세요.';
+      } else {
+        return '수면 시간이 길어요. 7-9시간이 적정 수면입니다.';
+      }
+    },
   },
   computed: {
     // 날짜를 '0000년 0월 0일' 형식으로 표시하는 계산된 속성
@@ -606,22 +721,32 @@ export default {
   margin-bottom: 10px;
 }
 
-.logo {
-  width: 48px;
-  height: 48px;
-  background: rgba(59, 73, 171, 0.2);
+.user-profile {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   margin-right: 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+  border: 2px solid white;
+  transition: transform 0.3s ease;
 }
 
-.title-section h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #333;
+.user-profile:hover {
+  transform: scale(1.05);
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.date-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .date-chip {
@@ -674,7 +799,6 @@ export default {
   justify-content: space-between;
   margin-bottom: 24px;
 }
-
 .card-badge {
   width: 40px;
   height: 40px;
@@ -1117,6 +1241,7 @@ export default {
   }
 }
 
+
 @media (max-width: 480px) {
   .title-section h1 {
     font-size: 1.3rem;
@@ -1184,13 +1309,71 @@ export default {
   width: 100%;
 }
 
-/* 프로필 모달 스타일 */
+
+
+/* 심장 박동 상태 스타일 */
+.status-normal {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.status-low {
+  color: #2196F3;
+  font-weight: 600;
+}
+
+.status-elevated {
+  color: #FF9800;
+  font-weight: 600;
+}
+
+.status-high {
+  color: #F44336;
+  font-weight: 600;
+}
+
+/* 수면 상태 배지 스타일 */
+.sleep-good {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.sleep-insufficient, .sleep-excessive {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #F44336;
+}
+
+.sleep-slight-insufficient {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #FF9800;
+}
+
+/* * * 프로필 모달 스타일 * */ 
+
 .profile-dialog-close {
   position: absolute;
   top: 5px;
   right: 5px;
   z-index: 10;
 }
+
+.profile-card {
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.profile-dialog {
+  border-radius: 8px !important;
+  overflow: visible !important;
+}
+
+.no-data-message {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
 </style>
+
 
 

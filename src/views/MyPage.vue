@@ -39,11 +39,11 @@
           <div class="info-row">
             <div class="info-item">
               <div class="info-label">성별</div>
-              <div class="info-value">{{ userInfo.sex }}</div>
+              <div class="info-value">{{ userInfo.sex === 'MALE' ? '남자' : '여자' }}</div>
             </div>
             <div class="info-item">
               <div class="info-label">생년월일</div>
-              <div class="info-value">{{ userInfo.birthday }}</div>
+              <div class="info-value">{{ formatBirthday() }}</div>
             </div>
           </div>
           
@@ -170,6 +170,11 @@
   <LinkRequest v-model="showLinkRequestModal" @input="handleModalChange" />
   <LinkRequestToProcteor v-model="showLinkRequestModal2" @input="handleModalChange2" />
 
+  <!-- 스낵바 -->
+  <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
+    {{ snackbar.message }}
+  </v-snackbar>
+
 </template>
 
 <script>
@@ -212,6 +217,12 @@ import LinkRequestToProcteor from "@/components/LinkRequestToProcteor.vue";
       // 보호자/피보호자 연결 모달
       showLinkRequestModal: false,
       showLinkRequestModal2: false,
+      // 스낵바
+      snackbar: {
+        show: false,
+        message: '',
+        color: 'success',
+      },
     }
   },
   mounted() {
@@ -242,7 +253,16 @@ import LinkRequestToProcteor from "@/components/LinkRequestToProcteor.vue";
       this.dependentList = response.data.result;
       console.log("피보호자",this.dependentList.length)
      },
-
+      //
+      formatBirthday() {
+        if (!/^\d{8}$/.test(this.userInfo.birthday)) {
+          return '잘못된 형식입니다'; // 8자리 숫자가 아닌 경우
+        }
+        const year = this.userInfo.birthday.slice(0, 4);
+        const month = this.userInfo.birthday.slice(4, 6);
+        const day = this.userInfo.birthday.slice(6, 8);
+        return `${year}-${month}-${day}`;
+      },
 
 
 //  프로필 사진 변경
@@ -264,9 +284,11 @@ import LinkRequestToProcteor from "@/components/LinkRequestToProcteor.vue";
         console.log(response)
         const newProfileImage = response.data.result;
         this.userInfo.profileImage = newProfileImage;
+        this.showSnackbar('프로필 사진이 성공적으로 등록되었습니다.', 'success');
 
         }catch(error){
             console.log(error)
+            this.showSnackbar('프로필 사진 등록에 실패했습니다.', 'error');
         }
     },
     
@@ -316,6 +338,12 @@ import LinkRequestToProcteor from "@/components/LinkRequestToProcteor.vue";
     },
     handleModalChange2(val) {
       this.showLinkRequestModal2 = val;
+    },
+
+    showSnackbar(message, color) {
+      this.snackbar.show = true;
+      this.snackbar.message = message;
+      this.snackbar.color = color;
     },
 
   }

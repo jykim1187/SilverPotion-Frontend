@@ -2,22 +2,24 @@
   <div class="health-dashboard-v5">
     <div class="dashboard-header">
       <div class="title-section">
-        <div class="logo">
-          <v-icon large color="white">mdi-atom</v-icon>
+        <div class="user-profile" @click="showUserProfile">
+          <img :src="profileImage" class="profile-image" alt="User Profile">
         </div>
         <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 모니터링</h1>
       </div>
       <!-- 날짜 선택 -->
-      <div class="date-picker-section">
-        <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
-        <div class="date-picker-container" v-show="showDatePicker">
-          <DatePickerRange :type="type" @handleDateChange="handleDateChange" :isHealthData="true" />
+      <div class="date-controls">
+        <div class="date-picker-section">
+          <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
+          <div class="date-picker-container" v-show="showDatePicker">
+            <DatePickerRange :type="type" @handleDateChange="handleDateChange" :isHealthData="true" />
+          </div>
         </div>
-      </div>
-      <div class="date-section">
-        <v-chip outlined color="black" class="date-chip">
-          {{ currentDate }}
-        </v-chip>
+        <div class="date-section">
+          <v-chip outlined color="black" class="date-chip">
+            {{ myData.period }}
+          </v-chip>
+        </div>
       </div>
     </div>
     
@@ -59,7 +61,9 @@
           <div class="card-bottom">
             <div class="stat-title">
               <h3>심장 박동</h3>
-              <span class="stat-subtitle">정상 범위</span>
+              <span class="stat-subtitle" :class="getHeartRateStatusClass(myData.heartbeat)">
+                {{ getHeartRateStatus(myData.heartbeat) }}
+              </span>
             </div>
             <div class="stat-chart heartbeat-animation">
               <svg viewBox="0 0 120 30" class="heartbeat">
@@ -153,11 +157,11 @@
                 </div>
               </div>
               <div class="sleep-status">
-                <div class="status-badge">
-                  좋은 수면
+                <div class="status-badge" :class="getSleepStatusClass(myData.totalSleepMinutes)">
+                  {{ getSleepStatus(myData.totalSleepMinutes) }}
                 </div>
                 <div class="status-text">
-                  어제보다 30분 더 많이 주무셨습니다
+                  {{ getSleepDescription(myData.totalSleepMinutes) }}
                 </div>
               </div>
             </div>
@@ -255,8 +259,8 @@
   </v-dialog>
   
   <!-- 사용자 프로필 모달 -->
-  <v-dialog v-model="showUserProfileModal" max-width="450">
-    <v-card>
+  <v-dialog v-model="showUserProfileModal" max-width="400" content-class="profile-dialog">
+    <v-card flat class="profile-card">
       <v-card-actions class="profile-dialog-close">
         <v-spacer></v-spacer>
         <v-btn icon @click="showUserProfileModal = false">
@@ -289,15 +293,25 @@ export default {
     type: String,
     userName: String,
     userLongId: Number,
-    targetDate: String,
+    // targetDate: String,
   },
   components: {
     DatePickerRange,
     UserProfileComponent
   },
   data() {
+    // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+    function formatDateToYYYYMMDD(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
+    const today = new Date();
+    
     return {
-      currentDate: new Date().toISOString().split('T')[0],
+      currentDate: formatDateToYYYYMMDD(today),
       showDatePicker: false,
       myData: {
         step: 0,
@@ -308,19 +322,24 @@ export default {
         totalSleepMinutes : 0,
         deepSleepMinutes : 0,
         lightSleepMinutes : 0,
-        remSleepMinutes : 0
+        remSleepMinutes : 0,
+        period : ''
       },
+      profileImage : '',
       showErrorModal : false,
       targetCalory: 2000,
       showCaloryTargetModal: false,
       newTargetCalory: 2000,
       showUserProfileModal: false,
       // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
-      parentType: 'healthData'
+      parentType: 'healthData',
+      isRequestPending: false // 요청 중복 방지 플래그 추가
     }
   },
 
   async mounted(){
+    // 사용자 프로필 이미지 가져오기
+
     // 목표 칼로리 불러오기
     this.loadTargetCalory();
     
@@ -328,27 +347,50 @@ export default {
     this.setInitialDate();
    
     // 데이터 불러오기
-    this.fetchData();
+    this.fetchDataOnce();
+    
+    // 탭 변경 이벤트 리스너 등록
+    window.addEventListener('tab-changed', this.handleTabChange);
   },
+  
+  beforeUnmount() {
+    // 컴포넌트 제거 시 이벤트 리스너 제거
+    window.removeEventListener('tab-changed', this.handleTabChange);
+  },
+  
   watch: {
     loginId() {
-      this.fetchData();
+      this.fetchDataOnce();
       this.loadTargetCalory();
     },
-    type() {
+    type(newVal, oldVal) {
+      // 빈 값이거나 초기화 중인 경우 처리하지 않음
+      if (!newVal || (oldVal === undefined || oldVal === '')) {
+        return;
+      }
+      
       // 타입이 변경되면 그에 맞는 초기 날짜 설정
       this.setInitialDate();
-      this.fetchData();
+      this.fetchDataOnce();
     }
   },
 
-  methods: {    // 타입에 따라 초기 날짜 설정
+  methods: {
+    // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+    formatDateToYYYYMMDD(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    },
+    
+    // 타입에 따라 초기 날짜 설정
     setInitialDate() {
       const today = new Date();
       
       if (this.type === 'DAY') {
         // 실시간 선택 시 오늘 날짜로 설정
-        this.currentDate = today.toISOString().split('T')[0];
+        this.currentDate = this.formatDateToYYYYMMDD(today);
       } 
       else if (this.type === 'WEEKAVG') {
         // 이번주 월요일 계산
@@ -358,13 +400,13 @@ export default {
         monday.setDate(diff);
         
         // 이번주 월요일로 설정 (그러면 백엔드에서 저번주 데이터를 조회)
-        this.currentDate = monday.toISOString().split('T')[0];
+        this.currentDate = this.formatDateToYYYYMMDD(monday);
       } 
       else if (this.type === 'MONTHAVG') {
         // 이번달 1일 계산
-        const firstDay = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         // 이번달 1일로 설정 (그러면 백엔드에서 저번달 데이터를 조회)
-        this.currentDate = firstDay.toISOString().split('T')[0];
+        this.currentDate = this.formatDateToYYYYMMDD(firstDay);
       }
     },
     
@@ -392,15 +434,53 @@ export default {
       this.showUserProfileModal = false;
     },
     
+    // 탭 변경 이벤트 처리
+    handleTabChange(event) {
+      // 헬스 데이터 탭으로 변경되었을 때만 처리
+      if (event.detail.showHealthData) {
+        console.log("헬스 데이터 탭으로 변경됨, 데이터 요청 준비");
+        // 기존 요청 플래그 초기화 (새로운 탭으로 전환되었으므로)
+        this.isRequestPending = false;
+      }
+    },
+    
+    // API 호출을 한 번만 수행하는 메소드
+    fetchDataOnce() {
+      // API 호출 중복 방지
+      if (!this.isRequestPending) {
+        this.isRequestPending = true;
+        
+        // 데이터 요청
+        this.fetchData().finally(() => {
+          // 요청 완료 후 플래그 초기화 (일정 시간 후에)
+          setTimeout(() => {
+            this.isRequestPending = false;
+          }, 500);
+        });
+      } else {
+        console.log("요청이 이미 진행 중입니다");
+      }
+    },
+    
     // 컴포넌트 외부에서 사용자가 피보호자 아이디를 클릭했다거나 데이터 타입을 변경했다거나 했을 때 watch를 통해 다시 호출되기 위해서
     async fetchData() {
+      // 필요한 데이터가 모두 있는지 확인
+      if (!this.loginId || !this.type || !this.currentDate) {
+        console.log("필요한 데이터가 없어 요청을 보내지 않습니다:", { 
+          loginId: this.loginId, 
+          type: this.type, 
+          date: this.currentDate 
+        });
+        return;
+      }
+      
       const dto = {
         "loginId": this.loginId,
         "type": this.type,
         "date": this.currentDate
       };
 
-      console.log("요청 데이터:", dto);
+      console.log("건강 데이터 요청:", dto);
       
       try {
         const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/allinone`, dto);
@@ -413,7 +493,11 @@ export default {
         this.myData.deepSleepMinutes = response.data.result.deepSleepMinutes;
         this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
         this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
+        this.myData.period = response.data.result.period;
+        this.profileImage = response.data.result.imgUrl;
+        console.log(response)
       } catch(error) {
+        console.error("건강 데이터 가져오기 실패:", error);
         this.showErrorModal = true;
       }
     },
@@ -425,7 +509,7 @@ export default {
       if (dateRange && dateRange !== 'NaN-NaN-NaN' && dateRange.match(/^\d{4}-\d{2}-\d{2}$/)) {
         this.currentDate = dateRange;
         this.showDatePicker = false;
-        this.fetchData();
+        this.fetchDataOnce();
       } else {
         console.error('유효하지 않은 날짜 형식:', dateRange);
         this.showErrorModal = true;
@@ -433,9 +517,7 @@ export default {
     },
 
     toggleDatePicker() {
-      console.log('toggleDatePicker 호출됨');
       this.showDatePicker = !this.showDatePicker;
-      console.log('showDatePicker:', this.showDatePicker);
     },
     
     // 목표 칼로리 저장
@@ -455,8 +537,114 @@ export default {
         this.targetCalory = parseInt(savedTargetCalory);
         this.newTargetCalory = this.targetCalory;
       }
+    },
+    
+    // 심장 박동수에 따른 상태 텍스트 반환
+    getHeartRateStatus(heartRate) {
+      if (!heartRate) return '정보 없음';
+      
+      if (heartRate < 60) {
+        return '낮은 심박수';
+      } else if (heartRate >= 60 && heartRate <= 100) {
+        return '정상 범위';
+      } else if (heartRate > 100 && heartRate <= 120) {
+        return '약간 높음';
+      } else {
+        return '높은 심박수';
+      }
+    },
+    
+    // 심장 박동수에 따른 클래스 반환
+    getHeartRateStatusClass(heartRate) {
+      if (!heartRate) return '';
+      
+      if (heartRate < 60) {
+        return 'status-low';
+      } else if (heartRate >= 60 && heartRate <= 100) {
+        return 'status-normal';
+      } else if (heartRate > 100 && heartRate <= 120) {
+        return 'status-elevated';
+      } else {
+        return 'status-high';
+      }
+    },
+    
+    // 수면 시간에 따른 상태 텍스트 반환
+    getSleepStatus(minutes) {
+      if (!minutes) return '정보 없음';
+      
+      const hours = minutes / 60;
+      
+      if (hours < 6) {
+        return '부족한 수면';
+      } else if (hours >= 6 && hours < 7) {
+        return '조금 부족한 수면';
+      } else if (hours >= 7 && hours <= 9) {
+        return '좋은 수면';
+      } else {
+        return '과도한 수면';
+      }
+    },
+    
+    // 수면 시간에 따른 클래스 반환
+    getSleepStatusClass(minutes) {
+      if (!minutes) return '';
+      
+      const hours = minutes / 60;
+      
+      if (hours < 6) {
+        return 'sleep-insufficient';
+      } else if (hours >= 6 && hours < 7) {
+        return 'sleep-slight-insufficient';
+      } else if (hours >= 7 && hours <= 9) {
+        return 'sleep-good';
+      } else {
+        return 'sleep-excessive';
+      }
+    },
+    
+    // 수면 시간에 따른 설명 텍스트 반환
+    getSleepDescription(minutes) {
+      if (!minutes) return '수면 데이터가 없습니다';
+      
+      const hours = minutes / 60;
+      
+      if (hours < 6) {
+        return '수면이 부족합니다. 7-9시간 수면을 권장합니다.';
+      } else if (hours >= 6 && hours < 7) {
+        return '수면이 조금 부족합니다. 1시간 더 주무세요.';
+      } else if (hours >= 7 && hours <= 9) {
+        return '건강한 수면 시간입니다. 좋은 습관을 유지하세요.';
+      } else {
+        return '수면 시간이 길어요. 7-9시간이 적정 수면입니다.';
+      }
+    },
+  },
+  computed: {
+    // 날짜를 '0000년 0월 0일' 형식으로 표시하는 계산된 속성
+    formattedCurrentDate() {
+      if (!this.currentDate) return '';
+      
+      const date = new Date(this.currentDate);
+      
+      if (this.type === 'DAY') {
+        // 일별 데이터는 날짜 표시
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      } 
+      else if (this.type === 'WEEKAVG') {
+        // 주간 평균 데이터는 날짜 표시
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
+      else if (this.type === 'MONTHAVG') {
+        // 월간 데이터는 월까지만 표시
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+      }
+      else {
+        // 기본값
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
     }
-}
+  }
 }
 </script>
 
@@ -508,22 +696,32 @@ export default {
   margin-bottom: 10px;
 }
 
-.logo {
-  width: 48px;
-  height: 48px;
-  background: rgba(59, 73, 171, 0.2);
+.user-profile {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   margin-right: 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+  border: 2px solid white;
+  transition: transform 0.3s ease;
 }
 
-.title-section h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #333;
+.user-profile:hover {
+  transform: scale(1.05);
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.date-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .date-chip {
@@ -576,7 +774,6 @@ export default {
   justify-content: space-between;
   margin-bottom: 24px;
 }
-
 .card-badge {
   width: 40px;
   height: 40px;
@@ -1019,6 +1216,7 @@ export default {
   }
 }
 
+
 @media (max-width: 480px) {
   .title-section h1 {
     font-size: 1.3rem;
@@ -1086,13 +1284,66 @@ export default {
   width: 100%;
 }
 
-/* 프로필 모달 스타일 */
+
+
+/* 심장 박동 상태 스타일 */
+.status-normal {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.status-low {
+  color: #2196F3;
+  font-weight: 600;
+}
+
+.status-elevated {
+  color: #FF9800;
+  font-weight: 600;
+}
+
+.status-high {
+  color: #F44336;
+  font-weight: 600;
+}
+
+/* 수면 상태 배지 스타일 */
+.sleep-good {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.sleep-insufficient, .sleep-excessive {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #F44336;
+}
+
+.sleep-slight-insufficient {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #FF9800;
+}
+
+/* * * 프로필 모달 스타일 * */ 
+
 .profile-dialog-close {
   position: absolute;
   top: 5px;
   right: 5px;
   z-index: 10;
 }
+
+.profile-card {
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.profile-dialog {
+  border-radius: 8px !important;
+  overflow: visible !important;
+}
+
 </style>
+
 
 

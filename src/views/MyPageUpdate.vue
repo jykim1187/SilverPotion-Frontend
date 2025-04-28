@@ -8,7 +8,7 @@
     </div>
 
     <v-container class="form-container">
-      <v-row>
+      <!-- <v-row>
         <v-col cols="12">
           <div class="profile-avatar">
             <v-avatar size="100" color="primary">
@@ -17,7 +17,7 @@
             </v-avatar>
           </div>
         </v-col>
-      </v-row>
+      </v-row> -->
 
       <v-form ref="form" class="edit-form">
         <!-- 이름 (수정 불가) -->
@@ -84,7 +84,11 @@
             outlined 
             hide-details="auto"
             color="primary"
+            @blur="validateNickName"
           ></v-text-field>
+          <div v-if="nickNameCheck.checked" :class="['validation-message', nickNameCheck.valid ? 'valid' : 'invalid']">
+            {{ nickNameCheck.message }}
+          </div>
         </div>
 
         <!-- 비밀번호 -->
@@ -244,7 +248,14 @@ export default {
         show: false,
         message: '',
         color: 'success',
-      }
+      },
+      nickNameCheck: {
+        checked: false,
+        valid: false,
+        message: ''
+      },
+      debounceTimeout: null,
+      originalNickName: '', // 원래 닉네임 저장
     };
   },
   computed: {
@@ -276,6 +287,7 @@ export default {
           region: userInfo.region,
           zipcode: userInfo.zipcode || '',
         };
+        this.originalNickName = userInfo.nickName; // 원래 닉네임 저장
         this.userImage = userInfo.profileImage;
       } catch (error) {
         console.error('사용자 정보 조회 실패:', error);
@@ -314,8 +326,60 @@ export default {
       this.snackbar.color = color;
     },
     
+    async validateNickName() {
+      // 닉네임이 비어있으면 검증하지 않음
+      if (!this.userData.nickName) {
+        this.nickNameCheck.checked = false;
+        return;
+      }
+
+      // 원래 닉네임과 같으면 검증하지 않음 (변경이 없는 경우)
+      if (this.userData.nickName === this.originalNickName) {
+        this.nickNameCheck.checked = false;
+        return;
+      }
+
+      // 디바운스 처리 (이전 타이머 취소)
+      if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout);
+      }
+
+      // 300ms 후에 실행
+      this.debounceTimeout = setTimeout(async () => {
+        try {
+          // 닉네임 중복 체크 API 호출
+          const response = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/checkDuplicate`, 
+            { params: { field: 'nickName', value: this.userData.nickName } }
+          );
+          
+          // 결과 업데이트
+          const isDuplicate = response.data.result;
+          this.nickNameCheck.checked = true;
+          this.nickNameCheck.valid = !isDuplicate;
+          
+          if (isDuplicate) {
+            this.nickNameCheck.message = '이미 사용 중인 닉네임입니다.';
+          } else {
+            this.nickNameCheck.message = '사용 가능한 닉네임입니다.';
+          }
+        } catch (error) {
+          console.error('닉네임 중복 확인 실패:', error);
+          this.nickNameCheck.checked = true;
+          this.nickNameCheck.valid = false;
+          this.nickNameCheck.message = '중복 확인에 실패했습니다.';
+        }
+      }, 300);
+    },
+    
     async updateUserInfo() {
       if (!this.$refs.form.validate()) return;
+      
+      // 닉네임 중복 체크 상태 확인
+      if (this.nickNameCheck.checked && !this.nickNameCheck.valid) {
+        this.showSnackbar('중복된 닉네임입니다. 다시 확인해주세요.', 'error');
+        return;
+      }
       
       this.loading = true;
       try {
@@ -465,6 +529,20 @@ export default {
 .save-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.validation-message {
+  font-size: 12px;
+  margin-top: 5px;
+  padding-left: 5px;
+}
+
+.validation-message.valid {
+  color: #4caf50;
+}
+
+.validation-message.invalid {
+  color: #f44336;
 }
 
 /* 다크 모드 */

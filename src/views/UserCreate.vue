@@ -23,7 +23,11 @@
           background-color="transparent"
           hide-details="auto"
           class="floating-input"
+          @blur="validateField('loginId')"
         />
+        <div v-if="checkResults.loginId.checked" :class="['validation-message', checkResults.loginId.valid ? 'valid' : 'invalid']">
+          {{ checkResults.loginId.message }}
+        </div>
       </div>
 
       <div class="floating-input-wrapper">
@@ -40,7 +44,11 @@
           background-color="transparent"
           hide-details="auto"
           class="floating-input"
+          @blur="validateField('email')"
         />
+        <div v-if="checkResults.email.checked" :class="['validation-message', checkResults.email.valid ? 'valid' : 'invalid']">
+          {{ checkResults.email.message }}
+        </div>
       </div>
 
       <div class="floating-input-wrapper">
@@ -155,7 +163,11 @@
           background-color="transparent"
           hide-details="auto"
           class="floating-input"
+          @blur="validateField('nickName')"
         />
+        <div v-if="checkResults.nickName.checked" :class="['validation-message', checkResults.nickName.valid ? 'valid' : 'invalid']">
+          {{ checkResults.nickName.message }}
+        </div>
       </div>
 
       <div class="floating-input-wrapper">
@@ -262,14 +274,38 @@ export default {
         show: false,
         message: '',
         color: 'success',
-      }
+      },
+      checkResults: {
+        loginId: { 
+          checked: false, 
+          valid: false, 
+          message: '' 
+        },
+        email: { 
+          checked: false, 
+          valid: false, 
+          message: '' 
+        },
+        nickName: { 
+          checked: false, 
+          valid: false, 
+          message: '' 
+        },
+      },
+      debounceTimeout: null
     }
   },
   created() {
     // URL 쿼리 파라미터에서 구글 로그인 정보 가져오기
     const { loginId, email, name } = this.$route.query;
-    if (loginId) this.formData.loginId = loginId;
-    if (email) this.formData.email = email;
+    if (loginId) {
+      this.formData.loginId = loginId;
+      this.validateField('loginId');
+    }
+    if (email) {
+      this.formData.email = email;
+      this.validateField('email');
+    }
     if (name) this.formData.name = name;
   },
   methods: {
@@ -318,8 +354,64 @@ export default {
       this.snackbar.color = color;
     },
 
+    async validateField(field) {
+      // 값이 비어있으면 검증하지 않음
+      if (!this.formData[field]) {
+        this.checkResults[field].checked = false;
+        return;
+      }
+
+      // 디바운스 처리 (이전 타이머 취소)
+      if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout);
+      }
+
+      // 300ms 후에 실행
+      this.debounceTimeout = setTimeout(async () => {
+        try {
+          // 필드별 중복 체크 API 호출
+          const response = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/checkDuplicate`, 
+            { params: { field, value: this.formData[field] } }
+          );
+          
+          // 결과 업데이트
+          const isDuplicate = response.data.result;
+          this.checkResults[field].checked = true;
+          this.checkResults[field].valid = !isDuplicate;
+          
+          if (isDuplicate) {
+            if (field === 'loginId') {
+              this.checkResults[field].message = '이미 사용 중인 아이디입니다.';
+            } else if (field === 'email') {
+              this.checkResults[field].message = '이미 사용 중인 이메일입니다.';
+            } else if (field === 'nickName') {
+              this.checkResults[field].message = '이미 사용 중인 닉네임입니다.';
+            }
+          } else {
+            this.checkResults[field].message = '사용 가능합니다.';
+          }
+        } catch (error) {
+          console.error(`${field} 중복 확인 실패:`, error);
+          this.checkResults[field].checked = true;
+          this.checkResults[field].valid = false;
+          this.checkResults[field].message = '중복 확인에 실패했습니다.';
+        }
+      }, 300);
+    },
+
     async handleSubmit() {
       if (!this.$refs.form.validate()) return;
+      
+      // 중복 체크 상태 확인
+      if (
+        (this.checkResults.loginId.checked && !this.checkResults.loginId.valid) ||
+        (this.checkResults.email.checked && !this.checkResults.email.valid) ||
+        (this.checkResults.nickName.checked && !this.checkResults.nickName.valid)
+      ) {
+        this.showSnackbar('중복된 정보가 있습니다. 다시 확인해주세요.', 'error');
+        return;
+      }
       
       this.loading = true;
       try {
@@ -447,6 +539,21 @@ export default {
 .floating-footer p {
   font-size: 14px;
   color: #666;
+}
+
+/* 중복확인 메시지 스타일 */
+.validation-message {
+  font-size: 12px;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+
+.valid {
+  color: #4caf50;
+}
+
+.invalid {
+  color: #f44336;
 }
 
 /* 다크모드 대응 */
