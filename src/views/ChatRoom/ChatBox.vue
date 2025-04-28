@@ -35,10 +35,10 @@
                             @keyup.enter="sendMessage"
                         />
                         <!-- 이미지 첨부 버튼 -->
-                        <v-btn icon @click="openFileInput">
+                        <!-- <v-btn icon @click="openFileInput">
                             <v-icon>mdi-plus</v-icon>
                         </v-btn>
-                        <input type="file" ref="fileInput" style="display: none" @change="handleFileChange" accept="image/*" />
+                        <input type="file" ref="fileInput" style="display: none" @change="handleFileChange" accept="image/*" /> -->
                             
                         <v-btn color="primary" block @click="sendMessage">전송</v-btn>
                     </v-card-text>
@@ -65,7 +65,7 @@ export default {
             page: 0,
             hasMore: true,
             loadingHistory: false, 
-            imageFile: null,
+            // imageFile: null,
         }
     },
     async created() {
@@ -115,23 +115,23 @@ export default {
             return String(senderId) === String(this.userId);
         },
         // 파일 첨부 버튼 클릭
-        openFileInput() {
-            this.$refs.fileInput.click();
-        },
+        // openFileInput() {
+        //     this.$refs.fileInput.click();
+        // },
         // 파일 변경 처리
-        handleFileChange(event) {
-            const file = event.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    this.imageFile = reader.result; // base64로 변환된 이미지
-                    console.log('첨부된 이미지:', this.imageFile);
-                };
-                reader.readAsDataURL(file); // 이미지 파일을 base64로 읽음
-            } else {
-                alert("이미지 파일만 첨부할 수 있습니다.");
-            }
-        },
+        // handleFileChange(event) {
+        //     const file = event.target.files[0];
+        //     if (file && file.type.startsWith('image/')) {
+        //         const reader = new FileReader();
+        //         reader.onload = () => {
+        //             this.imageFile = reader.result; // base64로 변환된 이미지
+        //             console.log('첨부된 이미지:', this.imageFile);
+        //         };
+        //         reader.readAsDataURL(file); // 이미지 파일을 base64로 읽음
+        //     } else {
+        //         alert("이미지 파일만 첨부할 수 있습니다.");
+        //     }
+        // },
         onScrollTop(e) {
             const el = e.target;
             if (el.scrollTop < 50 && this.hasMore && !this.loadingHistory) {
@@ -235,7 +235,7 @@ export default {
                 type: "TEXT",
                 senderId: this.userId,
                 createdAt: new Date().toISOString(),
-                image: this.imageFile
+                // image: this.imageFile
             };
             
             console.log('📤 Sending message:', message);
