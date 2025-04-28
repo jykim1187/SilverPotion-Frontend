@@ -14,7 +14,7 @@
                         icon 
                         class="ml-2" 
                         size="small"
-                        :to="{path:'/silverpotion/gathering/opensearch'}"
+                        :to="{path:'/silverpotion/gathering/search'}"
                     >
                         <v-icon size="20">mdi-magnify</v-icon>
                     </v-btn>
