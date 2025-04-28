@@ -34,6 +34,12 @@
                             label="메시지 입력"
                             @keyup.enter="sendMessage"
                         />
+                        <!-- 이미지 첨부 버튼 -->
+                        <v-btn icon @click="openFileInput">
+                            <v-icon>mdi-plus</v-icon>
+                        </v-btn>
+                        <input type="file" ref="fileInput" style="display: none" @change="handleFileChange" accept="image/*" />
+                            
                         <v-btn color="primary" block @click="sendMessage">전송</v-btn>
                     </v-card-text>
                 </v-card>
@@ -56,9 +62,10 @@ export default {
             senderLoginId: localStorage.getItem("loginId"),
             isSubscribed: false,
             isSending: false, 
-            page: 0, // ✅ 현재 페이지
-            hasMore: true, // ✅ 더 불러올 메시지가 있는지 여부
-            loadingHistory: false, // ✅ 중복 로딩 방지
+            page: 0,
+            hasMore: true,
+            loadingHistory: false, 
+            imageFile: null,
         }
     },
     async created() {
@@ -76,6 +83,8 @@ export default {
     mounted() {
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.addEventListener("scroll", this.onScrollTop);
+        // 컴포넌트가 마운트될 때 웹소켓 연결
+        this.connectWebsocket();
     },
     beforeRouteLeave(to, from, next) {
         this.markAsRead(); // ✅ 나가기 전에 읽음 처리
@@ -87,9 +96,41 @@ export default {
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.removeEventListener("scroll", this.onScrollTop);
     },
+    beforeRouteUpdate(to, from, next) {
+    this.roomId = to.params.roomId;  // 새로운 roomId 업데이트
+    this.messages = [];  // 기존 메시지 비우기
+    this.page = 0;  // 새로 시작할 페이지
+    this.hasMore = true;  // 더 불러올 메시지 여부 초기화
+
+    // 채팅 히스토리 로드
+    this.loadMessageHistory();
+
+    // 웹소켓 연결
+    this.connectWebsocket();
+
+    next();  // 라우트 이동 계속
+    },
     methods: {
         isMine(senderId) {
             return String(senderId) === String(this.userId);
+        },
+        // 파일 첨부 버튼 클릭
+        openFileInput() {
+            this.$refs.fileInput.click();
+        },
+        // 파일 변경 처리
+        handleFileChange(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    this.imageFile = reader.result; // base64로 변환된 이미지
+                    console.log('첨부된 이미지:', this.imageFile);
+                };
+                reader.readAsDataURL(file); // 이미지 파일을 base64로 읽음
+            } else {
+                alert("이미지 파일만 첨부할 수 있습니다.");
+            }
         },
         onScrollTop(e) {
             const el = e.target;
@@ -186,14 +227,15 @@ export default {
         },
         sendMessage() {
             if(this.newMessage.trim() === "") return;
-            this.isSending = true; // ✅ 전송 중 플래그 설정
+            this.isSending = true;
 
             const message = {
                 roomId: this.roomId,
                 content: this.newMessage,
                 type: "TEXT",
                 senderId: this.userId,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                image: this.imageFile
             };
             
             console.log('📤 Sending message:', message);
@@ -209,6 +251,8 @@ export default {
             );
             
             this.newMessage = "";
+            this.imageFile = null;
+            
             setTimeout(() => {
                 this.isSending = false; // ✅ 잠깐 후에 초기화
             }, 300); // debounce 효과
@@ -219,6 +263,7 @@ export default {
                 chatBox.scrollTop = chatBox.scrollHeight;
             });
         },
+
         formatTime(datetime) {
             if (!datetime) return '';
             const date = new Date(datetime);
@@ -273,6 +318,13 @@ export default {
     flex-direction: column;
     max-width: 80%;
     word-wrap: break-word;
+}
+.message-image {
+    max-width: 200px;
+    max-height: 200px;
+    margin-top: 8px;
+    border-radius: 8px;
+    object-fit: cover;
 }
 
 .sent {
