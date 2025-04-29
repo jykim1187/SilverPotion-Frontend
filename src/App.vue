@@ -14,12 +14,70 @@
 </template>
 
 <script>
+import WebSocketManager from './WebSocketManager'
 import HeaderComponent from './components/HeaderComponent.vue'
+import axios from 'axios'
+import emitter from './event-bus'
+
 export default {
   name: 'App',
   components: {
     HeaderComponent
-  }
+  },
+  mounted() {
+    this.checkLoginStatus();  // 앱이 마운트되면 로그인 상태를 체크하고 웹소켓 연결
+  },
+  beforeUnmount() {
+  // 앱이 종료될 때 웹소켓 연결을 끊습니다.
+  WebSocketManager.disconnect();
+  },
+  methods: {
+    async doLogout() {
+    try {
+      const loginId = localStorage.getItem("loginId");
+
+      await axios.post(
+        `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/logout`,
+        {}, 
+        { headers: { "X-User-LoginId": loginId } }
+      );
+
+      localStorage.clear();
+      emitter.emit('loginChanged');  // 로그인 상태 변경 이벤트 발생
+      this.$router.push('/');
+      
+      // 로그아웃 후 웹소켓 연결 종료
+      WebSocketManager.disconnect();
+
+    } catch (error) {
+      console.error('로그아웃 실패', error);
+    }
+  },
+    checkLoginStatus() {
+      const loginId = localStorage.getItem("loginId");
+      const token = localStorage.getItem("token");
+
+      if (loginId && token) {
+        // 로그인 상태일 때만 웹소켓 연결
+        WebSocketManager.token = token;
+        WebSocketManager.connect()
+          .then(() => {
+            // 연결이 성공하면, 채팅 유저 채널 구독
+            WebSocketManager.subscribe(`/user/${loginId}/chat`, this.onNewMessage);
+          })
+          .catch((error) => {
+            console.error("웹소켓 연결 실패:", error);
+          });
+      }
+    },
+
+    onNewMessage(message) {
+      console.log('새로운 메시지:', message);
+      // 메시지를 처리할 로직
+    }
+  },
+
+  
 }
 </script>
 

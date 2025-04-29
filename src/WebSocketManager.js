@@ -11,24 +11,17 @@ class WebSocketManager {
   }
 
   connect() {
-    console.log("[DEBUG] connect() called");
-    console.log("[DEBUG] current this.connected =", this.connected);
-  
     this.loginId = localStorage.getItem("loginId");
     this.token = localStorage.getItem("token");
-  
+
     if (this.connected) {
       console.log("✅ Already connected");
-      return Promise.resolve(); // 연결되어 있으면 바로 resolve
+      return Promise.resolve();
     }
-  
-    const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${localStorage.getItem("loginId")}`);
+
+    const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.loginId}`);
     this.stompClient = Stomp.over(socket);
-  
-    this.stompClient.debug = function (str) {
-      console.log('[STOMP DEBUG]', str);
-    };
-  
+
     return new Promise((resolve, reject) => {
       this.stompClient.connect(
         {
@@ -38,7 +31,7 @@ class WebSocketManager {
         () => {
           this.connected = true;
           console.log("✅ WebSocket connected");
-          resolve(); // ✅ 여기서 resolve 호출
+          resolve();
         },
         (error) => {
           console.error("❌ WebSocket connection failed", error);
@@ -48,59 +41,34 @@ class WebSocketManager {
     });
   }
 
-  async subscribe(destination, callback) {
+  subscribe(destination, callback) {
     if (!this.connected) {
-        console.warn("❌ subscribe 호출 시 WebSocket 연결 안됨 → 자동 연결 시도");
-        await this.connect();
-        return this.subscribe(destination, callback); // 재귀 호출 (다시 시도)
-      }
-    
-      if (this.subscriptions[destination]) {
-        console.log(`🔁 Already subscribed to ${destination}`);
-        return;
-      }
-    
-      const sub = this.stompClient.subscribe(destination, (message) => {
-        console.log("📨 Raw message received:", message);
-        if (message.body) {
-          try {
-            const parsed = JSON.parse(message.body);
-            callback(parsed);
-          } catch (e) {
-            console.error("❌ JSON 파싱 실패:", e, message.body);
-          }
+      console.warn("❌ WebSocket 연결 안됨 → 자동 연결 시도");
+      return this.connect().then(() => this._subscribe(destination, callback));
+    }
+    return this._subscribe(destination, callback);
+  }
+
+  _subscribe(destination, callback) {
+    if (this.subscriptions[destination]) {
+      console.log(`🔁 Already subscribed to ${destination}`);
+      return;
+    }
+
+    const sub = this.stompClient.subscribe(destination, (message) => {
+      console.log("📨 Raw message received:", message);
+      if (message.body) {
+        try {
+          const parsed = JSON.parse(message.body);
+          callback(parsed);
+        } catch (e) {
+          console.error("❌ JSON 파싱 실패:", e, message.body);
         }
-      });
-    
-      this.subscriptions[destination] = sub;
-      console.log(`✅ Successfully subscribed to ${destination}`);
-    }
-  async replaceSubscribe(destination, callback) {
-    // 먼저 구독이 이미 되어 있다면 해제
-    if (this.subscriptions[destination]) {
-      this.subscriptions[destination].unsubscribe();
-      delete this.subscriptions[destination];
-      console.log(`🔁 replaceSubscribe: 이전 구독 제거 → ${destination}`);
-    }
+      }
+    });
 
-    // 다시 구독
-    await this.subscribe(destination, callback);
-  }
-  unsubscribe(destination) {
-    if (this.subscriptions[destination]) {
-      this.subscriptions[destination].unsubscribe();
-      delete this.subscriptions[destination];
-      console.log(`🛑 Unsubscribed from ${destination}`);
-    }
-  }
-
-  send(destination, body) {
-    if (this.connected && this.stompClient) {
-      this.stompClient.send(destination, JSON.stringify(body), {
-        Authorization: `Bearer ${this.token}`,
-        "X-User-LoginId": this.loginId,
-      });
-    }
+    this.subscriptions[destination] = sub;
+    console.log(`✅ Successfully subscribed to ${destination}`);
   }
 
   disconnect() {
