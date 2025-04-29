@@ -310,9 +310,42 @@ export default {
         this.initEmptyData();
         
         // 에러 메시지 표시
-        this.noDataMessage = `${this.currentDate} 데이터가 없습니다.`;
+        if(this.type === 'DAY'){
+          this.noDataMessage = `${this.period} 데이터가 없습니다.`;
+        }
+        else if(this.type === 'WEEKAVG'){
+          console.log('피리오드',this.period);
+          const weekFormatted = this.convertDateToYearMonthWeek(this.currentDate);
+          this.noDataMessage = `${weekFormatted} 데이터가 없습니다.`;
+          this.period = weekFormatted;
+        }
+        else if(this.type === 'MONTHAVG'){
+          this.noDataMessage = `${this.period} 데이터가 없습니다.`;
+        }
       }
     },
+ //몇월 몇주차로 리턴
+    convertDateToYearMonthWeek(date1) {
+      const date = new Date(date1);
+  date.setDate(date.getDate() - 7); // 🔥 전주 월요일로 이동
+
+  // 첫 목요일 구하기
+  const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const firstDayWeekday = firstDayOfMonth.getDay(); // 0: 일 ~ 6: 토
+  const firstThursday = new Date(date.getFullYear(), date.getMonth(),
+    firstDayWeekday <= 4 ? 1 + (4 - firstDayWeekday) : 1 + (7 - firstDayWeekday) + 4
+  );
+
+  // 🔥 첫 목요일 기준으로 year, month 고정!
+  const fixedYear = firstThursday.getFullYear();
+  const fixedMonth = firstThursday.getMonth() + 1;
+
+  // 주차 계산
+  const diffDays = (date - firstThursday) / (1000 * 60 * 60 * 24);
+  const weekNumber = diffDays < 0 ? 1 : Math.floor(diffDays / 7) + 2;
+
+  return `${fixedYear}년 ${fixedMonth}월 ${weekNumber}주차`;
+            },
 
     // 데이터가 없을 때 기본 데이터 설정
     initEmptyData() {
