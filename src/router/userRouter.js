@@ -69,7 +69,7 @@ export const userRouter =[
 
     // 회원  건강정보 상세 추가
     {
-        path:'/silverpotion/userhealthadd',
+        path:'/silverpotion/userhealthinfodetail',
         name: 'UserInfoDetailAdd',
         component: UserInfoDetailAdd
     },

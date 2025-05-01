@@ -1,4 +1,4 @@
-<!-- 04.30 헬스 데이터 백업 페이지 (헬스점수 도입전) -->
+//5월 1일 헬스 데이터 점수불러오기도 잘됨
 <template>
     <div class="health-dashboard-v5">
       <div class="dashboard-header">
@@ -232,6 +232,90 @@
             </div>
           </div>
         </div>
+        
+    
+        <!-- 헬스 점수 섹션 - 버전 4 -->
+        <div class="health-score-container version-4" v-if="selectedScoreDesign === 4">
+          <div class="score-header-v4">
+            <h2>헬스 점수 리포트</h2>
+          </div>
+          
+          <div class="score-content-v4">
+            <!-- 상단 점수 카드 섹션 -->
+            <div class="score-card-hero">
+              <!-- 왼쪽: 설명 텍스트 -->
+              <div class="hero-content">
+                <div class="hero-title">종합 건강 점수</div>
+                <div class="hero-subtitle">{{ getHealthScoreStatus() }}</div>
+                <p class="score-description">
+                  {{ getHealthScoreDescription() }}
+                </p>
+              </div>
+              
+              <!-- 오른쪽: 원형 그래프 -->
+              <div class="hero-graphic">
+                <div class="score-ring">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" class="ring-bg" />
+                    <circle cx="50" cy="50" r="45" class="ring-value" :stroke-dasharray="`${healthScore * 2.83} 283`" />
+                  </svg>
+                  <div class="ring-content">
+                    <div class="ring-score">{{ healthScore }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="score-detail-cards">
+              <div class="detail-card activity-card">
+                <div class="card-inner">
+                  <div class="card-header">
+                    <div class="card-icon">
+                      <v-icon color="green">mdi-run</v-icon>
+                    </div>
+                    <div class="card-title">활동 점수</div>
+                  </div>
+                  <div class="card-score">{{ activityScore }}</div>
+                  <div class="card-bar">
+                    <div class="card-bar-fill activity-fill" :style="{ width: activityScore + '%' }"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="detail-card physical-card">
+                <div class="card-inner">
+                  <div class="card-header">
+                    <div class="card-icon">
+                      <v-icon color="blue">mdi-heart-pulse</v-icon>
+                    </div>
+                    <div class="card-title">신체상태 점수</div>
+                  </div>
+                  <div class="card-score">{{ physicalScore }}</div>
+                  <div class="card-bar">
+                    <div class="card-bar-fill physical-fill" :style="{ width: physicalScore + '%' }"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="detail-card lifestyle-card">
+                <div class="card-inner">
+                  <div class="card-header">
+                    <div class="card-icon">
+                      <v-icon color="amber">mdi-food-apple</v-icon>
+                    </div>
+                    <div class="card-title">생활습관 점수</div>
+                  </div>
+                  <div class="card-score">{{ lifestyleScore }}</div>
+                  <div class="card-bar">
+                    <div class="card-bar-fill lifestyle-fill" :style="{ width: lifestyleScore + '%' }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 여기까지가 헬스점수 섹션 -->
       </div>
     </div>
     <v-dialog v-model="showErrorModal" max-width="400">
@@ -342,7 +426,13 @@
         showUserProfileModal: false,
         // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
         parentType: 'healthData',
-        isRequestPending: false // 요청 중복 방지 플래그 추가
+        isRequestPending: false, // 요청 중복 방지 플래그 추가
+       ////
+        selectedScoreDesign: 4,
+        healthScore: 0,
+        activityScore: 0,
+        physicalScore: 0,
+        lifestyleScore: 0
       }
     },
   
@@ -360,6 +450,9 @@
       
       // 탭 변경 이벤트 리스너 등록
       window.addEventListener('tab-changed', this.handleTabChange);
+      
+      //// 더미 헬스 점수 데이터 생성
+      this.loadHealthScore();
     },
     
     beforeUnmount() {
@@ -371,6 +464,7 @@
       loginId() {
         this.fetchDataOnce();
         this.loadTargetCalory();
+        this.loadHealthScore();
       },
       type(newVal, oldVal) {
         // 빈 값이거나 초기화 중인 경우 처리하지 않음
@@ -381,6 +475,7 @@
         // 타입이 변경되면 그에 맞는 초기 날짜 설정
         this.setInitialDate();
         this.fetchDataOnce();
+        this.loadHealthScore();
       }
     },
   
@@ -574,6 +669,12 @@
         }
         
       },
+      resetHealthScore(){
+        this.healthScore = 0;
+        this.activityScore = 0;
+        this.physicalScore = 0;
+        this.lifestyleScore = 0;
+      },
       handleDateChange(dateRange) {
         console.log('선택된 날짜:', dateRange);
         
@@ -582,10 +683,12 @@
           this.currentDate = dateRange;
           this.showDatePicker = false;
           this.fetchDataOnce();
+          this.loadHealthScore();
         } else {
           console.error('유효하지 않은 날짜 형식:', dateRange);
           this.noDataMessage = '유효하지 않은 날짜 형식입니다.';
           this.resetData();
+          this.resetHealthScore();
         }
       },
   
@@ -693,6 +796,61 @@
         }
       },
     
+      //// 헬스 점수 더미 데이터 생성
+      async loadHealthScore() {
+        try{
+        const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/healthscore/create`, {
+          "userId": this.loginId,
+          "type": this.type,
+          "date": this.currentDate
+        });
+  
+        console.log('헬스 점수 데이터 가져오기', response);
+  
+        this.healthScore = response.data.result.totalScore;
+        this.activityScore = response.data.result.activityScore;
+        this.physicalScore = response.data.result.bodyScore;
+        this.lifestyleScore = response.data.result.habitScore;
+      }
+      catch(error){
+        console.error('헬스 점수 데이터 가져오기 실패:', error);
+        this.resetHealthScore();
+      }
+      
+  
+      },
+      
+      // 헬스 점수 상태 반환
+      getHealthScoreStatus() {
+        if (this.healthScore >= 90) {
+          return '최상';
+        } else if (this.healthScore >= 80) {
+          return '좋음';
+        } else if (this.healthScore >= 70) {
+          return '양호';
+        } else if (this.healthScore >= 60) {
+          return '주의';
+        } else {
+          return '관리필요';
+        }
+      },
+      
+      // 헬스 점수 설명 반환
+      getHealthScoreDescription() {
+        if (this.healthScore >= 90) {
+          return '매우 건강한 상태입니다. 현재 습관을 계속 유지하세요!';
+        } else if (this.healthScore >= 80) {
+          return '건강한 상태입니다. 조금만 더 신경써보세요!';
+        } else if (this.healthScore >= 70) {
+          return '양호한 상태입니다. 생활 습관 개선이 필요해요.';
+        } else if (this.healthScore >= 60) {
+          return '주의가 필요합니다. 운동량을 늘려보세요.';
+        } else {
+          return '건강 관리가 필요합니다. 전문가와 상담하세요.';
+        }
+      },
+      
+      ////
     },
    
     
@@ -1293,6 +1451,68 @@
   }
   
   
+  @media (max-width: 768px) {
+    .version-1 .score-content-v1 {
+      flex-direction: column;
+    }
+    
+    .version-2 .sub-score-card {
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .version-2 .card-icon {
+      margin: 0 auto 15px auto;
+    }
+    
+    .version-3 .sub-gauges {
+      flex-direction: column;
+    }
+    
+    .version-4 .score-card-hero {
+      flex-direction: column;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .version-4 .hero-content {
+      order: 2;
+      margin-top: 15px;
+    }
+    
+    .version-4 .hero-graphic {
+      order: 1;
+      margin: 0 auto;
+    }
+    
+    .version-4 .score-description {
+      text-align: center;
+      margin: 0 auto;
+    }
+    
+    .version-4 .score-detail-cards {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    
+    .version-4 .card-inner {
+      padding: 15px;
+    }
+    
+    .version-4 .card-score {
+      font-size: 1.8rem;
+    }
+    
+    .version-4 .card-title {
+      font-size: 0.85rem;
+    }
+    
+    .version-5 .score-card-hero {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+  
   @media (max-width: 480px) {
     .title-section h1 {
       font-size: 1.3rem;
@@ -1423,8 +1643,352 @@
     margin-bottom: 20px;
     width: 100%;
   }
+  /* //// */
+  /* 헬스 점수 공통 스타일 */
+  .health-score-container {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
   
+  .health-score-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+  
+  
+  
+  /* 버전 4 스타일  */
+  .version-4 {
+    background: #f9f9f9;
+    color: rgb(0, 0, 0);
+  }
+  
+  .version-4 .score-header-v4 {
+    margin-bottom: 30px;
+  }
+  
+  .version-4 .score-header-v4 h1 {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: rgb(0, 0, 0);
+  }
+  
+  .version-4 .score-content-v4 {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .version-4 .score-center-ring {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .version-4 .score-ring {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin-bottom: 20px;
+  }
+  
+  .version-4 .score-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  
+  .version-4 .ring-bg {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.1);
+    stroke-width: 8;
+  }
+  .version-4 .ring-value {
+    fill: none;
+    stroke: #00d4ff;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s ease;
+  }
+  
+  .version-4 .ring-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .version-4 .ring-score {
+    font-size: 3rem;
+    font-weight: 700;
+    color: rgb(0, 0, 0);
+  }
+  
+  .version-4 .ring-label {
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.7);
+  }
+  
+  .version-4 .ring-status {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-top: 5px;
+  }
+  
+  .version-4 .score-description {
+    text-align: center;
+    font-size: 1.1rem;
+    color: rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+    max-width: 500px;
+  }
+  
+  .version-4 .score-detail-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 항상 3개의 열을 표시 */
+    gap: 20px;
+    width: 100%;
+  }
+  
+  .version-4 .detail-card {
+    border-radius: 15px;
+    overflow: hidden;
+    min-width: 0; /* 최소 너비 제한 제거 */
+  }
+  
+  .version-4 .card-inner {
+    background: white;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.01);
+  }
+  
+  .version-4 .card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .version-4 .card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+  }
+  
+  .version-4 .activity-card .card-icon {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+  }
+  
+  .version-4 .physical-card .card-icon {
+    background: rgba(33, 150, 243, 0.15);
+    color: #2196F3;
+  }
+  
+  .version-4 .lifestyle-card .card-icon {
+    background: rgba(255, 193, 7, 0.15);
+    color: #FFC107;
+  }
+  
+  .version-4 .card-title {
+    font-size: 0.9rem;
+    color: #666;
+  }
+  
+  .version-4 .card-score {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 10px 0 20px 0;
+  }
+  
+  .version-4 .card-bar {
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: auto;
+  }
+  
+  .version-4 .card-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6a11cb, #2575fc);
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+  
+  .version-4 .activity-card .card-bar-fill {
+    background: linear-gradient(90deg, #43a047, #66bb6a);
+  }
+  
+  .version-4 .physical-card .card-bar-fill {
+    background: linear-gradient(90deg, #1976d2, #42a5f5);
+  }
+  
+  .version-4 .lifestyle-card .card-bar-fill {
+    background: linear-gradient(90deg, #ffa000, #ffca28);
+  }
+  
+  
+  
+  /* 반응형 스타일 */
+  @media (max-width: 768px) {
+    .version-1 .score-content-v1 {
+      flex-direction: column;
+    }
+    
+    .version-2 .sub-score-card {
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .version-2 .card-icon {
+      margin: 0 auto 15px auto;
+    }
+    
+    .version-3 .sub-gauges {
+      flex-direction: column;
+    }
+    
+    .version-4 .score-card-hero {
+      flex-direction: column;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .version-4 .hero-content {
+      order: 2;
+      margin-top: 15px;
+    }
+    
+    .version-4 .hero-graphic {
+      order: 1;
+      margin: 0 auto;
+    }
+    
+    .version-4 .score-description {
+      text-align: center;
+      margin: 0 auto;
+    }
+    
+    .version-4 .score-detail-cards {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    
+    .version-4 .card-inner {
+      padding: 15px;
+    }
+    
+    .version-4 .card-score {
+      font-size: 1.8rem;
+    }
+    
+    .version-4 .card-title {
+      font-size: 0.85rem;
+    }
+    
+    .version-5 .score-card-hero {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .version-4 .score-detail-cards {
+      grid-template-columns: 1fr !important;
+      gap: 15px;
+    }
+    
+    .version-4 .hero-graphic {
+      width: 150px;
+      height: 150px;
+    }
+    
+    .version-4 .ring-score {
+      font-size: 2.5rem;
+    }
+  }
+  
+  .version-4 .score-card-hero {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+  }
+  
+  .version-4 .hero-content {
+    flex: 1;
+    min-width: 250px;
+  }
+  
+  .version-4 .hero-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .version-4 .hero-subtitle {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #00c2ff;
+    margin-bottom: 15px;
+  }
+  
+  .version-4 .score-description {
+    font-size: 1rem;
+    color: #666;
+    line-height: 1.5;
+    max-width: 500px;
+  }
+  
+  .version-4 .hero-graphic {
+    width: 180px;
+    height: 180px;
+    position: relative;
+  }
+  
+  .version-4 .detail-card {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    background: white;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .version-4 .detail-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
   </style>
+  
   
   
   
