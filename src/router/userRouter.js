@@ -8,6 +8,7 @@ import BuyItem from "@/views/BuyItem.vue";
 import VisualChat from "@/views/visualChat.vue";
 import MyPage from "@/views/MyPage.vue";
 import MyPageUpdate from "@/views/MyPageUpdate.vue";
+import UserInfoDetailAdd from "@/views/Health/UserInfoDetailAdd.vue";
 
 export const userRouter =[
 {
@@ -64,6 +65,13 @@ export const userRouter =[
         path:'/silverpotion/mypageupdate',
         name: 'MyPageUpdate',
         component: MyPageUpdate
+    },
+
+    // 회원  건강정보 상세 추가
+    {
+        path:'/silverpotion/userhealthinfodetail',
+        name: 'UserInfoDetailAdd',
+        component: UserInfoDetailAdd
     },
 
 

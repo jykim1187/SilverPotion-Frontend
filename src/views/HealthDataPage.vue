@@ -1,5 +1,18 @@
 <template>
   <div class="health-data-page">
+    <!-- 내 건강프로필 작성하기 버튼 -->
+    <div class="health-profile-button-container">
+      <v-btn
+        class="health-profile-btn"
+        @click="goToHealthProfile"
+        elevation="2"
+        color="warning"
+      >
+        <v-icon left>mdi-file-document-edit</v-icon>
+        <span class="profile-btn-text">건강프로필</span>
+      </v-btn>
+    </div>
+    
     <!-- 뷰 전환 버튼을 최상단으로 이동 -->
     <div class="view-toggle-wrapper">
       <div class="toggle-buttons">
@@ -131,7 +144,8 @@ export default {
       selectedUserName: localStorage.getItem('userName'),
       selectedLongId: null,
       showHealthData: true, // 기본적으로 건강 데이터 화면 표시
-      isFirstLoad: true
+      isFirstLoad: true,
+      selectedProfileBtn: 4 // 기본 선택된 프로필 버튼 (4번 버전 고정)
     }
   },
  async mounted() {
@@ -246,6 +260,9 @@ export default {
     },
   },
   methods: {
+    goToHealthProfile() {
+      this.$router.push('/silverpotion/userhealthinfodetail');
+    },
     selectMyData() {
       this.selectedUser = this.me;
       this.selectedUserName = localStorage.getItem('userName') || '';
@@ -266,7 +283,7 @@ export default {
     },
     handleModalChange2(val) {
       this.showLinkRequestModal2 = val;
-    }
+    },
   },
 }
 </script>
@@ -278,9 +295,54 @@ export default {
   margin: 0 auto;
   background-color: #f5f7fa;
   min-height: 100vh;
+  position: relative;
+}
+
+/* 건강 프로필 버튼 컨테이너 */
+.health-profile-button-container {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.health-profile-btn {
+  background: linear-gradient(135deg, #00c2ff, #12c0f5);
+  color: white;
+  transition: all 0.3s ease;
+  border-radius: 20px;
+  padding: 0 16px;
+  height: 36px;
+  text-transform: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 3px 5px rgba(4, 183, 238, 0.3);
+}
+
+/* 모든 버튼 공통 hover 효과 */
+.health-profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(4, 183, 238, 0.4);
+}
+
+/* 모바일 설정 - 작은 화면에서는 아이콘만 표시 */
+@media (max-width: 768px) {
+  .profile-btn-text {
+    display: none;
+  }
+  
+  .health-profile-btn {
+    min-width: 36px !important;
+    width: 36px;
+    padding: 0;
+    border-radius: 50%;
+  }
 }
 
 .view-toggle-wrapper {
+  margin-top: 40px; /* 프로필 버튼 공간 확보 */
   margin-bottom: 20px;
   display: flex;
   justify-content: center;
