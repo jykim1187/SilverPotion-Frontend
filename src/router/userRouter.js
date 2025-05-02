@@ -1,7 +1,6 @@
 import LoginPage from "@/views/LoginPage.vue";
 import MainHome from "@/views/MainHome.vue";
 import UserCreate from "@/views/UserCreate.vue";
-import UserList from "@/views/UserList.vue";
 import HealthData from "@/components/HealthData.vue";
 import HealthDataPage from "@/views/HealthDataPage.vue";
 import BuyItem from "@/views/BuyItem.vue";
@@ -9,80 +8,77 @@ import VisualChat from "@/views/visualChat.vue";
 import MyPage from "@/views/MyPage.vue";
 import MyPageUpdate from "@/views/MyPageUpdate.vue";
 import UserInfoDetailAdd from "@/views/Health/UserInfoDetailAdd.vue";
+import AdminPage from "@/views/admin/AdminDashboard.vue";
+import UserDetail from '@/views/admin/user/userDetail.vue';
+import UserList from '@/views/admin/user/adminUserList.vue';
 
-export const userRouter =[
-{
-        path:'/',
+export const userRouter = [
+    {
+        path: '/',
         name: 'MainHome',
         component: MainHome
     },
     {
-        path:'/silverpotion/user/create',
+        path: '/silverpotion/user/create',
         name: 'UserCreate',
         component: UserCreate
     },
     {
-        path:'/silverpotion/user/login',
+        path: '/silverpotion/user/login',
         name: 'LoginPage',
         component: LoginPage
     },
-    
     {
-        path:'/silverpotion/user/list',
-        name: 'UserList',
-        component: UserList
-    }, 
-     {
-        path:'/silverpotion/healthdata',
+        path: '/silverpotion/healthdata',
         name: 'HealthData',
         component: HealthData
     },
     {
-        path:'/silverpotion/healthdatapage',
+        path: '/silverpotion/healthdatapage',
         name: 'HealthDataPage',
         component: HealthDataPage
     },
-    // 힐링포션 구매  페이지
     {
-        path:'/silverpotion/buyitem',
+        path: '/silverpotion/buyitem',
         name: 'BuyItem',
         component: BuyItem
     },
-    // 화상통화 페이지
     {
-        path:'/silverpotion/visualchat/:loginId',
+        path: '/silverpotion/visualchat/:loginId',
         name: 'VisualChat',
         component: VisualChat
     },
-    // 마이페이지
     {
-        path:'/silverpotion/mypage',
+        path: '/silverpotion/mypage',
         name: 'MyPage',
         component: MyPage
     },
-    // 마이페이지 수정
     {
-        path:'/silverpotion/mypageupdate',
+        path: '/silverpotion/mypageupdate',
         name: 'MyPageUpdate',
         component: MyPageUpdate
     },
-
-    // 회원  건강정보 상세 추가
     {
-        path:'/silverpotion/userhealthinfodetail',
+        path: '/silverpotion/userhealthinfodetail',
         name: 'UserInfoDetailAdd',
         component: UserInfoDetailAdd
     },
-
-
-
-
-
-
-
-
-
-
-
-
-]
+    // 관리자 페이지
+    {
+        path: '/silverpotion/admin',
+        name: 'AdminPage',
+        component: AdminPage
+    },
+    // 관리자 - 유저 목록
+    {
+        path: '/silverpotion/admin/users',
+        name: 'userList',
+        component: UserList
+    },
+    // 관리자 - 유저 상세
+    {
+        path: '/silverpotion/admin/detail/:userId',
+        name: 'UserDetail',
+        component: UserDetail
+    }
+];

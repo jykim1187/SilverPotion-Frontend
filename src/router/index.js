@@ -9,11 +9,12 @@ import VoteDetail from '@/components/VoteDetail.vue'
 import FreePostCreate from '@/views/FreePostCreate.vue'
 import NoticePostCreate from '@/views/NoticePostCreate.vue'
 import VotePostCreate from '@/views/VotePostCreate.vue'
-
+import { adminRouter } from "./adminRouter";
 const routes = [
     ...chatRouter,
     ...userRouter,
     ...gatheringRouter,
+    ...adminRouter,
     
     {
         path: '/oauth/google/redirect',
@@ -82,6 +83,18 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes
+});
+
+// Navigation guard to protect admin routes
+router.beforeEach((to, from, next) => {
+    if (to.path.startsWith('/silverpotion/admin')) {
+        const role = localStorage.getItem('role');
+        if (role !== 'ADMIN') {
+            next('/silverpotion/admins');
+            return;
+        }
+    }
+    next();
 });
 
 export default router;
