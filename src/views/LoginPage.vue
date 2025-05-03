@@ -132,22 +132,29 @@ export default {
           `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/login`,
           loginData
         )
-        console.log(response)
-        const token = response.data.result.token
-        const refreshToken = response.data.result.refreshToken
+        console.log('Login Response:', response.data);
+        
+        const token = response.data.result.token;
+        const refreshToken = response.data.result.refreshToken;
+        const role = response.data.result.role;
+        const adminRole = response.data.result.adminRole;
 
         // 저장
-        localStorage.setItem("token", token)
-        localStorage.setItem("refreshToken", refreshToken)
-        // 디코딩해서 로그인 ID와 권한 추출 (선택)
-        // const role = jwtDecode(token).role
-        // const loginId = jwtDecode(token).sub
-        localStorage.setItem("role", response.data.result.role)
-        localStorage.setItem("loginId", response.data.result.id)
-        localStorage.setItem("userName", response.data.result.name)
-        localStorage.setItem("nickName", response.data.result.nickName)
-        localStorage.setItem("profileImage", response.data.result.profileImage)
-        localStorage.setItem("userId", response.data.result.userId)
+        localStorage.setItem("token", token);
+        localStorage.setItem("refreshToken", refreshToken);
+        localStorage.setItem("role", role);
+        localStorage.setItem("adminRole", adminRole);
+        localStorage.setItem("loginId", response.data.result.id);
+        localStorage.setItem("userName", response.data.result.name);
+        localStorage.setItem("nickName", response.data.result.nickName);
+        localStorage.setItem("profileImage", response.data.result.profileImage);
+        localStorage.setItem("userId", response.data.result.userId);
+
+        // 저장된 값 확인
+        console.log('Stored Token:', localStorage.getItem('token'));
+        console.log('Stored Role:', localStorage.getItem('role'));
+        console.log('Stored AdminRole:', localStorage.getItem('adminRole'));
+
         // 리디렉션
         console.log("Login 성공! now routing to /");
         WebSocketManager.token = token;

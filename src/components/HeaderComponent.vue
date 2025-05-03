@@ -69,6 +69,13 @@
                                             </v-btn>
                                         </v-list-item-title>
                                     </v-list-item>
+                                    <v-list-item v-if="isAdmin">
+                                        <v-list-item-title>
+                                            <v-btn :to="{path:'/silverpotion/admin'}" variant="text" block class="justify-start">
+                                                <v-icon start>mdi-shield-account</v-icon> 관리자 페이지
+                                            </v-btn>
+                                        </v-list-item-title>
+                                    </v-list-item>
                                     <v-divider></v-divider>
                                     <v-list-item>
                                         <v-list-item-title>
@@ -112,6 +119,7 @@ export default {
   data() {
     return {
       isLogin: false,
+      isAdmin: false,
       hasNotifications: false,
       profileMenu: false,
       notificationsMenu: false,
@@ -135,6 +143,7 @@ export default {
   methods: {
     checkLogin() {
       this.isLogin = !!localStorage.getItem('token');
+      this.isAdmin = localStorage.getItem('role') === 'ADMIN';
       if (this.isLogin) {
         this.fetchUserProfile();
       }
