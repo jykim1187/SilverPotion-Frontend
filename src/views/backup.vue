@@ -1,397 +1,323 @@
-//5월 1일 헬스 데이터 점수불러오기도 잘됨
 <template>
-    <div class="health-dashboard-v5">
-      <div class="dashboard-header">
-        <div class="title-section">
-          <div class="user-profile" @click="showUserProfile">
-            <img :src="profileImage" class="profile-image" alt="User Profile">
-          </div>
-          <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 모니터링</h1>
-        </div>
-        <!-- 날짜 선택 -->
-        <div class="date-controls">
-          <div class="date-picker-section">
-            <v-icon @click="toggleDatePicker" class="calendar-icon">mdi-calendar</v-icon>
-            <div class="date-picker-container" v-show="showDatePicker">
-              <DatePickerRange :type="type" @handleDateChange="handleDateChange" :isHealthData="true" />
-            </div>
-          </div>
-          <div class="date-section">
-            <v-chip outlined color="black" class="date-chip">
-              {{ myData.period }}
-            </v-chip>
-          </div>
-        </div>
-      </div>
-      
-      <div class="dashboard-content">
-        <!-- 데이터 없음 메시지 -->
-        <div v-if="noDataMessage" class="no-data-message">
-          <v-alert type="info" text>
-            {{ noDataMessage }}
-          </v-alert>
-        </div>
-  
-        <!-- 주요 건강 지표 카드 -->
-        <div class="stats-grid">
-          <!-- 걸음 수 -->
-          <div class="stats-card steps">
-            <div class="card-top">
-              <div class="card-badge">
-                <v-icon>mdi-shoe-print</v-icon>
-              </div>
-              <div class="stat-value">
-                <div class="value-number">{{ myData.step }}</div>
-                <div class="value-label">걸음</div>
-              </div>
-            </div>
-            <div class="card-bottom">
-              <div class="stat-info">
-                <div class="distance-info">
-                  <div class="distance-value">{{ (myData.distance / 1000).toFixed(2) }} <span class="distance-unit">km</span></div>
-                  <div class="distance-label">걸은 거리</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 심장 박동 -->
-          <div class="stats-card heart-rate">
-            <div class="card-top">
-              <div class="card-badge">
-                <v-icon>mdi-heart-pulse</v-icon>
-              </div>
-              <div class="stat-value">
-                <div class="value-number">{{ myData.heartbeat }}</div>
-                <div class="value-label">BPM</div>
-              </div>
-            </div>
-            <div class="card-bottom">
-              <div class="stat-title">
-                <h3>심장 박동</h3>
-                <span class="stat-subtitle" :class="getHeartRateStatusClass(myData.heartbeat)">
-                  {{ getHeartRateStatus(myData.heartbeat) }}
-                </span>
-              </div>
-              <div class="stat-chart heartbeat-animation">
-                <svg viewBox="0 0 120 30" class="heartbeat">
-                   <polyline 
-                    points="0,20 5,20 10,10 15,30 20,10 25,20 30,20 35,10 40,20 45,20 50,10 55,20 60,20 65,10 70,20 75,20 80,10 85,20 90,20 95,10 100,20 105,20 110,10 115,20 120,20" 
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 소모 칼로리 -->
-          <div class="stats-card calories" @click="showCaloryTargetModal = true">
-            <div class="card-top">
-              <div class="card-badge">
-                <v-icon>mdi-fire</v-icon>
-              </div>
-              <div class="stat-value">
-                <div class="value-number">{{ myData.calory }}</div>
-                <div class="value-label">칼로리</div>
-              </div>
-            </div>
-            <div class="card-bottom">
-              <div class="stat-title">
-                <h3>소모 칼로리</h3>
-                <span class="stat-subtitle">목표 {{ targetCalory }} kcal</span>
-              </div>
-              <div class="stat-chart">
-                <div class="circular-progress">
-                  <svg viewBox="0 0 36 36">
-                    <path
-                      class="circle-bg"
-                      d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      class="circle calories-circle"
-                      :stroke-dasharray="`${(myData.calory / targetCalory) * 100}, 100`"
-                      d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                  </svg>
-                  <div class="percentage">{{ Math.round((myData.calory / targetCalory) * 100) }}%</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 수면 데이터 -->
-        <div class="sleep-container">
-          <div class="sleep-header">
-            <h2><v-icon left>mdi-moon-waning-crescent</v-icon> 수면 분석</h2>
-          </div>
-          
-          <div class="sleep-content">
-            <div class="sleep-overview">
-              <div class="sleep-total">
-                <div class="total-time-circle">
-                  <svg viewBox="0 0 160 160">
-                    <circle class="sleep-bg" cx="80" cy="80" r="70" />
-                    <circle 
-                      class="sleep-deep" 
-                      cx="80" 
-                      cy="80" 
-                      r="70" 
-                      :stroke-dasharray="`${(myData.deepSleepMinutes / myData.totalSleepMinutes) * 439.6}, 439.6`"
-                      stroke-dashoffset="0"
-                    />
-                    <circle 
-                      class="sleep-rem" 
-                      cx="80" 
-                      cy="80" 
-                      r="70" 
-                      :stroke-dasharray="`${(myData.remSleepMinutes / myData.totalSleepMinutes) * 439.6}, 439.6`"
-                      :stroke-dashoffset="-1 * (myData.deepSleepMinutes / myData.totalSleepMinutes) * 439.6"
-                    />
-                    <circle 
-                      class="sleep-light" 
-                      cx="80" 
-                      cy="80" 
-                      r="70" 
-                      :stroke-dasharray="`${(myData.lightSleepMinutes / myData.totalSleepMinutes) * 439.6}, 439.6`"
-                      :stroke-dashoffset="-1 * ((myData.deepSleepMinutes + myData.remSleepMinutes) / myData.totalSleepMinutes) * 439.6"
-                    />
-                  </svg>
-                  <div class="sleep-total-text">
-                    <div class="total-hours">{{Math.floor(myData.totalSleepMinutes / 60)}}<span class="time-unit">시간</span> {{myData.totalSleepMinutes % 60}}<span class="time-unit">분</span></div>
-                  </div>
-                </div>
-                <div class="sleep-status">
-                  <div class="status-badge" :class="getSleepStatusClass(myData.totalSleepMinutes)">
-                    {{ getSleepStatus(myData.totalSleepMinutes) }}
-                  </div>
-                  <div class="status-text">
-                    {{ getSleepDescription(myData.totalSleepMinutes) }}
-                  </div>
-                </div>
-              </div>
-              
-              <div class="sleep-details">
-                <div class="sleep-metrics">
-                  <div class="sleep-metric-item">
-                    <div class="metric-header">
-                      <v-icon color="deep-purple" class="mr-2">mdi-sleep</v-icon>
-                      <span class="metric-title">깊은 수면</span>
-                    </div>
-                    <div class="metric-value-wrapper">
-                      <span class="metric-value">{{Math.floor(myData.deepSleepMinutes / 60)}}시간 {{myData.deepSleepMinutes % 60}}분</span>
-                      <span class="metric-percent">{{ Math.round((myData.deepSleepMinutes / myData.totalSleepMinutes) * 100) }}%</span>
-                    </div>
-                    <v-progress-linear
-                      :value="(myData.deepSleepMinutes / myData.totalSleepMinutes) * 100"
-                      height="8"
-                      rounded
-                      color="deep-purple"
-                      background-color="rgba(0, 0, 0, 0.1)"
-                    ></v-progress-linear>
-                  </div>
-                  <div class="sleep-metric-item">
-                    <div class="metric-header">
-                      <v-icon color="indigo" class="mr-2">mdi-eye</v-icon>
-                      <span class="metric-title">REM 수면</span>
-                    </div>
-                    <div class="metric-value-wrapper">
-                      <span class="metric-value">{{Math.floor(myData.remSleepMinutes / 60)}}시간 {{myData.remSleepMinutes % 60}}분</span>
-                      <span class="metric-percent">{{ Math.round((myData.remSleepMinutes / myData.totalSleepMinutes) * 100) }}%</span>
-                    </div>
-                    <v-progress-linear
-                      :value="(myData.remSleepMinutes / myData.totalSleepMinutes) * 100"
-                      height="8"
-                      rounded
-                      color="indigo"
-                      background-color="rgba(0, 0, 0, 0.1)"
-                    ></v-progress-linear>
-                  </div>
-                  <div class="sleep-metric-item">
-                    <div class="metric-header">
-                      <v-icon color="blue lighten-1" class="mr-2">mdi-weather-night</v-icon>
-                      <span class="metric-title">얕은 수면</span>
-                    </div>
-                    <div class="metric-value-wrapper">
-                      <span class="metric-value">{{Math.floor(myData.lightSleepMinutes / 60)}}시간 {{myData.lightSleepMinutes % 60}}분</span>
-                      <span class="metric-percent">{{ Math.round((myData.lightSleepMinutes / myData.totalSleepMinutes) * 100) }}%</span>
-                    </div>
-                    <v-progress-linear
-                      :value="(myData.lightSleepMinutes / myData.totalSleepMinutes) * 100"
-                      height="8"
-                      rounded
-                      color="blue lighten-1"
-                      background-color="rgba(0, 0, 0, 0.1)"
-                    ></v-progress-linear>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
+  <div class="health-data-page">
+    <!-- 내 건강프로필 작성하기 버튼 -->
+    <div class="health-profile-button-container">
+      <v-btn
+        class="health-profile-btn"
+        @click="goToHealthProfile"
+        elevation="2"
+        color="warning"
+      >
+        <v-icon left>mdi-file-document-edit</v-icon>
+        <span class="profile-btn-text">건강프로필</span>
+      </v-btn>
+    </div>
     
-        <!-- 헬스 점수 섹션 - 버전 4 -->
-        <div class="health-score-container version-4" v-if="selectedScoreDesign === 4">
-          <div class="score-header-v4">
-            <h2>헬스 점수 리포트</h2>
-          </div>
-          
-          <div class="score-content-v4">
-            <!-- 상단 점수 카드 섹션 -->
-            <div class="score-card-hero">
-              <!-- 왼쪽: 설명 텍스트 -->
-              <div class="hero-content">
-                <div class="hero-title">종합 건강 점수</div>
-                <div class="hero-subtitle">{{ getHealthScoreStatus() }}</div>
-                <p class="score-description">
-                  {{ getHealthScoreDescription() }}
-                </p>
-              </div>
-              
-              <!-- 오른쪽: 원형 그래프 -->
-              <div class="hero-graphic">
-                <div class="score-ring">
-                  <svg viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" class="ring-bg" />
-                    <circle cx="50" cy="50" r="45" class="ring-value" :stroke-dasharray="`${healthScore * 2.83} 283`" />
-                  </svg>
-                  <div class="ring-content">
-                    <div class="ring-score">{{ healthScore }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="score-detail-cards">
-              <div class="detail-card activity-card">
-                <div class="card-inner">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <v-icon color="green">mdi-run</v-icon>
-                    </div>
-                    <div class="card-title">활동 점수</div>
-                  </div>
-                  <div class="card-score">{{ activityScore }}</div>
-                  <div class="card-bar">
-                    <div class="card-bar-fill activity-fill" :style="{ width: activityScore + '%' }"></div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="detail-card physical-card">
-                <div class="card-inner">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <v-icon color="blue">mdi-heart-pulse</v-icon>
-                    </div>
-                    <div class="card-title">신체상태 점수</div>
-                  </div>
-                  <div class="card-score">{{ physicalScore }}</div>
-                  <div class="card-bar">
-                    <div class="card-bar-fill physical-fill" :style="{ width: physicalScore + '%' }"></div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="detail-card lifestyle-card">
-                <div class="card-inner">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <v-icon color="amber">mdi-food-apple</v-icon>
-                    </div>
-                    <div class="card-title">생활습관 점수</div>
-                  </div>
-                  <div class="card-score">{{ lifestyleScore }}</div>
-                  <div class="card-bar">
-                    <div class="card-bar-fill lifestyle-fill" :style="{ width: lifestyleScore + '%' }"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 여기까지가 헬스점수 섹션 -->
+    <!-- 뷰 전환 버튼을 최상단으로 이동 -->
+    <div class="view-toggle-wrapper">
+      <div class="toggle-buttons">
+        <button 
+          class="modern-tab-button" 
+          :class="{ active: showHealthData }"
+          @click="showHealthData = true">
+          <v-icon left>mdi-chart-line</v-icon>
+          건강 데이터
+        </button>
+        <button 
+          class="modern-tab-button" 
+          :class="{ active: !showHealthData }"
+          @click="showHealthData = false">
+          <v-icon left>mdi-file-document-outline</v-icon>
+          건강 리포트
+        </button>
       </div>
     </div>
-    <v-dialog v-model="showErrorModal" max-width="400">
-      <v-card>
-        <v-card-title class="headline">오류 발생</v-card-title>
-        <v-card-text>데이터가 존재하지 않습니다.</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="primary" text @click="showErrorModal = false">닫기</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+
+    <div class="dependents-toggle-section">
+      <div class="me-section">
+        <v-btn small class="me-btn" :class="{ active: selectedUser === me }" @click="selectMyData">내 데이터</v-btn>
+      </div>
+      
+      <div class="lists-container">
+        <!-- 피보호자 목록 섹션 - 항상 표시 -->
+        <div class="list-section dependents-section">
+          <div class="list-header">
+            <v-icon small color="primary" class="mr-1">mdi-account-child</v-icon>
+            <span>피보호자</span>
+          </div>
+          <div class="list-content">
+            <div v-if="dependents.length === 0" class="empty-list-message">
+              피보호자가 없습니다
+            </div>
+            <v-btn 
+              v-for="dependent in dependents" 
+              :key="dependent.userId" 
+              small 
+              class="dependent-btn" 
+              :class="{ active: selectedUser === dependent.userId }"
+              @click="selectdependent(dependent)">
+              {{ dependent.name }}
+            </v-btn>
+            <v-btn small class="add-btn" icon @click="showLinkRequestModal = true">
+              <v-icon small>mdi-plus</v-icon>
+            </v-btn>
+          </div>
+        </div>
+        
+        <!-- 보호자 목록 섹션 - 항상 표시 -->
+        <div class="list-section guardians-section">
+          <div class="list-header">
+            <v-icon small color="primary" class="mr-1">mdi-account-tie</v-icon>
+            <span>보호자</span>
+          </div>
+          <div class="list-content">
+            <div v-if="protectors.length === 0" class="empty-list-message">
+              보호자가 없습니다
+            </div>
+            <v-btn 
+              v-for="protector in protectors" 
+              :key="protector.userId" 
+              small 
+              class="guardian-btn" 
+              :class="{ active: selectedUser === protector.userId }"
+              @click="selectProtector(protector)">
+              {{ protector.name }}
+            </v-btn>
+            <v-btn small class="add-btn" icon @click="showLinkRequestModal2 = true">
+              <v-icon small>mdi-plus</v-icon>
+            </v-btn>
+          </div>
+        </div>
+      </div>
+    </div>
     
-    <!-- 목표 칼로리 설정 다이얼로그 -->
-    <v-dialog v-model="showCaloryTargetModal" max-width="400">
-      <v-card>
-        <v-card-title class="headline">소모 칼로리 목표 설정</v-card-title>
-        <v-card-text>
-          <v-text-field
-            v-model="newTargetCalory"
-            label="목표 칼로리 (kcal)"
-            type="number"
-            :rules="[v => !!v || '목표 칼로리를 입력해주세요', v => v > 0 || '0보다 큰 값을 입력해주세요']"
-            outlined
-          ></v-text-field>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="grey darken-1" text @click="showCaloryTargetModal = false">취소</v-btn>
-          <v-btn color="primary" text @click="saveTargetCalory">저장</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <div class="period-selection">
+      <v-tabs v-model="selectedType" background-color="white" color="primary" grow>
+        <v-tab value="DAY">실시간</v-tab>
+        <v-tab value="WEEKAVG">주간 평균</v-tab>
+        <v-tab value="MONTHAVG">월간 평균</v-tab>
+      </v-tabs>
+    </div>
     
-    <!-- 사용자 프로필 모달 -->
-    <v-dialog v-model="showUserProfileModal" max-width="400" content-class="profile-dialog">
-      <v-card flat class="profile-card">
-        <v-card-actions class="profile-dialog-close">
+    <!-- 헬스데이터 컴포넌트 호출  -->
+    <div class="health-data-container" v-if="showHealthData">
+      <HealthData :loginId="currentUserId" :type="selectedType"  :userName="selectedUserName" :userLongId="selectedLongId" />
+    </div>
+    
+    <!-- 헬스리포트 컴포넌트 호출 -->
+    <div class="health-report-container" v-else>
+      <HealthReportComponent :loginId="currentUserId" :type="selectedType" :targetDate="calculatedDate" :userName="selectedUserName" :userLongId="selectedLongId" v-model:isFirstLoad="isFirstLoad" />
+    </div>
+    
+    <!-- 소모임 추천 섹션 -->
+    <div class="group-recommendation-container">
+      <div class="recommendation-header">
+        <v-icon color="primary" class="mr-2">mdi-account-group</v-icon>
+        <h3>소모임 추천</h3>
+      </div>
+      <div class="recommendation-content">
+        <v-btn 
+          class="recommendation-btn" 
+          color="primary" 
+          elevation="2"
+          @click="showGroupModal = true"
+        >
+          <v-icon left>mdi-star</v-icon>
+          소모임 추천받기
+        </v-btn>
+        <p class="recommendation-desc">건강 데이터를 기반으로 나에게 맞는 모임을 추천받아보세요!</p>
+      </div>
+    </div>
+    
+    <!-- 피보호자 연결 요청 모달 -->
+    <LinkRequest v-model="showLinkRequestModal" @input="handleModalChange" />
+    <!-- 보호자 연결 요청 모달 -->
+    <LinkRequestToProcteor v-model="showLinkRequestModal2" @input="handleModalChange2" />
+    
+    <!-- 소모임 추천 모달 -->
+    <v-dialog v-model="showGroupModal" max-width="700">
+      <v-card class="group-modal">
+        <v-card-title class="modal-title">
+          <v-icon color="primary" class="mr-2">mdi-account-group</v-icon>
+          소모임 추천
           <v-spacer></v-spacer>
-          <v-btn icon @click="showUserProfileModal = false">
+          <v-btn icon @click="showGroupModal = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
-        </v-card-actions>
-        <v-card-text class="pa-0">
-          <UserProfileComponent 
-            :loginId="loginId" 
-            :userName="userName"
-            :userLongId="userLongId"
-            :parentType="parentType"
-            @start-text-chat="handleStartTextChat"
-            @start-video-chat="handleStartVideoChat"
-          />
+        </v-card-title>
+        
+        <v-card-text>
+          <!-- 나와 유사한 모임 추천 섹션 -->
+          <div class="recommendation-section similar-section">
+            <div class="section-header">
+              <v-icon color="success" class="mr-2">mdi-account-multiple-check</v-icon>
+              <h3>나와 유사한 모임 추천</h3>
+            </div>
+            
+            <v-row>
+              <v-col cols="12" sm="6" v-for="(group, index) in similarGroups" :key="'similar-'+index">
+                <v-card outlined class="group-card" :class="{'top-ranked': index === 0}">
+                  <div class="rank-badge" v-if="index === 0">1위</div>
+                  <div class="rank-badge rank-second" v-else>2위</div>
+                  <v-img :src="group.image" height="150" contain></v-img>
+                  <v-card-title>{{ group.name }}</v-card-title>
+                  <v-card-subtitle>{{ group.category }}</v-card-subtitle>
+                  <v-card-text>
+                    <p class="group-description">{{ group.description }}</p>
+                    <div class="match-rate">
+                      <div class="match-label">매칭률</div>
+                      <v-progress-linear 
+                        :value="group.matchRate" 
+                        color="success" 
+                        height="8" 
+                        rounded
+                      ></v-progress-linear>
+                      <span class="match-percent">{{ group.matchRate }}%</span>
+                    </div>
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-btn text color="primary">
+                      자세히 보기
+                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" small outlined>
+                      가입 신청
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+          </div>
+          
+          <!-- 색다른 모임 추천 섹션 -->
+          <div class="recommendation-section different-section mt-6">
+            <div class="section-header">
+              <v-icon color="info" class="mr-2">mdi-lightbulb-on</v-icon>
+              <h3>이런 모임은 어때요?</h3>
+            </div>
+            
+            <v-row>
+              <v-col cols="12" sm="4" v-for="(group, index) in differentGroups" :key="'different-'+index">
+                <v-card outlined class="group-card-small" hover>
+                  <v-img :src="group.image" height="120" contain></v-img>
+                  <v-card-title class="subtitle-1">{{ group.name }}</v-card-title>
+                  <v-card-subtitle class="caption">{{ group.category }}</v-card-subtitle>
+                  <v-card-text class="card-text-small">
+                    <p class="group-description-small">{{ group.description }}</p>
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-btn text color="primary" x-small>
+                      자세히 보기
+                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn icon x-small color="primary">
+                      <v-icon>mdi-arrow-right</v-icon>
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+          </div>
         </v-card-text>
       </v-card>
     </v-dialog>
-  </template>
-  
-  <script>
-  import axios from 'axios';
-  import DatePickerRange from "@/components/DatePickerRange.vue";
-  import UserProfileComponent from "@/components/UserProfileComponet.vue";
-  import '@vuepic/vue-datepicker/dist/main.css';
-  export default {
-    name: 'HealthData',
-    props: {
-      loginId: String,
-      type: String,
-      userName: String,
-      userLongId: Number,
-      // targetDate: String,
+  </div>
+</template>
+
+<script>
+import HealthData from '@/components/HealthData.vue';
+import HealthReportComponent from '@/components/HealthReportComponent.vue';
+import LinkRequest from '@/components/LinkRequest.vue';
+import LinkRequestToProcteor from '@/components/LinkRequestToProcteor.vue';
+import axios from 'axios';
+
+export default {
+  name: 'HealthDataPage',
+  components: {
+    HealthData,
+    HealthReportComponent,
+    LinkRequest,
+    LinkRequestToProcteor
+  },
+  data() {
+    return { 
+      me: localStorage.getItem('loginId') || '',
+      selectedUser: localStorage.getItem('loginId') || '',
+      selectedType: 'DAY',
+      dependents: [],
+      protectors: [],
+      currentdependent: null,
+      showLinkRequestModal: false,
+      showLinkRequestModal2: false,
+      selectedUserName: localStorage.getItem('userName'),
+      selectedLongId: null,
+      showHealthData: true, // 기본적으로 건강 데이터 화면 표시
+      isFirstLoad: true,
+      selectedProfileBtn: 4, // 기본 선택된 프로필 버튼 (4번 버전 고정)
+      
+      // 소모임 추천 관련 데이터
+      showGroupModal: false,
+      similarGroups: [
+        {
+          name: '활력 넘치는 아침 산책',
+          category: '운동 / 아웃도어',
+          description: '매일 아침 함께하는 산책으로 건강을 챙기는 모임입니다. 60대 이상 회원들이 주로 활동하며 가벼운 걷기와 스트레칭을 함께해요.',
+          image: 'https://via.placeholder.com/300x200?text=Morning+Walk',
+          matchRate: 95
+        },
+        {
+          name: '실버 요가 클럽',
+          category: '운동 / 요가',
+          description: '시니어를 위한 맞춤형 요가 모임입니다. 관절에 무리가 가지 않는 동작으로 구성된 프로그램으로 유연성과 균형감각을 향상시켜요.',
+          image: 'https://via.placeholder.com/300x200?text=Silver+Yoga',
+          matchRate: 87
+        }
+      ],
+      differentGroups: [
+        {
+          name: '정원 가꾸기 모임',
+          category: '취미 / 원예',
+          description: '함께 식물을 키우고 정원을 가꾸는 모임입니다. 다양한 계절 식물과 허브를 재배하며 자연과 함께하는 시간을 가져요.',
+          image: 'https://via.placeholder.com/300x200?text=Garden+Club'
+        },
+        {
+          name: '실버 합창단',
+          category: '음악 / 노래',
+          description: '주 1회 모여 다양한 장르의 노래를 배우고 연습하는 합창 모임입니다. 정기적인 공연 활동도 함께 진행해요.',
+          image: 'https://via.placeholder.com/300x200?text=Choir'
+        },
+        {
+          name: '추억의 영화감상 모임',
+          category: '문화 / 영화',
+          description: '추억의 영화를 함께 감상하고 이야기를 나누는 모임입니다. 다양한 시대의 명작 영화를 선정하여 감상 후 토론도 진행해요.',
+          image: 'https://via.placeholder.com/300x200?text=Movie+Club'
+        }
+      ]
+    }
+  },
+ async mounted() {
+    // 내 피보호자 목록 받아오기 백엔드로부터
+    const dependentData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myDependentList`);
+    this.dependents = dependentData.data.result;
+    console.log("피보호자", this.dependents);
+    
+    // 내 보호자 목록 받아오기 (API가 실제로 구현되어 있는지 확인 필요)
+    try {
+      const protectorData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myProtectList`);
+      this.protectors = protectorData.data.result;
+      console.log("보호자", this.protectors);
+    } catch (error) {
+      console.error("보호자 목록 가져오기 실패:", error);
+      this.protectors = []; // 에러 시 빈 배열 할당
+    }
+  },
+  computed: {
+    currentUserId() {
+      return this.selectedUser
     },
-    components: {
-      DatePickerRange,
-      UserProfileComponent
-    },
-    data() {
+    calculatedDate() {
+      const today = new Date();
+      
       // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
       function formatDateToYYYYMMDD(date) {
         const year = date.getFullYear();
@@ -400,1596 +326,515 @@
         return `${year}-${month}-${day}`;
       }
       
-      const today = new Date();
-      
-      return {
-        currentDate: formatDateToYYYYMMDD(today),
-        showDatePicker: false,
-        myData: {
-          step: 0,
-          heartbeat: 0,
-          calory : 0,
-          activeCalory : 0,
-          distance : 0,
-          totalSleepMinutes : 0,
-          deepSleepMinutes : 0,
-          lightSleepMinutes : 0,
-          remSleepMinutes : 0,
-          period : ''
-        },
-        profileImage : '',
-        showErrorModal : false,
-        noDataMessage: '',
-        targetCalory: 2000,
-        showCaloryTargetModal: false,
-        newTargetCalory: 2000,
-        showUserProfileModal: false,
-        // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
-        parentType: 'healthData',
-        isRequestPending: false, // 요청 중복 방지 플래그 추가
-       ////
-        selectedScoreDesign: 4,
-        healthScore: 0,
-        activityScore: 0,
-        physicalScore: 0,
-        lifestyleScore: 0
+      if (this.selectedType === 'DAY') {
+        // 실시간 선택 시, 건강 리포트 컴포넌트에는 어제 날짜, 건강 데이터 컴포넌트에는 오늘 날짜를 반환
+        if (!this.showHealthData) {
+          // 건강 리포트용 날짜 (어제)
+          console.log("여기호출");
+          const yesterday = new Date(today);
+          yesterday.setDate(today.getDate());
+          return formatDateToYYYYMMDD(yesterday);
+        } else {
+          // 건강 데이터용 날짜 (오늘)
+          return formatDateToYYYYMMDD(today);
+        }
+      } 
+      else if (this.selectedType === 'WEEKAVG') {
+        // 이번주 월요일 계산
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 구하기
+        const monday = new Date(today);
+        monday.setDate(diff);
+        
+        if (this.showHealthData) {
+          // 건강 데이터용 날짜 (이번주 월요일)
+          const nextMonday = new Date(monday);
+          nextMonday.setDate(nextMonday.getDate() + 7);
+          return formatDateToYYYYMMDD(nextMonday);
+        } else {
+          // 건강 리포트용 날짜 (지난주 월요일)
+          const lastMonday = new Date(monday);
+          lastMonday.setDate(lastMonday.getDate() - 7);
+          return formatDateToYYYYMMDD(lastMonday);
+        }
+      } 
+      else if (this.selectedType === 'MONTHAVG') {
+        // 이번달 1일
+        // const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        if (this.showHealthData) {
+          // 건강 데이터용 날짜 (이번달 1일)
+          const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+          return formatDateToYYYYMMDD(nextMonth);
+        } else {
+          // 건강 리포트용 날짜 (지난달 1일)
+          const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          return formatDateToYYYYMMDD(lastMonth);
+        }
       }
-    },
-  
-    async mounted(){
-      // 사용자 프로필 이미지 가져오기
-  
-      // 목표 칼로리 불러오기
-      this.loadTargetCalory();
       
-      // 타입에 따라 초기 날짜 설정
-      this.setInitialDate();
-     
-      // 데이터 불러오기
-      this.fetchDataOnce();
+      return formatDateToYYYYMMDD(today);
+    }
+  },
+  watch: {
+    // showHealthData가 변경될 때 (건강 데이터/건강 리포트 전환 시)
+    showHealthData() {
+      // selectedType이 비어있거나 변경 중이면 변경 생략
+      if (!this.selectedType) return;
       
-      // 탭 변경 이벤트 리스너 등록
-      window.addEventListener('tab-changed', this.handleTabChange);
+      // 여기서는 실제로 타입을 바꾸진 않고, 단지 탭 전환 여부 플래그만 설정
+      // 컴포넌트에 플래그를 전달하여 컴포넌트 내부에서 처리하도록 함
+      this.isFirstLoad = this.selectedType === 'DAY';
       
-      //// 더미 헬스 점수 데이터 생성
-      this.loadHealthScore();
-    },
-    
-    beforeUnmount() {
-      // 컴포넌트 제거 시 이벤트 리스너 제거
-      window.removeEventListener('tab-changed', this.handleTabChange);
-    },
-    
-    watch: {
-      loginId() {
-        this.fetchDataOnce();
-        this.loadTargetCalory();
-        this.loadHealthScore();
-      },
-      type(newVal, oldVal) {
-        // 빈 값이거나 초기화 중인 경우 처리하지 않음
-        if (!newVal || (oldVal === undefined || oldVal === '')) {
-          return;
-        }
-        
-        // 타입이 변경되면 그에 맞는 초기 날짜 설정
-        this.setInitialDate();
-        this.fetchDataOnce();
-        this.loadHealthScore();
-      }
-    },
-  
-    methods: {
-      // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
-      formatDateToYYYYMMDD(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      },
-      
-      // 타입에 따라 초기 날짜 설정
-      setInitialDate() {
-        const today = new Date();
-        
-        if (this.type === 'DAY') {
-          // 실시간 선택 시 오늘 날짜로 설정
-          this.currentDate = this.formatDateToYYYYMMDD(today);
-        } 
-        else if (this.type === 'WEEKAVG') {
-          // 이번주 월요일 계산
-          const day = today.getDay();
-          const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 구하기
-          const monday = new Date(today);
-          monday.setDate(diff);
-          
-          // 이번주 월요일로 설정 (그러면 백엔드에서 저번주 데이터를 조회)
-          this.currentDate = this.formatDateToYYYYMMDD(monday);
-        } 
-        else if (this.type === 'MONTHAVG') {
-          // 이번달 1일 계산
-          const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-          // 이번달 1일로 설정 (그러면 백엔드에서 저번달 데이터를 조회)
-          this.currentDate = this.formatDateToYYYYMMDD(firstDay);
-        }
-      },
-      
-      // 사용자 프로필 표시
-      showUserProfile() {
-        if(this.loginId === localStorage.getItem("loginId")){
-          this.showUserProfileModal = false;
-        }
-        else{
-          this.showUserProfileModal = true;
-          console.log(this.userLongId)
-        }
-      },
-      
-      // 채팅 관련 이벤트 핸들러
-      handleStartTextChat(userId) {
-        console.log(`${userId}와의 1:1 채팅 시작`);
-        // 채팅 페이지로 이동하거나 채팅 기능 실행
-        this.showUserProfileModal = false;
-      },
-      
-      handleStartVideoChat(userId) {
-        console.log(`${userId}와의 화상 채팅 시작`);
-        // 화상 채팅 기능 실행
-        this.showUserProfileModal = false;
-      },
-      
-      // 탭 변경 이벤트 처리
-      handleTabChange(event) {
-        // 헬스 데이터 탭으로 변경되었을 때만 처리
-        if (event.detail.showHealthData) {
-          console.log("헬스 데이터 탭으로 변경됨, 데이터 요청 준비");
-          // 기존 요청 플래그 초기화 (새로운 탭으로 전환되었으므로)
-          this.isRequestPending = false;
-        }
-      },
-      
-      // API 호출을 한 번만 수행하는 메소드
-      fetchDataOnce() {
-        // API 호출 중복 방지
-        if (!this.isRequestPending) {
-          this.isRequestPending = true;
-          
-          // 데이터 요청
-          this.fetchData().finally(() => {
-            this.isRequestPending = false;
-          });
-        } else {
-          console.log("요청이 이미 진행 중입니다");
-        }
-      },
-      
-      // 컴포넌트 외부에서 사용자가 피보호자 아이디를 클릭했다거나 데이터 타입을 변경했다거나 했을 때 watch를 통해 다시 호출되기 위해서
-      async fetchData() {
-        // 필요한 데이터가 모두 있는지 확인
-        if (!this.loginId || !this.type || !this.currentDate) {
-          console.log("필요한 데이터가 없어 요청을 보내지 않습니다:", { 
-            loginId: this.loginId, 
-            type: this.type, 
-            date: this.currentDate 
-          });
-          return;
-        }
-        
-        const dto = {
-          "loginId": this.loginId,
-          "type": this.type,
-          "date": this.currentDate
-        };
-  
-        console.log("건강 데이터 요청:", dto);
-        
-        try {
-          const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/allinone`, dto);
-          this.myData.step = response.data.result.step;
-          this.myData.heartbeat = response.data.result.heartbeat;
-          this.myData.calory = response.data.result.calory;
-          this.myData.activeCalory = response.data.result.activeCalory;
-          this.myData.distance = response.data.result.distance;
-          this.myData.totalSleepMinutes = response.data.result.totalSleepMinutes;
-          this.myData.deepSleepMinutes = response.data.result.deepSleepMinutes;
-          this.myData.lightSleepMinutes = response.data.result.lightSleepMinutes;
-          this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
-          this.myData.period = response.data.result.period;
-          this.profileImage = response.data.result.imgUrl;
-          this.noDataMessage = '';
-          console.log(response);
-        } catch(error) {
-          console.error("건강 데이터 가져오기 실패:", error);
-          
-          // 데이터 초기화
-          this.resetData();
-          
-          // 에러 모달 대신 메시지 표시
-          this.noDataMessage = `${this.myData.period} 데이터가 없습니다.`;
-        }
-      },
-  
-       //날짜를 주차로 변환하는 메소드
-       convertDateToWeek(date1){
-        console.log('날짜',date1)
-        const date = new Date(date1);
-    date.setDate(date.getDate() - 7); //  전주 월요일로 이동
-  
-    // 첫 목요일 구하기
-    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const firstDayWeekday = firstDayOfMonth.getDay(); // 0: 일 ~ 6: 토
-    const firstThursday = new Date(date.getFullYear(), date.getMonth(),
-      firstDayWeekday <= 4 ? 1 + (4 - firstDayWeekday) : 1 + (7 - firstDayWeekday) + 4
-    );
-  
-    // 첫 목요일 기준으로 year, month 고정!
-    const fixedYear = firstThursday.getFullYear();
-    const fixedMonth = firstThursday.getMonth() + 1;
-  
-    // 주차 계산
-    const diffDays = (date - firstThursday) / (1000 * 60 * 60 * 24);
-    const weekNumber = diffDays < 0 ? 1 : Math.floor(diffDays / 7) + 2;
-  
-    return `${fixedYear}년 ${fixedMonth}월 ${weekNumber}주차`;
-        },
-  
-        // 날짜를 년월로 변환하는 메소드
-          convertDateToYearMonth(date1) {
-            const date = new Date(date1);
-            let year = date.getFullYear();
-            let month = date.getMonth(); 
-  
-            // 만약 월이 0이면 (1월에서 -1 한 경우), 전년도 12월로 설정
-            if (month === 0) {
-              year -= 1;
-              month = 12;
-            }
-            return `${year}년 ${month}월`;
-          },
-  
-      // 데이터 초기화 메소드 추가
-      resetData() {
-        this.myData.step = 0;
-        this.myData.heartbeat = 0;
-        this.myData.calory = 0;
-        this.myData.activeCalory = 0;
-        this.myData.distance = 0;
-        this.myData.totalSleepMinutes = 0;
-        this.myData.deepSleepMinutes = 0;
-        this.myData.lightSleepMinutes = 0;
-        this.myData.remSleepMinutes = 0;
-        if(this.type === 'DAY'){
-          this.myData.period = this.currentDate;
-        }
-        else if(this.type === 'WEEKAVG'){
-          this.myData.period = this.convertDateToWeek(this.currentDate);
-        }
-        else if(this.type === 'MONTHAVG'){
-          this.myData.period = this.convertDateToYearMonth(this.currentDate);
-        }
-        
-      },
-      resetHealthScore(){
-        this.healthScore = 0;
-        this.activityScore = 0;
-        this.physicalScore = 0;
-        this.lifestyleScore = 0;
-      },
-      handleDateChange(dateRange) {
-        console.log('선택된 날짜:', dateRange);
-        
-        // 날짜 형식 검증
-        if (dateRange && dateRange !== 'NaN-NaN-NaN' && dateRange.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          this.currentDate = dateRange;
-          this.showDatePicker = false;
-          this.fetchDataOnce();
-          this.loadHealthScore();
-        } else {
-          console.error('유효하지 않은 날짜 형식:', dateRange);
-          this.noDataMessage = '유효하지 않은 날짜 형식입니다.';
-          this.resetData();
-          this.resetHealthScore();
-        }
-      },
-  
-      toggleDatePicker() {
-        this.showDatePicker = !this.showDatePicker;
-      },
-      
-      // 목표 칼로리 저장
-      saveTargetCalory() {
-        if (this.newTargetCalory > 0) {
-          this.targetCalory = parseInt(this.newTargetCalory);
-          // 로컬 스토리지에 사용자별 목표 칼로리 저장
-          localStorage.setItem(`targetCalory_${this.loginId}`, this.targetCalory);
-          this.showCaloryTargetModal = false;
-        }
-      },
-      
-      // 목표 칼로리 불러오기
-      loadTargetCalory() {
-        const savedTargetCalory = localStorage.getItem(`targetCalory_${this.loginId}`);
-        if (savedTargetCalory) {
-          this.targetCalory = parseInt(savedTargetCalory);
-          this.newTargetCalory = this.targetCalory;
-        }
-      },
-      
-      // 심장 박동수에 따른 상태 텍스트 반환
-      getHeartRateStatus(heartRate) {
-        if (!heartRate) return '정보 없음';
-        
-        if (heartRate < 60) {
-          return '낮은 심박수';
-        } else if (heartRate >= 60 && heartRate <= 100) {
-          return '정상 범위';
-        } else if (heartRate > 100 && heartRate <= 120) {
-          return '약간 높음';
-        } else {
-          return '높은 심박수';
-        }
-      },
-      
-      // 심장 박동수에 따른 클래스 반환
-      getHeartRateStatusClass(heartRate) {
-        if (!heartRate) return '';
-        
-        if (heartRate < 60) {
-          return 'status-low';
-        } else if (heartRate >= 60 && heartRate <= 100) {
-          return 'status-normal';
-        } else if (heartRate > 100 && heartRate <= 120) {
-          return 'status-elevated';
-        } else {
-          return 'status-high';
-        }
-      },
-      
-      // 수면 시간에 따른 상태 텍스트 반환
-      getSleepStatus(minutes) {
-        if (!minutes) return '정보 없음';
-        
-        const hours = minutes / 60;
-        
-        if (hours < 6) {
-          return '부족한 수면';
-        } else if (hours >= 6 && hours < 7) {
-          return '조금 부족한 수면';
-        } else if (hours >= 7 && hours <= 9) {
-          return '좋은 수면';
-        } else {
-          return '과도한 수면';
-        }
-      },
-      
-      // 수면 시간에 따른 클래스 반환
-      getSleepStatusClass(minutes) {
-        if (!minutes) return '';
-        
-        const hours = minutes / 60;
-        
-        if (hours < 6) {
-          return 'sleep-insufficient';
-        } else if (hours >= 6 && hours < 7) {
-          return 'sleep-slight-insufficient';
-        } else if (hours >= 7 && hours <= 9) {
-          return 'sleep-good';
-        } else {
-          return 'sleep-excessive';
-        }
-      },
-      
-      // 수면 시간에 따른 설명 텍스트 반환
-      getSleepDescription(minutes) {
-        if (!minutes) return '수면 데이터가 없습니다';
-        
-        const hours = minutes / 60;
-        
-        if (hours < 6) {
-          return '수면이 부족합니다. 7-9시간 수면을 권장합니다.';
-        } else if (hours >= 6 && hours < 7) {
-          return '수면이 조금 부족합니다. 1시간 더 주무세요.';
-        } else if (hours >= 7 && hours <= 9) {
-          return '건강한 수면 시간입니다. 좋은 습관을 유지하세요.';
-        } else {
-          return '수면 시간이 길어요. 7-9시간이 적정 수면입니다.';
-        }
-      },
-    
-      //// 헬스 점수 더미 데이터 생성
-      async loadHealthScore() {
-        try{
-        const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/healthscore/create`, {
-          "userId": this.loginId,
-          "type": this.type,
-          "date": this.currentDate
+      // 기존 로직 대신 이벤트 전달 방식으로 변경
+      this.$nextTick(() => {
+        const event = new CustomEvent('tab-changed', {
+          detail: { 
+            showHealthData: this.showHealthData,
+            selectedType: this.selectedType
+          }
         });
-  
-        console.log('헬스 점수 데이터 가져오기', response);
-  
-        this.healthScore = response.data.result.totalScore;
-        this.activityScore = response.data.result.activityScore;
-        this.physicalScore = response.data.result.bodyScore;
-        this.lifestyleScore = response.data.result.habitScore;
-      }
-      catch(error){
-        console.error('헬스 점수 데이터 가져오기 실패:', error);
-        this.resetHealthScore();
-      }
-      
-  
-      },
-      
-      // 헬스 점수 상태 반환
-      getHealthScoreStatus() {
-        if (this.healthScore >= 90) {
-          return '최상';
-        } else if (this.healthScore >= 80) {
-          return '좋음';
-        } else if (this.healthScore >= 70) {
-          return '양호';
-        } else if (this.healthScore >= 60) {
-          return '주의';
-        } else {
-          return '관리필요';
-        }
-      },
-      
-      // 헬스 점수 설명 반환
-      getHealthScoreDescription() {
-        if (this.healthScore >= 90) {
-          return '매우 건강한 상태입니다. 현재 습관을 계속 유지하세요!';
-        } else if (this.healthScore >= 80) {
-          return '건강한 상태입니다. 조금만 더 신경써보세요!';
-        } else if (this.healthScore >= 70) {
-          return '양호한 상태입니다. 생활 습관 개선이 필요해요.';
-        } else if (this.healthScore >= 60) {
-          return '주의가 필요합니다. 운동량을 늘려보세요.';
-        } else {
-          return '건강 관리가 필요합니다. 전문가와 상담하세요.';
-        }
-      },
-      
-      ////
+        window.dispatchEvent(event);
+      });
     },
-   
-    
-    computed: {
-      // 날짜를 '0000년 0월 0일' 형식으로 표시하는 계산된 속성
-      formattedCurrentDate() {
-        if (!this.currentDate) return '';
-        
-        const date = new Date(this.currentDate);
-        
-        if (this.type === 'DAY') {
-          // 일별 데이터는 날짜 표시
-          return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-        } 
-        else if (this.type === 'WEEKAVG') {
-          // 주간 평균 데이터는 날짜 표시
-          return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-        }
-        else if (this.type === 'MONTHAVG') {
-          // 월간 데이터는 월까지만 표시
-          return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
-        }
-        else {
-          // 기본값
-          return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-        }
+    selectedType(newVal) {
+      if(newVal === 'DAY'){
+        this.isFirstLoad = true;
       }
-    }
+      else{
+        this.isFirstLoad = false;
+      }
+    },
+  },
+  methods: {
+    goToHealthProfile() {
+      this.$router.push('/silverpotion/userhealthinfodetail');
+    },
+    selectMyData() {
+      this.selectedUser = this.me;
+      this.selectedUserName = localStorage.getItem('userName') || '';
+      this.selectedLongId = null;
+    },
+    selectdependent(dependent) {
+      this.selectedUser = dependent.loginId;
+      this.selectedLongId = dependent.userId;
+      this.selectedUserName = dependent.name;
+    },
+    selectProtector(protector) {
+      this.selectedUser = protector.loginId;
+      this.selectedLongId = protector.userId;
+      this.selectedUserName = protector.name;
+    },
+    handleModalChange(val) {
+      this.showLinkRequestModal = val;
+    },
+    handleModalChange2(val) {
+      this.showLinkRequestModal2 = val;
+    },
+  },
+}
+</script>
+
+<style scoped>
+.health-data-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* 건강 프로필 버튼 컨테이너 */
+.health-profile-button-container {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.health-profile-btn {
+  background: linear-gradient(135deg, #00c2ff, #12c0f5);
+  color: white;
+  transition: all 0.3s ease;
+  border-radius: 20px;
+  padding: 0 16px;
+  height: 36px;
+  text-transform: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 3px 5px rgba(4, 183, 238, 0.3);
+}
+
+/* 모든 버튼 공통 hover 효과 */
+.health-profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(4, 183, 238, 0.4);
+}
+
+/* 모바일 설정 - 작은 화면에서는 아이콘만 표시 */
+@media (max-width: 768px) {
+  .profile-btn-text {
+    display: none;
   }
-  </script>
   
-  <style scoped>
-  .date-picker-section {
-    position: relative;
-    margin-left: 20px;
-    z-index: 9999;
-  }
-  
-  .calendar-icon {
-    cursor: pointer;
-    font-size: 24px;
-    color: #333;
-  }
-  
-  .date-picker-container {
-    position: absolute;
-    top: 40px;
-    right: 0;
-    z-index: 9999;
-    background-color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
-    padding: 8px;
-  }
-  
-  .health-dashboard-v5 {
-    background: white;
-    color: #333;
-    min-height: 100vh;
-    font-family: 'Roboto', sans-serif;
-    width: 100%;
-    overflow-x: hidden;
-  }
-  
-  .dashboard-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 24px 20px;
-    background-color: #f5f5f5;
-    flex-wrap: wrap;
-  }
-  
-  .title-section {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  
-  .user-profile {
-    width: 50px;
-    height: 50px;
+  .health-profile-btn {
+    min-width: 36px !important;
+    width: 36px;
+    padding: 0;
     border-radius: 50%;
-    overflow: hidden;
-    margin-right: 16px;
-    cursor: pointer;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-    border: 2px solid white;
-    transition: transform 0.3s ease;
   }
-  
-  .user-profile:hover {
-    transform: scale(1.05);
-  }
-  
-  .profile-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  .date-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .date-chip {
-    font-size: 0.9rem;
-    padding: 0 16px;
-    color: #333;
-    border-color: #333;
-  }
-  
-  .dashboard-content {
-    padding: 20px;
-  }
-  
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-bottom: 32px;
-  }
-  
-  .stats-card {
-    background: #f9f9f9;
-    border-radius: 16px;
-    padding: 20px;
-    overflow: hidden;
-    position: relative;
-    transition: transform 0.3s, box-shadow 0.3s;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .stats-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 100%);
-    z-index: -1;
-  }
-  
-  .stats-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
-  }
-  
-  .card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-  }
-  .card-badge {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .steps .card-badge {
-    background: rgba(76, 175, 80, 0.25);
-    color: #4CAF50;
-  }
-  
-  .heart-rate .card-badge {
-    background: rgba(244, 67, 54, 0.25);
-    color: #F44336;
-  }
-  
-  .calories .card-badge {
-    background: rgba(255, 152, 0, 0.25);
-    color: #FF9800;
-  }
-  
-  .stat-value {
-    text-align: right;
-  }
-  
-  .value-number {
-    font-size: 2.2rem;
-    font-weight: 700;
-    line-height: 1;
-    color: #333;
-  }
-  
-  .value-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    margin-top: 4px;
-    color: #555;
-  }
-  
-  .card-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-  
-  .stat-info {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .distance-info {
-    padding-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  
-  .distance-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #2196F3;
-    line-height: 1;
-  }
-  
-  .distance-unit {
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
-  
-  .distance-label {
-    font-size: 0.8rem;
-    color: #555;
-    margin-top: 2px;
-  }
-  
-  .stat-title h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: #333;
-  }
-  
-  .stat-subtitle {
-    font-size: 0.8rem;
-    opacity: 0.7;
-    color: #555;
-  }
-  
-  .circular-progress {
-    position: relative;
-    width: 60px;
-    height: 60px;
-  }
-  
-  .circular-progress svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-  
-  .circle-bg {
-    fill: none;
-    stroke: rgba(0, 0, 0, 0.1);
-    stroke-width: 3;
-  }
-  
-  .circle {
-    fill: none;
-    stroke-width: 3;
-    stroke-linecap: round;
-    animation: progress 1s ease-out forwards;
-  }
-  
-  .steps-circle {
-    stroke: #4CAF50;
-  }
-  
-  .calories-circle {
-    stroke: #FF9800;
-  }
-  
-  .percentage {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .heartbeat-animation {
-    width: 60px;
-    height: 30px;
-  }
-  
-  .heartbeat {
-    fill: none;
-    stroke: #F44336;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  
-  .sleep-container {
-    background: #f9f9f9;
-    border-radius: 16px;
-    overflow: hidden;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .sleep-header {
-    margin-bottom: 24px;
-  }
-  
-  .sleep-header h2 {
-    font-size: 1.4rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    color: #333;
-  }
-  
-  .sleep-content {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .sleep-overview {
-    display: flex;
-    flex-wrap: wrap;
-  }
-  
-  .sleep-total {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 200px;
-    margin-right: 48px;
-  }
-  
-  .total-time-circle {
-    position: relative;
-    width: 160px;
-    height: 160px;
-    margin-bottom: 16px;
-  }
-  
-  .total-time-circle svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-  
-  .sleep-bg {
-    fill: none;
-    stroke: rgba(0, 0, 0, 0.1);
-    stroke-width: 12;
-  }
-  
-  .sleep-deep {
-    fill: none;
-    stroke: #3F51B5;
-    stroke-width: 12;
-    transform-origin: center;
-    stroke-linecap: round;
-    transition: stroke-dasharray 1s ease-out, stroke-dashoffset 1s ease-out;
-  }
-  
-  .sleep-rem {
-    fill: none;
-    stroke: #673AB7;
-    stroke-width: 12;
-    transform-origin: center;
-    stroke-linecap: round;
-    transition: stroke-dasharray 1s ease-out, stroke-dashoffset 1s ease-out;
-  }
-  
-  .sleep-light {
-    fill: none;
-    stroke: #64B5F6;
-    stroke-width: 12;
-    transform-origin: center;
-    stroke-linecap: round;
-    transition: stroke-dasharray 1s ease-out, stroke-dashoffset 1s ease-out;
-  }
-  
-  .sleep-total-text {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .total-hours {
-    font-size: 2.0rem;
-    font-weight: 700;
-    line-height: 1;
-    color: #333;
-  }
-  
-  .time-unit {
-    font-size: 1rem;
-    font-weight: 400;
-    color: #555;
-  }
-  
-  .sleep-status {
-    text-align: center;
-  }
-  
-  .status-badge {
-    display: inline-block;
-    padding: 6px 16px;
-    background: rgba(76, 175, 80, 0.2);
-    color: #4CAF50;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-  
-  .status-text {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    color: #555;
-  }
-  
-  .sleep-details {
-    flex-grow: 1;
-    min-width: 300px;
-  }
-  
-  .sleep-metrics {
-    margin-bottom: 24px;
-  }
-  
-  .sleep-metric-item {
-    margin-bottom: 16px;
-  }
-  
-  .metric-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  
-  .metric-title {
-    font-weight: 500;
-    color: #333;
-  }
-  
-  .metric-value-wrapper {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-  
-  .metric-value {
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .metric-percent {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    color: #555;
-  }
-  
-  .sleep-timeline {
-    margin-top: 24px;
-  }
-  
-  .timeline-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 0.75rem;
-    color: #555;
-  }
-  
-  .timeline-track {
-    height: 24px;
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 12px;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .track-segment {
-    position: absolute;
-    height: 100%;
-  }
-  
-  .track-segment.deep {
-    background-color: #3F51B5;
-  }
-  
-  .track-segment.light {
-    background-color: #64B5F6;
-  }
-  
-  .track-segment.rem {
-    background-color: #673AB7;
-  }
-  
-  @keyframes progress {
-    0% {
-      stroke-dasharray: 0 100;
-    }
-  }
-  
-  @keyframes pulse {
-    0% {
-      transform: scaleY(1);
-    }
-    50% {
-      transform: scaleY(1.15);
-    }
-    100% {
-      transform: scaleY(1);
-    }
-  }
-  
-  @keyframes appear {
-    0% {
-      stroke-dashoffset: 439.6;
-    }
-  }
-  
-  @media (max-width: 960px) {
-    .dashboard-header {
-      flex-direction: column;
-      align-items: flex-start;
-      padding: 16px;
-    }
-    
-    .date-picker-section {
-      margin-left: 0;
-      margin-top: 10px;
-    }
-    
-    .date-section {
-      margin-top: 10px;
-    }
-    
-    .stats-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    
-    .sleep-overview {
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .sleep-total {
-      margin-right: 0;
-      margin-bottom: 32px;
-      width: 100%;
-    }
-    
-    .sleep-details {
-      width: 100%;
-    }
-    
-    .value-number {
-      font-size: 1.8rem;
-    }
-    
-    .total-hours {
-      font-size: 1.8rem;
-    }
-    
-    .total-time-circle {
-      width: 140px;
-      height: 140px;
-    }
-    
-    .card-badge {
-      width: 36px;
-      height: 36px;
-    }
-    
-    .dashboard-content {
-      padding: 15px;
-    }
-  }
-  
-  
-  @media (max-width: 768px) {
-    .version-1 .score-content-v1 {
-      flex-direction: column;
-    }
-    
-    .version-2 .sub-score-card {
-      flex-direction: column;
-      text-align: center;
-    }
-    
-    .version-2 .card-icon {
-      margin: 0 auto 15px auto;
-    }
-    
-    .version-3 .sub-gauges {
-      flex-direction: column;
-    }
-    
-    .version-4 .score-card-hero {
-      flex-direction: column;
-      text-align: center;
-      padding: 20px;
-    }
-    
-    .version-4 .hero-content {
-      order: 2;
-      margin-top: 15px;
-    }
-    
-    .version-4 .hero-graphic {
-      order: 1;
-      margin: 0 auto;
-    }
-    
-    .version-4 .score-description {
-      text-align: center;
-      margin: 0 auto;
-    }
-    
-    .version-4 .score-detail-cards {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    
-    .version-4 .card-inner {
-      padding: 15px;
-    }
-    
-    .version-4 .card-score {
-      font-size: 1.8rem;
-    }
-    
-    .version-4 .card-title {
-      font-size: 0.85rem;
-    }
-    
-    .version-5 .score-card-hero {
-      flex-direction: column;
-      text-align: center;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .title-section h1 {
-      font-size: 1.3rem;
-    }
-    
-    .total-time-circle {
-      width: 120px;
-      height: 120px;
-    }
-    
-    .metric-value-wrapper {
-      flex-direction: column;
-    }
-    
-    .metric-percent {
-      margin-top: 5px;
-    }
-    
-    .date-chip {
-      font-size: 0.8rem;
-      padding: 0 12px;
-    }
-  }
-  
-  .calories {
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  
-  .calories:hover {
-    box-shadow: 0 8px 16px rgba(255, 152, 0, 0.2);
-  }
-  
-  .heart-rate:hover {
-    box-shadow: 0 8px 16px rgba(245, 2, 2, 0.2);
-  }
-  
-  .steps:hover {
-    box-shadow: 0 8px 16px rgba(55, 212, 7, 0.342);
-  }
-  
-  /* 사용자 이름 제목 스타일 */
-  .user-name-title {
-    cursor: pointer;
-    transition: color 0.3s ease;
-    position: relative;
-  }
-  
-  .user-name-title:hover {
-    color: #3f51b5;
-  }
-  
-  .user-name-title::after {
-    content: '';
-    position: absolute;
-    bottom: -3px;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background-color: #3f51b5;
-    transition: width 0.3s ease;
-  }
-  
-  .user-name-title:hover::after {
-    width: 100%;
-  }
-  
-  
-  
-  /* 심장 박동 상태 스타일 */
-  .status-normal {
-    color: #4CAF50;
-    font-weight: 600;
-  }
-  
-  .status-low {
-    color: #2196F3;
-    font-weight: 600;
-  }
-  
-  .status-elevated {
-    color: #FF9800;
-    font-weight: 600;
-  }
-  
-  .status-high {
-    color: #F44336;
-    font-weight: 600;
-  }
-  
-  /* 수면 상태 배지 스타일 */
-  .sleep-good {
-    background-color: rgba(76, 175, 80, 0.2);
-    color: #4CAF50;
-  }
-  
-  .sleep-insufficient, .sleep-excessive {
-    background-color: rgba(244, 67, 54, 0.2);
-    color: #F44336;
-  }
-  
-  .sleep-slight-insufficient {
-    background-color: rgba(255, 152, 0, 0.2);
-    color: #FF9800;
-  }
-  
-  /* * * 프로필 모달 스타일 * */ 
-  
-  .profile-dialog-close {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    z-index: 10;
-  }
-  
-  .profile-card {
-    border-radius: 8px !important;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-  }
-  
-  .profile-dialog {
-    border-radius: 8px !important;
-    overflow: visible !important;
-  }
-  
-  .no-data-message {
-    margin-bottom: 20px;
-    width: 100%;
-  }
-  /* //// */
-  /* 헬스 점수 공통 스타일 */
-  .health-score-container {
-    background: white;
-    border-radius: 16px;
-    padding: 20px;
-    margin-top: 24px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  
-  .health-score-container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  }
-  
-  
-  
-  /* 버전 4 스타일  */
-  .version-4 {
-    background: #f9f9f9;
-    color: rgb(0, 0, 0);
-  }
-  
-  .version-4 .score-header-v4 {
-    margin-bottom: 30px;
-  }
-  
-  .version-4 .score-header-v4 h1 {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: rgb(0, 0, 0);
-  }
-  
-  .version-4 .score-content-v4 {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-  }
-  
-  .version-4 .score-center-ring {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 30px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  
-  .version-4 .score-ring {
-    position: relative;
-    width: 180px;
-    height: 180px;
-    margin-bottom: 20px;
-  }
-  
-  .version-4 .score-ring svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-  
-  .version-4 .ring-bg {
-    fill: none;
-    stroke: rgba(0, 0, 0, 0.1);
-    stroke-width: 8;
-  }
-  .version-4 .ring-value {
-    fill: none;
-    stroke: #00d4ff;
-    stroke-width: 8;
-    stroke-linecap: round;
-    transition: stroke-dasharray 1s ease;
-  }
-  
-  .version-4 .ring-content {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .version-4 .ring-score {
-    font-size: 3rem;
-    font-weight: 700;
-    color: rgb(0, 0, 0);
-  }
-  
-  .version-4 .ring-label {
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.7);
-  }
-  
-  .version-4 .ring-status {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
-    margin-top: 5px;
-  }
-  
-  .version-4 .score-description {
-    text-align: center;
-    font-size: 1.1rem;
-    color: rgba(0, 0, 0, 0.1);
-    margin-bottom: 0;
-    max-width: 500px;
-  }
-  
-  .version-4 .score-detail-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 항상 3개의 열을 표시 */
+}
+
+.view-toggle-wrapper {
+  margin-top: 40px; /* 프로필 버튼 공간 확보 */
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.toggle-buttons {
+  display: flex;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.modern-tab-button {
+  min-width: 150px;
+  padding: 12px 24px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+
+.modern-tab-button.active {
+  background: linear-gradient(135deg, #3f51b5, #5c6bc0);
+  color: white;
+  box-shadow: 0 5px 15px rgba(63, 81, 181, 0.3);
+}
+
+.modern-tab-button:hover:not(.active) {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.view-toggle-container {
+  display: none; 
+}
+
+.dependents-toggle-section {
+  background-color: white;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.me-section {
+  margin-bottom: 15px;
+}
+
+.lists-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.list-section {
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  padding: 10px 15px;
+}
+
+.dependents-section {
+  border-left: 4px solid #4caf50; /* 피보호자 섹션은 초록색 */
+}
+
+.guardians-section {
+  border-left: 4px solid #2196f3; /* 보호자 섹션은 파란색 */
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.empty-list-message {
+  color: #9e9e9e;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 4px 0;
+  flex-grow: 1;
+}
+
+.list-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+}
+
+.me-btn, .dependent-btn, .guardian-btn, .add-btn {
+  border-radius: 20px;
+}
+
+.me-btn.active, .dependent-btn.active, .guardian-btn.active {
+  background-color: #3f51b5;
+  color: white;
+}
+
+.me-btn {
+  font-weight: bold;
+  background-color: #e0e0e0;
+}
+
+.dependent-btn {
+  background-color: #e8f5e9; /* 연한 초록색 배경 */
+}
+
+.guardian-btn {
+  background-color: #e3f2fd; /* 연한 파란색 배경 */
+}
+
+.add-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  margin-left: auto;
+}
+
+.add-btn2 {
+  display: none; /* 이제 필요 없음 */
+}
+
+.period-selection {
+  margin-bottom: 20px;
+  background-color: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.health-data-container, .health-report-container {
+  background-color: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+/* 모바일 대응 */
+@media (min-width: 768px) {
+  .lists-container {
+    flex-direction: row;
     gap: 20px;
-    width: 100%;
   }
   
-  .version-4 .detail-card {
-    border-radius: 15px;
-    overflow: hidden;
-    min-width: 0; /* 최소 너비 제한 제거 */
-  }
-  
-  .version-4 .card-inner {
-    background: white;
-    padding: 20px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.01);
-  }
-  
-  .version-4 .card-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-  }
-  
-  .version-4 .card-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 12px;
-  }
-  
-  .version-4 .activity-card .card-icon {
-    background: rgba(76, 175, 80, 0.15);
-    color: #4CAF50;
-  }
-  
-  .version-4 .physical-card .card-icon {
-    background: rgba(33, 150, 243, 0.15);
-    color: #2196F3;
-  }
-  
-  .version-4 .lifestyle-card .card-icon {
-    background: rgba(255, 193, 7, 0.15);
-    color: #FFC107;
-  }
-  
-  .version-4 .card-title {
-    font-size: 0.9rem;
-    color: #666;
-  }
-  
-  .version-4 .card-score {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #333;
-    margin: 10px 0 20px 0;
-  }
-  
-  .version-4 .card-bar {
-    height: 6px;
-    background: #f0f0f0;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: auto;
-  }
-  
-  .version-4 .card-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #6a11cb, #2575fc);
-    border-radius: 3px;
-    transition: width 1s ease;
-  }
-  
-  .version-4 .activity-card .card-bar-fill {
-    background: linear-gradient(90deg, #43a047, #66bb6a);
-  }
-  
-  .version-4 .physical-card .card-bar-fill {
-    background: linear-gradient(90deg, #1976d2, #42a5f5);
-  }
-  
-  .version-4 .lifestyle-card .card-bar-fill {
-    background: linear-gradient(90deg, #ffa000, #ffca28);
-  }
-  
-  
-  
-  /* 반응형 스타일 */
-  @media (max-width: 768px) {
-    .version-1 .score-content-v1 {
-      flex-direction: column;
-    }
-    
-    .version-2 .sub-score-card {
-      flex-direction: column;
-      text-align: center;
-    }
-    
-    .version-2 .card-icon {
-      margin: 0 auto 15px auto;
-    }
-    
-    .version-3 .sub-gauges {
-      flex-direction: column;
-    }
-    
-    .version-4 .score-card-hero {
-      flex-direction: column;
-      text-align: center;
-      padding: 20px;
-    }
-    
-    .version-4 .hero-content {
-      order: 2;
-      margin-top: 15px;
-    }
-    
-    .version-4 .hero-graphic {
-      order: 1;
-      margin: 0 auto;
-    }
-    
-    .version-4 .score-description {
-      text-align: center;
-      margin: 0 auto;
-    }
-    
-    .version-4 .score-detail-cards {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    
-    .version-4 .card-inner {
-      padding: 15px;
-    }
-    
-    .version-4 .card-score {
-      font-size: 1.8rem;
-    }
-    
-    .version-4 .card-title {
-      font-size: 0.85rem;
-    }
-    
-    .version-5 .score-card-hero {
-      flex-direction: column;
-      text-align: center;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .version-4 .score-detail-cards {
-      grid-template-columns: 1fr !important;
-      gap: 15px;
-    }
-    
-    .version-4 .hero-graphic {
-      width: 150px;
-      height: 150px;
-    }
-    
-    .version-4 .ring-score {
-      font-size: 2.5rem;
-    }
-  }
-  
-  .version-4 .score-card-hero {
-    background: white;
-    border-radius: 15px;
-    padding: 30px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    margin-bottom: 30px;
-  }
-  
-  .version-4 .hero-content {
+  .list-section {
     flex: 1;
-    min-width: 250px;
+  }
+}
+
+/* 소모임 추천 섹션 스타일 */
+.group-recommendation-container {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.group-recommendation-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.recommendation-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.recommendation-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 0;
+}
+
+.recommendation-btn {
+  margin-bottom: 15px;
+  min-width: 200px;
+  height: 45px;
+  border-radius: 30px;
+  text-transform: none;
+  font-weight: 600;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #3f51b5, #5c6bc0);
+  transition: all 0.3s ease;
+}
+
+.recommendation-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(63, 81, 181, 0.3);
+}
+
+.recommendation-desc {
+  color: #666;
+  text-align: center;
+  font-size: 0.95rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* 모달 스타일 */
+.group-modal .modal-title {
+  background-color: #f5f7fa;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.group-card {
+  position: relative;
+  height: 100%;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.group-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.rank-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #4caf50;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  z-index: 2;
+}
+
+.rank-second {
+  background-color: #2196f3;
+}
+
+.top-ranked {
+  border: 2px solid #4caf50;
+}
+
+.group-description {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match-rate {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.match-label {
+  font-size: 0.8rem;
+  color: #555;
+  margin-right: 10px;
+  flex-basis: 100%;
+  margin-bottom: 5px;
+}
+
+.match-percent {
+  margin-left: 10px;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.group-card-small {
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.card-text-small {
+  padding-top: 0;
+}
+
+.group-description-small {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .recommendation-content {
+    padding: 10px 0;
   }
   
-  .version-4 .hero-title {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 10px;
+  .recommendation-btn {
+    min-width: 180px;
+    height: 40px;
+    font-size: 0.9rem;
   }
   
-  .version-4 .hero-subtitle {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #00c2ff;
-    margin-bottom: 15px;
+  .recommendation-desc {
+    font-size: 0.85rem;
   }
-  
-  .version-4 .score-description {
-    font-size: 1rem;
-    color: #666;
-    line-height: 1.5;
-    max-width: 500px;
-  }
-  
-  .version-4 .hero-graphic {
-    width: 180px;
-    height: 180px;
-    position: relative;
-  }
-  
-  .version-4 .detail-card {
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    background: white;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  
-  .version-4 .detail-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  }
-  </style>
-  
-  
-  
-  
-  
+}
+</style>
+
+
