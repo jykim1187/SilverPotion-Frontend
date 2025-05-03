@@ -49,6 +49,7 @@
 <script>
 import axios from 'axios';
 import WebSocketManager from '@/WebSocketManager';
+import emitter from '@/event-bus';
 
 export default {
     data() {
@@ -62,31 +63,15 @@ export default {
         }
     },
     created() {
-    this.loadChatRooms();
-    this.chatRoomList.sort((a, b) => {
-        const timeA = new Date(a.lastMessageTime || a.createdAt);
-        const timeB = new Date(b.lastMessageTime || b.createdAt);
-        return timeB - timeA;
-    });
-
-    const loginId = localStorage.getItem("loginId");
-    const topic = `/user/${loginId}/chat`;
-
-    WebSocketManager.replaceSubscribe(topic, (parsed) => {
-        console.log('📨 리스트용 메시지 수신:', parsed);
-
-        // 메시지에서 roomId 추출
-        if (parsed && parsed.roomId) {
-        this.updateChatRoom(parsed.roomId, parsed);
-        }
-    });
+        this.loadChatRooms();
+        emitter.on("newMessageReceived", this.updateChatRoom);
     },
     beforeRouteLeave(to, from, next) {
         // this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
-        this.disconnectWebSocket();
+        emitter.off("newMessageReceived", this.updateChatRoom); // 정리
     },
     beforeRouteUpdate(to, from, next) {
         this.roomId = to.params.roomId;
@@ -95,6 +80,7 @@ export default {
         this.hasMore = true;
 
         this.loadMessageHistory();
+        
         this.markAsRead();
         this.disconnectWebSocket();
         this.connectWebsocket();
@@ -102,7 +88,12 @@ export default {
         next();
     },
     methods: {
-        
+        onNewMessage(message) {
+            console.log('🔄 onNewMessage called with:', message);
+            if (message && message.roomId) {
+            this.updateChatRoom(message.roomId, message);  // 실시간 갱신
+            }
+        },
         updateChatRoom(roomId, message) {
             console.log('🔄 updateChatRoom called with:', { roomId, message });
             const roomIndex = this.chatRoomList.findIndex(room => room.id == roomId);
@@ -111,31 +102,31 @@ export default {
             const isCurrentRoom = this.isCurrentChatRoom(roomId);
 
             if (roomIndex !== -1) {
-                const room = this.chatRoomList[roomIndex];
-                const updatedUnreadCount = isCurrentRoom ? 0 : (room.unreadCount || 0) + 1;
+            const room = this.chatRoomList[roomIndex];
+            const updatedUnreadCount = isCurrentRoom ? 0 : (room.unreadCount || 0) + 1;
 
-                this.chatRoomList[roomIndex] = {
-                    ...room,
-                    lastMessageContent: message.content,
-                    lastMessageTime: message.createdAt || new Date().toISOString(),
-                    unreadCount: updatedUnreadCount,
-                };
+            this.chatRoomList[roomIndex] = {
+                ...room,
+                lastMessageContent: message.content,
+                lastMessageTime: message.createdAt || new Date().toISOString(),
+                unreadCount: updatedUnreadCount,
+            };
             } else {
-                // 🆕 새 채팅방일 경우
-                this.chatRoomList.push({
-                    id: roomId,
-                    title: message.senderNickName || '새 채팅방', // 기본 타이틀
-                    lastMessageContent: message.content,
-                    lastMessageTime: message.createdAt || new Date().toISOString(),
-                    unreadCount: 1, // ✅ 처음 오면 읽지 않은 메시지 1개
-                });
+            // 🆕 새 채팅방일 경우
+            this.chatRoomList.push({
+                id: roomId,
+                title: message.senderNickName || '새 채팅방', // 기본 타이틀
+                lastMessageContent: message.content,
+                lastMessageTime: message.createdAt || new Date().toISOString(),
+                unreadCount: 1, // ✅ 처음 오면 읽지 않은 메시지 1개
+            });
             }
 
             // 리스트 정렬 (최신순)
             this.chatRoomList.sort((a, b) => {
-                const timeA = new Date(a.lastMessageTime || a.createdAt);
-                const timeB = new Date(b.lastMessageTime || b.createdAt);
-                return timeB - timeA;
+            const timeA = new Date(a.lastMessageTime || a.createdAt);
+            const timeB = new Date(b.lastMessageTime || b.createdAt);
+            return timeB - timeA;
             });
 
             console.log('✅ 채팅방 리스트 실시간 갱신됨:', this.chatRoomList);
@@ -144,8 +135,9 @@ export default {
             return this.$route.path === `/chat/${roomId}`;
         },
         disconnectWebSocket() {
-            const topic = `/user/${this.senderLoginId}/chat`;
-            WebSocketManager.unsubscribe(topic);
+            console.log("🛑 disconnectWebSocket 호출됨");
+            WebSocketManager.unsubscribe(`/user/${this.senderLoginId}/chat`);
+            this.isSubscribed = false;
         },
         async loadChatRooms() {
             try {

@@ -107,6 +107,7 @@
 <script>
 import emitter from '@/event-bus';
 import axios from 'axios';
+import WebSocketManager from '@/WebSocketManager';
 
 export default {
   data() {
@@ -150,7 +151,9 @@ export default {
         );
 
         localStorage.clear();
+
         emitter.emit('loginChanged');
+        WebSocketManager.disconnect();
         this.$router.push('/');
         this.profileMenu = false;
       }

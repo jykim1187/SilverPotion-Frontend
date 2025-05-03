@@ -24,13 +24,23 @@ export default {
   components: {
     HeaderComponent
   },
+  data() {
+    return {
+      isWebSocketConnected: false,  // WebSocket 연결 상태를 관리
+    };
+  },
   mounted() {
-    this.checkLoginStatus();  // 앱이 마운트되면 로그인 상태를 체크하고 웹소켓 연결
+    this.checkLoginStatus();
+    
   },
   beforeUnmount() {
   // 앱이 종료될 때 웹소켓 연결을 끊습니다.
   WebSocketManager.disconnect();
   },
+  beforeRouteLeave(to, from, next) {
+  WebSocketManager.disconnect();  // 페이지 이동 시 WebSocket 연결 해제
+  next();
+},
   methods: {
     async doLogout() {
     try {
@@ -47,33 +57,35 @@ export default {
       this.$router.push('/');
       
       // 로그아웃 후 웹소켓 연결 종료
-      WebSocketManager.disconnect();
+      this.disconnectWebSocket();
 
     } catch (error) {
       console.error('로그아웃 실패', error);
     }
   },
-    checkLoginStatus() {
+    async checkLoginStatus() {
       const loginId = localStorage.getItem("loginId");
       const token = localStorage.getItem("token");
 
       if (loginId && token) {
-        // 로그인 상태일 때만 웹소켓 연결
-        WebSocketManager.token = token;
-        WebSocketManager.connect()
-          .then(() => {
-            // 연결이 성공하면, 채팅 유저 채널 구독
-            WebSocketManager.subscribe(`/user/${loginId}/chat`, this.onNewMessage);
-          })
-          .catch((error) => {
-            console.error("웹소켓 연결 실패:", error);
-          });
-      }
+      await WebSocketManager.connect();  // WebSocket 연결 시도
+      const topic = `/user/${loginId}/chat`;
+      const self = this;  // ✅ 명시적 바인딩
+      WebSocketManager.replaceSubscribe(topic, (message) => {
+        self.onNewMessage(message);
+      });
+    }
     },
 
     onNewMessage(message) {
       console.log('새로운 메시지:', message);
       // 메시지를 처리할 로직
+      emitter.emit("newMessageReceived", { senderNickName: message.senderNickName, roomId: message.roomId, message });
+    },
+    disconnectWebSocket() {
+      // WebSocket 연결 해제
+      WebSocketManager.disconnect();
+      this.isWebSocketConnected = false;
     }
   },
 

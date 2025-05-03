@@ -44,6 +44,7 @@
 
 <script>
 import WebSocketManager from '@/WebSocketManager';
+import emitter from '@/event-bus';
 
 export default {
     data() {
@@ -71,22 +72,20 @@ export default {
         this.hasMore = true;
         await this.loadMessageHistory();
         this.markAsRead();
-        this.connectWebsocket();
     },
     mounted() {
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.addEventListener("scroll", this.onScrollTop);
-        this.connectWebsocket();
+        emitter.on("newMessageReceived", this.onMessageReceived);
     },
     beforeRouteLeave(to, from, next) {
         this.markAsRead(); // ✅ 나가기 전에 읽음 처리
-        this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
-        this.disconnectWebSocket();
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.removeEventListener("scroll", this.onScrollTop);
+        emitter.off("newMessageReceived", this.onMessageReceived);
     },
     beforeRouteUpdate(to, from, next) {
     this.roomId = to.params.roomId;  // 새로운 roomId 업데이트
@@ -96,178 +95,166 @@ export default {
 
     // 채팅 히스토리 로드
     this.loadMessageHistory();
-
-    // 웹소켓 연결
-    this.connectWebsocket();
-
     next();  // 라우트 이동 계속
     },
     methods: {
-        isMine(senderId) {
-            return String(senderId) === String(this.userId);
-        },
-        onScrollTop(e) {
-            const el = e.target;
-            if (el.scrollTop < 50 && this.hasMore && !this.loadingHistory) {
+    isMine(senderId) {
+        return String(senderId) === String(this.userId);
+    },
+
+    onScrollTop(e) {
+        const el = e.target;
+        if (el.scrollTop < 50 && this.hasMore && !this.loadingHistory) {
             this.page++;
             this.loadMessageHistory();
-            }
-        },
-        async loadMessageHistory() {
-            this.loadingHistory = true;
-            try {
-                const response = await fetch(
+        }
+    },
+
+    async loadMessageHistory() {
+        this.loadingHistory = true;
+        try {
+            const response = await fetch(
                 `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${this.roomId}/messages?page=${this.page}&size=30`,
                 {
                     headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    "X-User-LoginId": this.senderLoginId
+                        Authorization: `Bearer ${this.token}`,
+                        "X-User-LoginId": this.senderLoginId
                     }
                 }
-                );
+            );
 
-                const result = await response.json();
-                const reversed = result.content.reverse(); // 오래된 메시지가 위로 오도록
+            const result = await response.json();
+            const reversed = result.content.reverse(); // 오래된 메시지가 위로 오도록
 
-                if (reversed.length === 0) {
+            if (reversed.length === 0) {
                 this.hasMore = false;
                 return;
-                }
+            }
 
-                const chatBox = this.$el.querySelector(".chat-box");
-                const oldScrollHeight = chatBox.scrollHeight;
+            const chatBox = this.$el.querySelector(".chat-box");
+            const oldScrollHeight = chatBox.scrollHeight;
 
-                this.messages = [...reversed, ...this.messages]; // 위로 붙이기
+            this.messages = [...reversed, ...this.messages]; // 위로 붙이기
 
-                this.$nextTick(() => {
+            this.$nextTick(() => {
                 const newScrollHeight = chatBox.scrollHeight;
                 chatBox.scrollTop = newScrollHeight - oldScrollHeight; // 스크롤 위치 유지
-                });
+            });
 
-                console.log(`📄 page ${this.page} 히스토리 불러옴`, reversed.length);
-            } catch (error) {
-                console.error("❌ 채팅 히스토리 불러오기 실패", error);
-            } finally {
-                this.loadingHistory = false;
-            }
-        },
-        connectWebsocket() {
-            console.log("🔧 connectWebsocket 호출됨, 현재 isSubscribed =", this.isSubscribed);
-            if (this.isSubscribed){
-                console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
-                return;
-            }
+            console.log(`📄 page ${this.page} 히스토리 불러옴`, reversed.length);
+        } catch (error) {
+            console.error("❌ 채팅 히스토리 불러오기 실패", error);
+        } finally {
+            this.loadingHistory = false;
+        }
+    },
+
+    connectWebsocket() {
+        console.log("🔧 connectWebsocket 호출됨, 현재 isSubscribed =", this.isSubscribed, "connected =", WebSocketManager.connected);
+
+        // 이미 구독된 상태라면 구독을 다시 시도하지 않음
+        if (this.isSubscribed || WebSocketManager.connected) {
+            console.warn("🚫 이미 구독 또는 연결됨, connect 중단됨");
+            return;
+        }
             const loginId = localStorage.getItem("loginId");
             const topic = `/user/${loginId}/chat`;
 
             console.log("📡 replaceSubscribe 호출 예정 topic:", topic);
 
-            WebSocketManager.replaceSubscribe(topic, (message) => {
-                console.log('📨 ChatRoom용 메시지 수신:', message);
-                console.log('📨 Message details:', {
-                    roomId: message.roomId,
-                    currentRoomId: this.roomId,
-                    content: message.content,
-                    senderId: message.senderId,
-                    currentUserId: this.userId
-                });
-                console.log("🧩 현재 roomId:", this.roomId, typeof this.roomId);
-                console.log("🧩 수신된 message.roomId:", message.roomId, typeof message.roomId);
-                if (!message) {
-                    console.warn("❌ message is undefined/null");
-                    return;
-                }
-                
-                if (!message.roomId) {
-                    console.warn("⚠️ message.roomId 없음, 전체 메시지:", message);
-                    return;
-                }
-                
-                if (parseInt(message.roomId) === parseInt(this.roomId)) {
-                    // 내가 방금 보낸 메시지라면 무시 (로컬에서 이미 push 했음)
-                    if (String(message.senderId) === String(this.userId)) {
-                        console.log("🙅 내 메시지는 수신에서 무시함");
+            WebSocketManager.connect().then(() => {
+                WebSocketManager.replaceSubscribe(topic, (message) => {
+                    if (!message || !message.roomId) {
+                        console.warn("❌ Invalid message received:", message);
                         return;
                     }
-                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
-                    this.messages.push(message);
-                    this.scrollToBottom();
-                } else {
-                    console.log('📪 다른 방 메시지:', message.roomId, '현재 방:', this.roomId);
-                }
-            });
-            
-            this.isSubscribed = true;
-        },
-        sendMessage() {
-            if(this.newMessage.trim() === "") return;
-            this.isSending = true; // ✅ 전송 중 플래그 설정
 
-            const message = {
-                roomId: this.roomId,
-                content: this.newMessage,
-                type: "TEXT",
-                senderId: this.userId,
-                createdAt: new Date().toISOString()
-            };
-            
-            console.log('📤 Sending message:', message);
-            
-            // 메시지를 먼저 로컬에 추가
-            this.messages.push(message);
-            this.scrollToBottom();
-            
-            // WebSocket으로 메시지 전송
-            WebSocketManager.send(
-                `/pub/room/${this.roomId}`,
-                message
-            );
-            
-            this.newMessage = "";
-            setTimeout(() => {
-                this.isSending = false; // ✅ 잠깐 후에 초기화
-            }, 300); // debounce 효과
-        },
-        scrollToBottom() {
-            this.$nextTick(() => {
-                const chatBox = this.$el.querySelector(".chat-box");
-                chatBox.scrollTop = chatBox.scrollHeight;
-            });
-        },
-        formatTime(datetime) {
-            if (!datetime) return '';
-            const date = new Date(datetime);
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            return `${hours}:${minutes}`;
-        },
-        // ✅ 나가기 전에 읽음 처리
-        async markAsRead() {
-            if (!this.messages.length) return;
-
-            const lastMessage = this.messages[this.messages.length - 1];
-            const userId = localStorage.getItem("userId");
-
-            try {
-                await fetch(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${this.roomId}/read?userId=${userId}&messageId=${lastMessage.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        Authorization: `Bearer ${this.token}`,
-                        "X-User-LoginId": this.senderLoginId
+                    if (parseInt(message.roomId) === parseInt(this.roomId)) {
+                        if (String(message.senderId) !== String(this.userId)) {
+                            this.messages.push(message);
+                            this.scrollToBottom();
+                        }
                     }
                 });
-                console.log('📍 메시지 읽음 처리 완료');
-            } catch (error) {
-                console.error('❌ 메시지 읽음 처리 실패', error);
-            }
+
+                this.isSubscribed = true;
+            }).catch((error) => {
+                console.error("웹소켓 연결 실패:", error);
+            });
         },
-        disconnectWebSocket() {
-            const topic = `/user/${this.senderLoginId}/chat`;
-            console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
-            WebSocketManager.unsubscribe(topic);
-            this.isSubscribed = false;
+
+        sendMessage() {
+        if (this.newMessage.trim() === "") return;
+        this.isSending = true; // 전송 중 플래그 설정
+
+        const message = {
+            roomId: this.roomId,
+            content: this.newMessage,
+            type: "TEXT",
+            senderId: this.userId,
+            senderNickName: localStorage.getItem("nickName"),
+            createdAt: new Date().toISOString() // ISO 8601 형식으로 시간 생성
+        };
+
+        console.log('📤 Sending message:', message);
+
+        // 메시지를 먼저 로컬에 추가
+        this.messages.push(message);
+        this.scrollToBottom();
+
+        // WebSocket으로 메시지 전송
+        WebSocketManager.send(
+            `/pub/room/${this.roomId}`,
+            message
+        );
+
+        this.newMessage = ""; // 메시지 입력 초기화
+        this.isSending = false; // 전송 완료 후 상태 초기화
         },
-    }
+
+    scrollToBottom() {
+        this.$nextTick(() => {
+            const chatBox = this.$el.querySelector(".chat-box");
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    },
+
+    formatTime(datetime) {
+        if (!datetime) return '';
+        const date = new Date(datetime);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    },
+
+    // ✅ 나가기 전에 읽음 처리
+    async markAsRead() {
+        if (!this.messages.length) return;
+
+        const lastMessage = this.messages[this.messages.length - 1];
+        const userId = localStorage.getItem("userId");
+
+        try {
+            await fetch(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${this.roomId}/read?userId=${userId}&messageId=${lastMessage.id}`, {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    "X-User-LoginId": this.senderLoginId
+                }
+            });
+            console.log('📍 메시지 읽음 처리 완료');
+        } catch (error) {
+            console.error('❌ 메시지 읽음 처리 실패', error);
+        }
+    },
+
+    disconnectWebSocket() {
+        const topic = `/user/${this.senderLoginId}/chat`;
+        console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
+        WebSocketManager.unsubscribe(topic);
+        this.isSubscribed = false;
+    },
+}
 }
 </script>
 
