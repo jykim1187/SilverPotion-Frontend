@@ -10,6 +10,8 @@ import FreePostCreate from '@/views/FreePostCreate.vue'
 import NoticePostCreate from '@/views/NoticePostCreate.vue'
 import VotePostCreate from '@/views/VotePostCreate.vue'
 import { adminRouter } from "./adminRouter";
+import CalendarView from '@/views/Calendar.vue'
+
 const routes = [
     ...chatRouter,
     ...userRouter,
@@ -25,6 +27,12 @@ const routes = [
         path: '/oauth/kakao/redirect',
         name: 'KakaoRedirect',
         component: KakaoRedirect
+    },
+    
+    {
+        path: '/calendar',
+        name: 'CalendarView',
+        component: CalendarView
     },
     
     // {

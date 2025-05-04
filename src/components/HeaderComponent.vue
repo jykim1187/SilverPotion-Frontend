@@ -64,6 +64,13 @@
                                     </v-list-item>
                                     <v-list-item>
                                         <v-list-item-title>
+                                            <v-btn :to="{path:'/calendar'}" variant="text" block class="justify-start">
+                                                <v-icon start>mdi-calendar</v-icon> 캘린더
+                                            </v-btn>
+                                        </v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item>
+                                        <v-list-item-title>
                                             <v-btn :to="{path:'/chat-service/chat/my/rooms'}" variant="text" block class="justify-start">
                                                 <v-icon start>mdi-chat</v-icon> 채팅목록
                                             </v-btn>
