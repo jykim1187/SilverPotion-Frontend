@@ -20,6 +20,7 @@
                                 outlined
                                 class="mb-4"
                                 :rules="[v => !!v || '로그인 ID를 입력해주세요']"
+                                @keyup.enter="doLogin"
                             ></v-text-field>
                           <!-- 비밀번호 입력 필드 -->
                             <v-text-field
@@ -31,6 +32,7 @@
                                 required
                                 outlined
                                 :rules="[v => !!v || '비밀번호를 입력해주세요']"
+                                @keyup.enter="doLogin"
                             ></v-text-field>
                           <!-- 로그인 버튼 -->
                             <v-btn

@@ -169,13 +169,29 @@
           </v-btn>
         </div>
         
-        <div v-else-if="voteDetail.isParticipating === 'Y'" class="text-center mt-4 text-success">
-          이미 투표에 참여하셨습니다.
+        <div v-else-if="voteDetail.isParticipating === 'Y'" class="d-flex justify-space-between mt-4">
+          <v-btn
+            color="grey-lighten-3"
+            variant="elevated"
+            class="flex-grow-1 mr-2"
+            rounded="lg"
+            @click="reVote"
+          >
+            다시 투표하기
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="text"
+            class="flex-grow-1"
+            disabled
+          >
+            이미 투표하셨습니다
+          </v-btn>
         </div>
         
         <!-- 투표 정보 -->
-        <div class="vote-info d-flex justify-end mt-4">
-          <div class="text-body-2">
+        <div class="vote-info d-flex justify-end mt-4" @click="showVoteUsersDialog">
+          <div class="text-body-2 vote-info-text">
             <strong>{{ voteDetail.participantsCount || 0 }}명</strong> 참여
           </div>
         </div>
@@ -577,6 +593,65 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 투표자 목록 다이얼로그 -->
+    <v-dialog v-model="voteUsersDialog" max-width="400">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <span class="text-h6">투표자 목록</span>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="voteUsersDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="pa-0">
+          <v-list>
+            <v-list-item v-for="(users, optionId) in voteUsers" :key="optionId">
+              <template v-slot:prepend>
+                <v-avatar size="40" class="mr-3">
+                  <v-img :src="getOptionImage()"></v-img>
+                </v-avatar>
+              </template>
+              <v-list-item-title class="font-weight-medium">
+                {{ getOptionText(optionId) }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                {{ users.length }}명 투표
+              </v-list-item-subtitle>
+              <template v-slot:append>
+                <v-btn
+                  icon
+                  @click="toggleOptionUsers(optionId)"
+                >
+                  <v-icon>{{ expandedOptions.has(optionId) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+                </v-btn>
+              </template>
+            </v-list-item>
+            
+            <!-- 각 옵션별 투표자 목록 -->
+            <div v-for="(users, optionId) in voteUsers" :key="optionId">
+              <v-expand-transition>
+                <v-list v-if="expandedOptions.has(optionId)">
+                  <v-list-item
+                    v-for="user in users"
+                    :key="user.userId"
+                    class="pl-8"
+                  >
+                    <template v-slot:prepend>
+                      <v-avatar size="32">
+                        <v-img :src="user.profileImage || require('@/assets/default-profile.png')"></v-img>
+                      </v-avatar>
+                    </template>
+                    <v-list-item-title>{{ user.nickName }}</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-expand-transition>
+            </div>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -641,6 +716,9 @@ export default {
         { text: '불법', value: 'ILLEGAL_ACT' },
         { text: '따돌림', value: 'BULLYING' }
       ],
+      voteUsersDialog: false,
+      voteUsers: {},
+      expandedOptions: new Set(),
     };
   },
   computed: {
@@ -704,11 +782,47 @@ export default {
       return this.voteDetail.writerId === parseInt(userId);
     },
 
+    // 투표 상세 정보 가져오기
     async fetchVoteDetail() {
       try {
         this.loading = true;
         const loginId = localStorage.getItem('loginId');
         const voteId = this.$route.params.voteId;
+        
+        // 로컬 스토리지에서 투표 상태 확인
+        const savedVoteState = localStorage.getItem(`vote_${voteId}`);
+        if (savedVoteState) {
+          const voteState = JSON.parse(savedVoteState);
+          
+          // 투표 옵션 데이터 처리
+          let processedVoteOptions = [];
+          if (voteState.options && Array.isArray(voteState.options)) {
+            processedVoteOptions = voteState.options.map(option => ({
+              id: option.optionId,
+              optionText: option.optionText || '',
+              voteCount: option.voteCount || 0,
+              voteRatio: option.voteRatio || 0
+            }));
+          }
+          
+          // 투표 상세 정보 설정
+          this.voteDetail = {
+            voteId: voteId,
+            isParticipating: voteState.isParticipating,
+            participantsCount: voteState.participantsCount,
+            voteOption: processedVoteOptions,
+            multipleChoice: voteState.multipleChoice || false
+          };
+          
+          // 선택한 옵션 설정
+          if (this.voteDetail.multipleChoice) {
+            this.selectedOptions = voteState.selectedOptions;
+          } else {
+            this.selectedOption = voteState.selectedOptions[0];
+          }
+          
+          return;
+        }
         
         console.log('투표 상세 조회 요청 - voteId:', voteId);
         
@@ -725,28 +839,19 @@ export default {
         
         const result = response.data.result || {};
         
-        // 투표 옵션 데이터 처리 - 무한 중첩 문제 해결
+        // 투표 옵션 데이터 처리
         let processedVoteOptions = [];
         if (result.voteOption && Array.isArray(result.voteOption)) {
-          console.log('원본 투표 옵션 데이터:', result.voteOption);
-          processedVoteOptions = result.voteOption.map(option => {
-            // 필요한 속성만 추출하여 새 객체 생성
-            console.log('처리중인 옵션:', option);
-            return {
-              id: option.id || 0,
-              optionText: option.optionText || '',
-              voteCount: option.answers ? option.answers.length : 0,
-              voteRatio: option.voteRatio || 0
-            };
-          });
-          console.log('처리된 투표 옵션 데이터:', processedVoteOptions);
-        } else {
-          console.warn('투표 옵션 데이터가 없거나 배열이 아닙니다:', result.voteOption);
+          processedVoteOptions = result.voteOption.map(option => ({
+            id: option.id || 0,
+            optionText: option.optionText || '',
+            voteCount: option.answers ? option.answers.length : 0,
+            voteRatio: option.voteRatio || 0
+          }));
         }
         
         // 테스트용 더미 데이터 (실제 데이터가 없는 경우)
         if (processedVoteOptions.length === 0) {
-          console.log('투표 옵션이 없어 더미 데이터를 추가합니다.');
           processedVoteOptions = [
             { id: 1, optionText: '치킨', voteCount: 2, voteRatio: 33.3 },
             { id: 2, optionText: '피자', voteCount: 3, voteRatio: 50.0 },
@@ -754,7 +859,7 @@ export default {
           ];
         }
         
-        // 안전하게 속성 추출 후 할당
+        // 투표 상세 정보 설정
         this.voteDetail = {
           voteId: result.voteId || null,
           writerId: result.writerId || null,
@@ -775,7 +880,7 @@ export default {
         // 댓글 데이터 설정
         this.commentList = result.commentList || [];
         
-        // 투표 참여 여부 확인
+        // 투표 참여 여부 확인 및 선택된 옵션 설정
         await this.checkUserVote();
         
         console.log('처리된 투표 상세 데이터:', this.voteDetail);
@@ -787,7 +892,7 @@ export default {
         this.loading = false;
       }
     },
-    
+
     // 사용자가 이미 투표했는지 확인
     async checkUserVote() {
       try {
@@ -834,7 +939,7 @@ export default {
         console.error('투표 참여 여부 확인에 실패했습니다:', error);
       }
     },
-    
+
     // 투표 제출
     async submitVote() {
       try {
@@ -874,6 +979,27 @@ export default {
             existingOption.voteRatio = option.voteRatio;
           }
         });
+
+        // 선택한 옵션 저장
+        if (this.voteDetail.multipleChoice) {
+          this.selectedOptions = selectedIds;
+        } else {
+          this.selectedOption = selectedIds[0];
+        }
+
+        // 투표 상태를 로컬 스토리지에 저장
+        const voteState = {
+          voteId: voteId,
+          isParticipating: 'Y',
+          selectedOptions: this.voteDetail.multipleChoice ? this.selectedOptions : [this.selectedOption],
+          participantsCount: result.totalParticipants,
+          options: result.options,
+          multipleChoice: this.voteDetail.multipleChoice,
+          description: this.voteDetail.description,
+          createTime: this.voteDetail.createTime,
+          closeTime: this.voteDetail.closeTime
+        };
+        localStorage.setItem(`vote_${voteId}`, JSON.stringify(voteState));
         
         alert('투표가 완료되었습니다.');
       } catch (error) {
@@ -881,7 +1007,7 @@ export default {
         alert('투표 제출에 실패했습니다.');
       }
     },
-    
+
     // 좋아요 토글
     async toggleLike() {
       try {
@@ -1340,6 +1466,39 @@ export default {
       }
     },
 
+    // 다시 투표하기
+    async reVote() {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const voteId = this.$route.params.voteId;
+        
+        await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/reset/${voteId}`,
+          null,
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        // 로컬 스토리지에서 투표 상태 삭제
+        localStorage.removeItem(`vote_${voteId}`);
+        
+        // 투표 상태 초기화
+        this.voteDetail.isParticipating = 'N';
+        this.selectedOption = null;
+        this.selectedOptions = [];
+        
+        // 투표 정보 새로고침
+        await this.fetchVoteDetail();
+        alert('다시 투표할 수 있습니다.');
+      } catch (error) {
+        console.error('다시 투표하기 처리 중 오류가 발생했습니다:', error);
+        alert('다시 투표하기 처리 중 오류가 발생했습니다.');
+      }
+    },
+
     async submitReport() {
       try {
         const loginId = localStorage.getItem('loginId');
@@ -1366,7 +1525,82 @@ export default {
       } catch (error) {
         alert('신고 처리 중 오류가 발생했습니다.');
       }
-    }
+    },
+
+    // 투표자 목록 다이얼로그 표시
+    async showVoteUsersDialog() {
+      this.voteUsersDialog = true;
+      this.voteUsers = {};
+      this.expandedOptions.clear();
+      
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const voteId = this.$route.params.voteId;
+        
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/${voteId}/userList`,
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        console.log('투표자 목록 응답:', response.data);
+        const result = response.data.result;
+        
+        if (result) {
+          // 사용자 정보를 가져오기 위한 추가 API 호출
+          const userPromises = Object.entries(result).map(async ([optionId, answers]) => {
+            const userPromises = answers.map(async (answer) => {
+              try {
+                const userResponse = await axios.get(
+                  `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/${answer.userId}`,
+                  {
+                    headers: {
+                      'X-User-LoginId': loginId
+                    }
+                  }
+                );
+                return userResponse.data.result;
+              } catch (error) {
+                console.error('사용자 정보 조회 실패:', error);
+                return null;
+              }
+            });
+            const users = await Promise.all(userPromises);
+            return [optionId, users.filter(user => user !== null)];
+          });
+          
+          const userResults = await Promise.all(userPromises);
+          this.voteUsers = Object.fromEntries(userResults);
+        }
+      } catch (error) {
+        console.error('투표자 목록 조회 중 오류가 발생했습니다:', error);
+        alert('투표자 목록을 불러오는데 실패했습니다.');
+      }
+    },
+    
+    // 옵션 ID로 옵션 텍스트 가져오기
+    getOptionText(optionId) {
+      const option = this.voteDetail.voteOption.find(opt => opt.id === optionId);
+      return option ? option.optionText : '알 수 없음';
+    },
+    
+    // 옵션 ID로 옵션 이미지 가져오기 (필요한 경우)
+    getOptionImage() {
+      // 여기에 옵션별 이미지 로직 추가
+      return require('@/assets/default-profile.png');
+    },
+    
+    // 옵션별 투표자 목록 토글
+    toggleOptionUsers(optionId) {
+      if (this.expandedOptions.has(optionId)) {
+        this.expandedOptions.delete(optionId);
+      } else {
+        this.expandedOptions.add(optionId);
+      }
+    },
   }
 };
 </script>
@@ -1602,5 +1836,18 @@ export default {
   .comment-input-container {
     max-width: 900px;
   }
+}
+
+.vote-info-text {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.vote-info-text:hover {
+  opacity: 0.8;
+}
+
+.vote-info-text:active {
+  opacity: 0.6;
 }
 </style> 

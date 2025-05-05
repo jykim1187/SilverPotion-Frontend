@@ -638,9 +638,7 @@ export default {
         loginId: this.loginId
       });
       
-      // 삭제를 실행할 때만 작성자 확인
-      // 우선 삭제 버튼은 모든 게시물에 표시
-      return true;
+      return this.isMyPost(post);
     },
     
     // 게시물 삭제 확인 다이얼로그 열기
@@ -712,30 +710,7 @@ export default {
         저장된nickname: localStorage.getItem('nickName')
       });
       
-      // 다양한 경우의 작성자 ID를 확인
-      const writerId = post.writerId || 
-                      (post.writer && post.writer.loginId) ||
-                      post.loginId;
-      
-      if (writerId) {
-        console.log('작성자 ID 비교:', writerId, this.loginId, writerId === this.loginId);
-        return writerId === this.loginId;
-      }
-      
-      // writerId가 없는 경우 nickname 비교 시도
-      if (post.nickname) {
-        const userNickname = localStorage.getItem('nickName');
-        console.log('닉네임 비교:', post.nickname, userNickname, post.nickname === userNickname);
-        if (userNickname && post.nickname === userNickname) {
-          return true;
-        }
-      }
-      
-      // 관리자 권한 확인 (임시로 주석 처리)
-      // const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      
-      // 테스트를 위해 임시로 모든 삭제 허용 (실제 운영 환경에서는 제거)
-      return true;
+      return this.isMyPost(post);
     },
 
     // 자신의 게시물인지 확인
@@ -751,17 +726,18 @@ export default {
         postNickname: post.nickname,
         localStorageNickname: localStorage.getItem('nickName'),
         loginId: this.loginId,
-        writerId: post.writerId
+        writer: post.writer,
+        writerLoginId: post.writer?.loginId
       });
       
-      // 1. 로그인 ID로 확인
-      if (this.loginId && post.writerId) {
+      // 1. 로그인 ID로 확인 (writer.loginId 사용)
+      if (this.loginId && post.writer?.loginId) {
         console.log('로그인 ID 비교:', {
           로그인ID: this.loginId,
-          작성자ID: post.writerId,
-          일치여부: this.loginId === post.writerId
+          작성자로그인ID: post.writer.loginId,
+          일치여부: this.loginId === post.writer.loginId
         });
-        return this.loginId === post.writerId;
+        return this.loginId === post.writer.loginId;
       }
       
       // 2. 닉네임으로 확인
@@ -779,7 +755,7 @@ export default {
         postNickname: post.nickname,
         localStorageNickname: userNickname,
         loginId: this.loginId,
-        writerId: post.writerId
+        writer: post.writer
       });
       return false;
     },
