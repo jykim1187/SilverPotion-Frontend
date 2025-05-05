@@ -86,7 +86,7 @@
                     </v-card-actions>
                     <!-- 회원가입 버튼 -->
                     <v-card-actions class="justify-center mt-4">
-                        <v-btn text color="grey darken-1" to="/user-service/silverpotion/user/create">
+                        <v-btn text color="grey darken-1" to="/silverpotion/user/create">
                             회원가입
                         </v-btn>
                     </v-card-actions>
