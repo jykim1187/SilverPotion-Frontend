@@ -17,6 +17,7 @@ axios.interceptors.request.use(
         if(token) {
             config.headers['Authorization'] = `Bearer ${token}`
         }
+        config.headers['ngrok-skip-browser-warning'] = 'true'; //엔그록 테스트 시에 필요
         return config
     },
     error => {
