@@ -1,18 +1,16 @@
 <template>
-    <v-container fluid class="fill-height pa-0 ma-0" style="max-width: 1080px; margin: 0 auto;">
-        <v-row align="center" justify="center">
-            <v-col cols="12" sm="11" md="9" lg="7">
-                <v-card class="elevation-0 pa-0">
-                   <!-- 로고 -->
-                    <v-card-text class="text-center pa-0">
-                      
-                        <img src="@/assets/logo.png" alt="Logo" class="logo mb-8" style="height: 60px;">
-                        <!-- 로그인 폼 -->
-                        <v-form @submit.prevent="doLogin" class="px-4">
-                           <!-- 로그인 ID 입력 필드 -->
+    <v-container fluid class="fill-height pa-0 ma-0">
+        <v-row align="center" justify="center" class="ma-0">
+            <v-col cols="12" sm="10" md="8" lg="6" class="pa-0">
+                <v-card class="login-container">
+                    <v-card-text class="login-content">
+                        <h1 class="welcome-text">실버포션</h1>
+                        <p class="sub-text">안녕하세요!<br>실버포션에 오신 것을 환영합니다</p>
+                        
+                        <v-form @submit.prevent="doLogin" class="login-form">
                             <v-text-field
                                 v-model="loginId"
-                                label="로그인 ID"
+                                label="아이디"
                                 name="login"
                                 prepend-inner-icon="mdi-account-outline"
                                 type="text"
@@ -21,8 +19,9 @@
                                 class="mb-4"
                                 :rules="[v => !!v || '로그인 ID를 입력해주세요']"
                                 @keyup.enter="doLogin"
+
                             ></v-text-field>
-                          <!-- 비밀번호 입력 필드 -->
+                            
                             <v-text-field
                                 v-model="password"
                                 label="비밀번호"
@@ -31,33 +30,38 @@
                                 type="password"
                                 required
                                 outlined
+                                class="custom-input"
                                 :rules="[v => !!v || '비밀번호를 입력해주세요']"
+
+
                                 @keyup.enter="doLogin"
                             ></v-text-field>
-                          <!-- 로그인 버튼 -->
+                            
                             <v-btn
-                                color="#FF6B00"
+                                color="#8BBEE8"
                                 @click="doLogin"
                                 block
-                                large
-                                class="mb-4 white--text"
-                                height="48"
+                                x-large
+                                class="login-btn"
+                                height="56"
                             >
                                 로그인
                             </v-btn>
                         </v-form>
                     </v-card-text>
+                    
                     <v-divider class="my-4"></v-divider>
-                    <!-- 소셜 로그인 버튼 -->
+                    
                     <v-card-actions class="justify-center px-4">
                         <v-row>
                             <v-col cols="6" class="text-center">
-                              <!-- 구글 로그인 버튼 -->
                                 <v-btn
                                     color="#4285F4"
-                                    class="white--text"
+                                    class="white--text social-btn"
                                     block
                                     @click="googleLogin"
+                                    x-large
+                                    height="56"
                                 >
                                     <v-img
                                         src="@/assets/google.png"
@@ -69,11 +73,13 @@
                                 </v-btn>
                             </v-col>
                             <v-col cols="6" class="text-center">
-                              <!-- 카카오 로그인 버튼 -->
                                 <v-btn
                                     color="#FEE500"
+                                    class="social-btn"
                                     block
                                     @click="kakaoLogin"
+                                    x-large
+                                    height="56"
                                 >
                                     <v-img
                                         src="@/assets/kakao.png"
@@ -86,9 +92,15 @@
                             </v-col>
                         </v-row>
                     </v-card-actions>
-                    <!-- 회원가입 버튼 -->
+                    
                     <v-card-actions class="justify-center mt-4">
-                        <v-btn text color="grey darken-1" to="/silverpotion/user/create">
+                        <v-btn
+                            text
+                            color="#8BBEE8"
+                            to="/silverpotion/user/create"
+                            class="signup-btn"
+                            x-large
+                        >
                             회원가입
                         </v-btn>
                     </v-card-actions>
@@ -121,7 +133,16 @@ export default {
     }
   },
   methods: {
-    
+    handleFocus(event) {
+      event.target.parentElement.classList.add('v-input--is-focused')
+      event.target.parentElement.querySelector('.v-label').style.opacity = '0'
+    },
+    handleBlur(event) {
+      if (!event.target.value) {
+        event.target.parentElement.classList.remove('v-input--is-focused')
+        event.target.parentElement.querySelector('.v-label').style.opacity = '1'
+      }
+    },
      // 일반 로그인
     async doLogin() {
       try {
@@ -185,33 +206,133 @@ export default {
 <style scoped>
 .fill-height {
     min-height: 100vh;
-    background-color: #f8f8f8;
+    background: linear-gradient(135deg, #E8F4FF 0%, #FFF5F0 100%);
     padding: 0;
     margin: 0;
 }
 
-@media (max-width: 1080px) {
-    .fill-height {
-        padding: 0 16px;
+.login-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+    background: white !important;
+}
+
+.login-content {
+    width: 100%;
+    padding: 0 !important;
+}
+
+.welcome-text {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4A6B8A;
+    margin-bottom: 16px;
+    text-align: center;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+.sub-text {
+    font-size: 1.25rem;
+    color: #666666;
+    margin-bottom: 48px;
+    text-align: center;
+    font-family: 'Noto Sans KR', sans-serif;
+    line-height: 1.6;
+}
+
+.login-form {
+    margin-bottom: 32px;
+}
+
+.custom-input {
+    border-radius: 12px !important;
+    margin-bottom: 24px !important;
+}
+
+.custom-input :deep(.v-input__slot) {
+    border-radius: 12px !important;
+    background-color: #FFFFFF !important;
+    border: 2px solid #E0E0E0 !important;
+    min-height: 56px !important;
+}
+
+.custom-input :deep(.v-label) {
+    font-size: 1.1rem !important;
+    color: #666666 !important;
+    opacity: 1;
+}
+
+.custom-input :deep(input) {
+    font-size: 1.2rem !important;
+    padding: 12px 0 !important;
+    color: #333333 !important;
+}
+
+.custom-input :deep(.v-input__prepend-inner) {
+    margin-top: 12px !important;
+}
+
+.login-btn {
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 1.2rem !important;
+    color: white !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 8px rgba(139, 190, 232, 0.3) !important;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(139, 190, 232, 0.4) !important;
+}
+
+.social-btn {
+    border-radius: 12px !important;
+    font-weight: 500 !important;
+    font-size: 1.1rem !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    transition: all 0.3s ease !important;
+}
+
+.social-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.signup-btn {
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+@media (max-width: 600px) {
+    .login-container {
+        padding: 32px 16px;
     }
-}
-
-.logo {
-    margin-top: 40px;
-}
-
-.v-text-field {
-    border-radius: 4px;
-}
-
-.v-btn {
-    text-transform: none;
-    font-weight: 500;
-    letter-spacing: 0;
-}
-
-.v-card {
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    
+    .welcome-text {
+        font-size: 2.2rem;
+    }
+    
+    .sub-text {
+        font-size: 1.1rem;
+    }
+    
+    .custom-input :deep(input) {
+        font-size: 1.1rem !important;
+    }
+    
+    .login-btn, .social-btn {
+        height: 52px !important;
+        font-size: 1.1rem !important;
+    }
 }
 </style>
