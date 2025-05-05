@@ -754,6 +754,15 @@ export default {
     font-size: 0.95rem;
     line-height: 1.6;
   }
+  
+  .date-picker-container {
+    right: auto;
+    left: 0;
+    max-width: 100vw;
+    width: calc(100vw - 40px);
+    transform: translateX(-11%);
+    left: 50%;
+  }
 }
 
 @media (max-width: 480px) {

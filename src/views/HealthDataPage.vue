@@ -282,7 +282,14 @@ export default {
     }
   },
  async mounted() {
-    // 내 피보호자 목록 받아오기 백엔드로부터
+  try {
+        //모바일데이터 요청
+        const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/health/dataFromApp`);
+        console.log(response);
+      } catch (error) {
+        console.error("모바일 데이터 가져오기 실패:", error);
+      }  
+  // 내 피보호자 목록 받아오기 백엔드로부터
     const dependentData = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/myDependentList`);
     this.dependents = dependentData.data.result;
     console.log("피보호자", this.dependents);

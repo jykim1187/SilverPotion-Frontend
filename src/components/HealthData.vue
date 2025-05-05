@@ -641,14 +641,14 @@ export default {
       lifestyleScore: 0,
       
       // 최근 5일간의 헬스 점수 더미 데이터
-      selectedGraphType: 'line',
-      lastFiveDaysScores: [
-        { date: '07-15', score: 87 },
-        { date: '07-16', score: 82 },
-        { date: '07-17', score: 91 },
-        { date: '07-18', score: 78 },
-        { date: '07-19', score: 85 }
-      ]
+      // selectedGraphType: 'line',
+      // lastFiveDaysScores: [
+      //   { date: '07-15', score: 87 },
+      //   { date: '07-16', score: 82 },
+      //   { date: '07-17', score: 91 },
+      //   { date: '07-18', score: 78 },
+      //   { date: '07-19', score: 85 }
+      // ]
     }
   },
 
@@ -666,7 +666,7 @@ export default {
     
     // 건강세부조사 작성 여부 불러오기
     this.loadyesOrNoForHealthDetail();
-    //// 더미 헬스 점수 데이터 생성
+    //// 헬스점수 불러오기
     this.loadHealthScore();
   },
   
@@ -915,24 +915,6 @@ export default {
       this.showDatePicker = !this.showDatePicker;
     },
     
-    // 목표 칼로리 저장
-    // saveTargetCalory() {
-    //   if (this.newTargetCalory > 0) {
-    //     this.targetCalory = parseInt(this.newTargetCalory);
-    //     // 로컬 스토리지에 사용자별 목표 칼로리 저장
-    //     localStorage.setItem(`targetCalory_${this.loginId}`, this.targetCalory);
-    //     this.showCaloryTargetModal = false;
-    //   }
-    // },
-    
-    // // 목표 칼로리 불러오기
-    // loadTargetCalory() {
-    //   const savedTargetCalory = localStorage.getItem(`targetCalory_${this.loginId}`);
-    //   if (savedTargetCalory) {
-    //     this.targetCalory = parseInt(savedTargetCalory);
-    //     this.newTargetCalory = this.targetCalory;
-    //   }
-    // },
     
     // 심장 박동수에 따른 상태 텍스트 반환
     getHeartRateStatus(heartRate) {
@@ -1200,6 +1182,18 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   padding: 8px;
+}
+
+/* 모바일 환경에서 달력이 화면 밖으로 넘어가지 않도록 조정 */
+@media (max-width: 768px) {
+  .date-picker-container {
+    right: auto;
+    left: 0;
+    max-width: 100vw;
+    width: calc(100vw - 40px);
+    transform: translateX(-7%);
+    left: 50%;
+  }
 }
 
 .health-dashboard-v5 {
