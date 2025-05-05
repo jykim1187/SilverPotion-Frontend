@@ -597,58 +597,29 @@
     <!-- 투표자 목록 다이얼로그 -->
     <v-dialog v-model="voteUsersDialog" max-width="400">
       <v-card>
-        <v-card-title class="d-flex align-center">
-          <span class="text-h6">투표자 목록</span>
+        <v-card-title class="d-flex align-center" style="background:#f5f5f7; border-bottom:1.5px solid #222; min-height:48px;">
+          <span class="text-h6 font-weight-bold" style="font-size:18px;">항목별</span>
           <v-spacer></v-spacer>
           <v-btn icon @click="voteUsersDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
-        <v-divider></v-divider>
-        <v-card-text class="pa-0">
-          <v-list>
-            <v-list-item v-for="(users, optionId) in voteUsers" :key="optionId">
-              <template v-slot:prepend>
-                <v-avatar size="40" class="mr-3">
-                  <v-img :src="getOptionImage()"></v-img>
-                </v-avatar>
-              </template>
-              <v-list-item-title class="font-weight-medium">
-                {{ getOptionText(optionId) }}
-              </v-list-item-title>
-              <v-list-item-subtitle>
-                {{ users.length }}명 투표
-              </v-list-item-subtitle>
-              <template v-slot:append>
-                <v-btn
-                  icon
-                  @click="toggleOptionUsers(optionId)"
-                >
-                  <v-icon>{{ expandedOptions.has(optionId) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-                </v-btn>
-              </template>
-            </v-list-item>
-            
-            <!-- 각 옵션별 투표자 목록 -->
-            <div v-for="(users, optionId) in voteUsers" :key="optionId">
-              <v-expand-transition>
-                <v-list v-if="expandedOptions.has(optionId)">
-                  <v-list-item
-                    v-for="user in users"
-                    :key="user.userId"
-                    class="pl-8"
-                  >
-                    <template v-slot:prepend>
-                      <v-avatar size="32">
-                        <v-img :src="user.profileImage || require('@/assets/default-profile.png')"></v-img>
-                      </v-avatar>
-                    </template>
-                    <v-list-item-title>{{ user.nickName }}</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-expand-transition>
+        <v-card-text class="pa-0" style="background:#fff;">
+          <div v-for="option in voteDetail.voteOption" :key="option.id" class="px-4 py-3">
+            <div class="d-flex align-center mb-2">
+              <span class="font-weight-bold mr-2" style="font-size:17px; color:#888;">{{ option.optionText }}:</span>
+              <span class="font-weight-bold" style="font-size:17px; color:#222;">{{ (voteUsers[option.id]?.length || 0) }}명</span>
             </div>
-          </v-list>
+            <div v-if="voteUsers[option.id] && voteUsers[option.id].length > 0">
+              <div v-for="user in voteUsers[option.id]" :key="user.userId" class="d-flex align-center mb-2 ml-2">
+                <v-avatar size="44" class="mr-3">
+                  <v-img :src="user.profileImage || require('@/assets/default-profile.png')" />
+                </v-avatar>
+                <span class="font-weight-bold" style="font-size:16px; color:#222;">{{ user.nickName }}</span>
+              </div>
+            </div>
+            <div v-else class="ml-2" style="color:#bbb; font-size:16px; font-weight:500; padding:8px 0 8px 0;">투표자가 없습니다.</div>
+          </div>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -1555,7 +1526,7 @@ export default {
             const userPromises = answers.map(async (answer) => {
               try {
                 const userResponse = await axios.get(
-                  `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/${answer.userId}`,
+                  `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/profile/${answer.userId}`,
                   {
                     headers: {
                       'X-User-LoginId': loginId
@@ -1849,5 +1820,12 @@ export default {
 
 .vote-info-text:active {
   opacity: 0.6;
+}
+
+.text-grey {
+  color: #888 !important;
+}
+.text-grey-lighten-1 {
+  color: #bbb !important;
 }
 </style> 
