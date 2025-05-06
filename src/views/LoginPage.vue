@@ -16,12 +16,10 @@
                                 type="text"
                                 required
                                 outlined
-                                class="custom-input"
-                                :rules="[v => !!v || '아이디를 입력해주세요']"
-                                hide-details="auto"
-                                dense
-                                @focus="handleFocus"
-                                @blur="handleBlur"
+                                class="mb-4"
+                                :rules="[v => !!v || '로그인 ID를 입력해주세요']"
+                                @keyup.enter="doLogin"
+
                             ></v-text-field>
                             
                             <v-text-field
@@ -34,10 +32,9 @@
                                 outlined
                                 class="custom-input"
                                 :rules="[v => !!v || '비밀번호를 입력해주세요']"
-                                hide-details="auto"
-                                dense
-                                @focus="handleFocus"
-                                @blur="handleBlur"
+
+
+                                @keyup.enter="doLogin"
                             ></v-text-field>
                             
                             <v-btn
