@@ -611,9 +611,9 @@
               <span class="font-weight-bold" style="font-size:17px; color:#222;">{{ (voteUsers[option.id]?.length || 0) }}명</span>
             </div>
             <div v-if="voteUsers[option.id] && voteUsers[option.id].length > 0">
-              <div v-for="user in voteUsers[option.id]" :key="user.userId" class="d-flex align-center mb-2 ml-2">
+              <div v-for="user in voteUsers[option.id]" :key="user.userId" class="d-flex align-center mb-2 ml-2" @click="goToUserProfile(user.userId)">
                 <v-avatar size="44" class="mr-3">
-                  <v-img :src="user.profileImage || require('@/assets/default-profile.png')" />
+                  <v-img :src="user.profileImage" :alt="user.nickName" />
                 </v-avatar>
                 <span class="font-weight-bold" style="font-size:16px; color:#222;">{{ user.nickName }}</span>
               </div>
@@ -1471,18 +1471,50 @@ export default {
           const userPromises = Object.entries(result).map(async ([optionId, answers]) => {
             const userPromises = answers.map(async (answer) => {
               try {
+                console.log('프로필 조회 요청 - userId:', answer.userId);
+                
                 const userResponse = await axios.get(
                   `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/profile/${answer.userId}`,
                   {
                     headers: {
-                      'X-User-LoginId': loginId
+                      'X-User-LoginId': loginId,
+                      'Internal-Request': 'true'
                     }
                   }
                 );
-                return userResponse.data.result;
+                
+                console.log('프로필 조회 응답:', userResponse.data);
+                
+                if (!userResponse.data) {
+                  console.warn('프로필 데이터가 없습니다:', userResponse.data);
+                  return {
+                    userId: answer.userId,
+                    profileImage: require('@/assets/default-profile.png'),
+                    nickName: '알 수 없음'
+                  };
+                }
+                
+                const profileData = userResponse.data;
+                console.log('프로필 데이터:', profileData);
+                
+                // 프로필 이미지 URL이 상대 경로인 경우 절대 경로로 변환
+                let profileImage = profileData.profileImage;
+                if (profileImage && !profileImage.startsWith('http')) {
+                  profileImage = `${process.env.VUE_APP_API_BASE_URL}${profileImage}`;
+                }
+                
+                return {
+                  userId: answer.userId,
+                  profileImage: profileImage || require('@/assets/default-profile.png'),
+                  nickName: profileData.nickname || '알 수 없음'
+                };
               } catch (error) {
                 console.error('사용자 정보 조회 실패:', error);
-                return null;
+                return {
+                  userId: answer.userId,
+                  profileImage: require('@/assets/default-profile.png'),
+                  nickName: '알 수 없음'
+                };
               }
             });
             const users = await Promise.all(userPromises);
@@ -1491,6 +1523,7 @@ export default {
           
           const userResults = await Promise.all(userPromises);
           this.voteUsers = Object.fromEntries(userResults);
+          console.log('최종 투표자 목록:', this.voteUsers);
         }
       } catch (error) {
         console.error('투표자 목록 조회 중 오류가 발생했습니다:', error);
@@ -1517,6 +1550,16 @@ export default {
       } else {
         this.expandedOptions.add(optionId);
       }
+    },
+
+    // 유저 프로필 페이지로 이동
+    goToUserProfile(userId) {
+      this.$router.push({
+        path: `/silverpotion/user/profile/${userId}`,
+        query: {
+          loginId: localStorage.getItem('loginId')
+        }
+      });
     },
   }
 };
