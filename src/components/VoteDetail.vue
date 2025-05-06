@@ -760,41 +760,6 @@ export default {
         const loginId = localStorage.getItem('loginId');
         const voteId = this.$route.params.voteId;
         
-        // 로컬 스토리지에서 투표 상태 확인
-        const savedVoteState = localStorage.getItem(`vote_${voteId}`);
-        if (savedVoteState) {
-          const voteState = JSON.parse(savedVoteState);
-          
-          // 투표 옵션 데이터 처리
-          let processedVoteOptions = [];
-          if (voteState.options && Array.isArray(voteState.options)) {
-            processedVoteOptions = voteState.options.map(option => ({
-              id: option.optionId,
-              optionText: option.optionText || '',
-              voteCount: option.voteCount || 0,
-              voteRatio: option.voteRatio || 0
-            }));
-          }
-          
-          // 투표 상세 정보 설정
-          this.voteDetail = {
-            voteId: voteId,
-            isParticipating: voteState.isParticipating,
-            participantsCount: voteState.participantsCount,
-            voteOption: processedVoteOptions,
-            multipleChoice: voteState.multipleChoice || false
-          };
-          
-          // 선택한 옵션 설정
-          if (this.voteDetail.multipleChoice) {
-            this.selectedOptions = voteState.selectedOptions;
-          } else {
-            this.selectedOption = voteState.selectedOptions[0];
-          }
-          
-          return;
-        }
-        
         console.log('투표 상세 조회 요청 - voteId:', voteId);
         
         const response = await axios.get(
@@ -816,18 +781,9 @@ export default {
           processedVoteOptions = result.voteOption.map(option => ({
             id: option.id || 0,
             optionText: option.optionText || '',
-            voteCount: option.answers ? option.answers.length : 0,
+            voteCount: option.voteCount || 0,
             voteRatio: option.voteRatio || 0
           }));
-        }
-        
-        // 테스트용 더미 데이터 (실제 데이터가 없는 경우)
-        if (processedVoteOptions.length === 0) {
-          processedVoteOptions = [
-            { id: 1, optionText: '치킨', voteCount: 2, voteRatio: 33.3 },
-            { id: 2, optionText: '피자', voteCount: 3, voteRatio: 50.0 },
-            { id: 3, optionText: '햄버거', voteCount: 1, voteRatio: 16.7 }
-          ];
         }
         
         // 투표 상세 정보 설정
@@ -887,13 +843,13 @@ export default {
           return;
         }
         
-        this.hasUserVoted = result.hasVoted;
-        this.voteDetail.isParticipating = result.hasVoted ? 'Y' : 'N';
+        this.hasUserVoted = result.isVoted;
+        this.voteDetail.isParticipating = result.isVoted ? 'Y' : 'N';
         
         // 이미 투표한 옵션들이 있다면 선택
-        if (this.hasUserVoted && result.selectedOptions && Array.isArray(result.selectedOptions)) {
+        if (this.hasUserVoted && result.voteOptions && Array.isArray(result.voteOptions)) {
           try {
-            const selectedOptionIds = result.selectedOptions.map(o => o.id || 0);
+            const selectedOptionIds = result.voteOptions.map(option => option.id);
             
             if (this.voteDetail.multipleChoice) {
               this.selectedOptions = selectedOptionIds;
@@ -943,13 +899,15 @@ export default {
         this.voteDetail.isParticipating = 'Y';
         
         // 각 옵션의 투표 수와 비율 업데이트
-        result.options.forEach(option => {
-          const existingOption = this.voteDetail.voteOption.find(o => o.id === option.optionId);
-          if (existingOption) {
-            existingOption.voteCount = option.voteCount;
-            existingOption.voteRatio = option.voteRatio;
-          }
-        });
+        if (result.options && Array.isArray(result.options)) {
+          result.options.forEach(option => {
+            const existingOption = this.voteDetail.voteOption.find(o => o.id === option.optionId);
+            if (existingOption) {
+              existingOption.voteCount = option.voteCount || 0;
+              existingOption.voteRatio = option.voteRatio || 0;
+            }
+          });
+        }
 
         // 선택한 옵션 저장
         if (this.voteDetail.multipleChoice) {
@@ -957,20 +915,6 @@ export default {
         } else {
           this.selectedOption = selectedIds[0];
         }
-
-        // 투표 상태를 로컬 스토리지에 저장
-        const voteState = {
-          voteId: voteId,
-          isParticipating: 'Y',
-          selectedOptions: this.voteDetail.multipleChoice ? this.selectedOptions : [this.selectedOption],
-          participantsCount: result.totalParticipants,
-          options: result.options,
-          multipleChoice: this.voteDetail.multipleChoice,
-          description: this.voteDetail.description,
-          createTime: this.voteDetail.createTime,
-          closeTime: this.voteDetail.closeTime
-        };
-        localStorage.setItem(`vote_${voteId}`, JSON.stringify(voteState));
         
         alert('투표가 완료되었습니다.');
       } catch (error) {
@@ -1127,11 +1071,13 @@ export default {
       if (!this.voteDetail.participantsCount || this.voteDetail.participantsCount === 0) return 0;
       
       const voteCount = option.voteCount || 0;
-      // 다중 선택인 경우 참여자 수가 아닌 총 투표 수로 계산해야 할 수 있음
+      const totalVotes = this.voteDetail.voteOption.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+      
+      // 다중 선택인 경우 총 투표 수로 계산
       if (this.voteDetail.multipleChoice) {
-        const totalVotes = this.voteDetail.voteOption.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
         return totalVotes === 0 ? 0 : Math.round((voteCount / totalVotes) * 100);
       } else {
+        // 단일 선택인 경우 참여자 수로 계산
         return Math.round((voteCount / this.voteDetail.participantsCount) * 100);
       }
     },
