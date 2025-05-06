@@ -30,10 +30,8 @@
                                 type="password"
                                 required
                                 outlined
-                                class="custom-input"
+                                class="mb-4"
                                 :rules="[v => !!v || '비밀번호를 입력해주세요']"
-
-
                                 @keyup.enter="doLogin"
                             ></v-text-field>
                             

@@ -11,6 +11,7 @@ import UserInfoDetailAdd from "@/views/Health/UserInfoDetailAdd.vue";
 import AdminPage from "@/views/admin/AdminDashboard.vue";
 import UserDetail from '@/views/admin/user/userDetail.vue';
 import UserList from '@/views/admin/user/adminUserList.vue';
+import UserProfileComponent from '@/components/UserProfileComponet.vue';
 
 export const userRouter = [
     {
@@ -80,5 +81,11 @@ export const userRouter = [
         path: '/silverpotion/admin/detail/:userId',
         name: 'UserDetail',
         component: UserDetail
+    },
+    {
+        path: '/silverpotion/user/profile/:userLongId',
+        name: 'UserProfile',
+        component: UserProfileComponent,
+        props: true
     }
 ];
