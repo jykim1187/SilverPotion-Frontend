@@ -66,7 +66,7 @@ export default {
   mounted: async function() { 
         await this.initLocalMedia();          // localStream 준비 완료 후
         await this.connectSignalingServer();  // signaling 준비 완료 후
-        await this.startCall();               // 이제 safe하게 시작 가능
+        // await this.startCall();               // 이제 safe하게 시작 가능
         // 이 코드는 비동기 작업을 수행하고, 모든 작업이 완료된 후에 실행됨. 즉 initLocalMedia(), connectSignalingServer(), startCall() 순으로 차례로 실행된다는 것
         await this.getNameInfo();
       },
@@ -168,6 +168,7 @@ export default {
 
         //2. 연결이 열리면 실행
         this.signalingServer.onopen = () =>{
+          this.startCall()
           console.log('시그널링 서버 연결 성공')
         }
 
