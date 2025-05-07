@@ -533,7 +533,8 @@ export default {
   cursor: pointer;
   transition: color 0.3s ease;
   position: relative;
-  font-size: 1.5rem;
+  font-size: 2.0rem;
+  font-weight: 700;
 }
 
 .user-name-title:hover {

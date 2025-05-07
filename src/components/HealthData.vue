@@ -269,17 +269,27 @@
           <div v-else class="health-profile-guide">
             <div class="guide-content">
               <v-icon large color="blue" class="guide-icon">mdi-file-document-edit-outline</v-icon>
-              <h3 class="guide-title">건강 프로필을 작성해 건강지수를 확인해보세요!</h3>
-              <p class="guide-description">건강 프로필 작성을 완료하면 맞춤형 건강 점수와 분석 결과를 확인할 수 있습니다.</p>
-              <v-btn 
-                color="warning" 
-                class="guide-btn" 
-                elevation="2" 
-                @click="goToHealthProfile"
-              >
-                <v-icon left>mdi-file-document-edit</v-icon>
-                건강프로필 작성하기
-              </v-btn>
+              
+              <!-- 자신의 데이터를 보는 경우 -->
+              <template v-if="isCurrentUser">
+                <h3 class="guide-title">건강 프로필을 작성해 건강지수를 확인해보세요!</h3>
+                <p class="guide-description">건강 프로필 작성을 완료하면 맞춤형 건강 점수와 분석 결과를 확인할 수 있습니다.</p>
+                <v-btn 
+                  color="warning" 
+                  class="guide-btn" 
+                  elevation="2" 
+                  @click="goToHealthProfile"
+                >
+                  <v-icon left>mdi-file-document-edit</v-icon>
+                  건강프로필 작성하기
+                </v-btn>
+              </template>
+              
+              <!-- 다른 사람의 데이터를 보는 경우 -->
+              <template v-else>
+                <h3 class="guide-title">건강 프로필 미작성 사용자</h3>
+                <p class="guide-description">아직 건강프로필을 작성하지 않은 사용자입니다.</p>
+              </template>
             </div>
           </div>
           
@@ -1155,6 +1165,19 @@ export default {
         // 기본값
         return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
       }
+    },
+    
+    // 현재 로그인한 사용자와 조회 중인 사용자가 같은지 확인하는 계산된 속성
+    isCurrentUser() {
+      try {
+        // localStorage에 접근 가능한지 확인하고, loginId와 비교
+        const currentLoginId = localStorage.getItem('loginId');
+        return this.loginId === currentLoginId;
+      } catch (error) {
+        // localStorage 접근 에러 발생 시 false 반환
+        console.error('localStorage 접근 오류:', error);
+        return false;
+      }
     }
   }
 }
@@ -1849,6 +1872,8 @@ export default {
   cursor: pointer;
   transition: color 0.3s ease;
   position: relative;
+  font-size: 2.0rem;
+  font-weight: 700;
 }
 
 .user-name-title:hover {
