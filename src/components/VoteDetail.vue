@@ -717,6 +717,17 @@ export default {
   },
   created() {
     this.fetchVoteDetail();
+    // 로컬 스토리지에서 투표 결과 복원
+    const voteId = this.$route.params.voteId;
+    const savedVoteData = localStorage.getItem(`vote_${voteId}`);
+    if (savedVoteData) {
+      const voteData = JSON.parse(savedVoteData);
+      if (voteData.hasVoted) {
+        this.voteDetail.voteOption = voteData.voteOptions;
+        this.voteDetail.participantsCount = voteData.participantsCount;
+        this.voteDetail.isParticipating = 'Y';
+      }
+    }
   },
   methods: {
     // 댓글 작성자 확인 (수정/삭제 권한)
@@ -777,12 +788,12 @@ export default {
         
         // 투표 옵션 데이터 처리
         let processedVoteOptions = [];
-        if (result.voteOption && Array.isArray(result.voteOption)) {
-          processedVoteOptions = result.voteOption.map(option => ({
-            id: option.id || 0,
+        if (result.voteOptions && Array.isArray(result.voteOptions)) {
+          processedVoteOptions = result.voteOptions.map(option => ({
+            id: option.optionId || 0,
             optionText: option.optionText || '',
             voteCount: option.voteCount || 0,
-            voteRatio: option.voteRatio || 0
+            voteRatio: option.voteRadio || 0
           }));
         }
         
@@ -801,14 +812,25 @@ export default {
           createTime: result.createTime || null,
           closeTime: result.closeTime || null,
           participantsCount: result.participantsCount || 0,
-          isParticipating: result.isParticipating || 'N'
+          isParticipating: result.hasVoted ? 'Y' : 'N'
         };
-        
+
+        // 투표 참여 여부 및 선택된 옵션 처리
+        if (result.hasVoted && result.selectOption && Array.isArray(result.selectOption)) {
+          this.hasUserVoted = true;
+          
+          // 사용자가 선택한 옵션 설정
+          const selectedIds = result.selectOption.map(opt => opt.optionId);
+          
+          if (this.voteDetail.multipleChoice) {
+            this.selectedOptions = selectedIds;
+          } else if (selectedIds.length > 0) {
+            this.selectedOption = selectedIds[0];
+          }
+        }
+
         // 댓글 데이터 설정
         this.commentList = result.commentList || [];
-        
-        // 투표 참여 여부 확인 및 선택된 옵션 설정
-        await this.checkUserVote();
         
         console.log('처리된 투표 상세 데이터:', this.voteDetail);
         console.log('댓글 목록:', this.commentList);
@@ -817,109 +839,6 @@ export default {
         alert('투표 상세 정보를 가져오는데 실패했습니다.');
       } finally {
         this.loading = false;
-      }
-    },
-
-    // 사용자가 이미 투표했는지 확인
-    async checkUserVote() {
-      try {
-        const loginId = localStorage.getItem('loginId');
-        const voteId = this.$route.params.voteId;
-        
-        const response = await axios.get(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/vote/check/${voteId}`,
-          {
-            headers: {
-              'X-User-LoginId': loginId
-            }
-          }
-        );
-        
-        console.log('투표 참여 여부 확인 결과:', response.data);
-        const result = response.data.result;
-        
-        if (!result) {
-          console.warn('투표 참여 여부 확인 결과가 없습니다.');
-          return;
-        }
-        
-        this.hasUserVoted = result.isVoted;
-        this.voteDetail.isParticipating = result.isVoted ? 'Y' : 'N';
-        
-        // 이미 투표한 옵션들이 있다면 선택
-        if (this.hasUserVoted && result.voteOptions && Array.isArray(result.voteOptions)) {
-          try {
-            const selectedOptionIds = result.voteOptions.map(option => option.id);
-            
-            if (this.voteDetail.multipleChoice) {
-              this.selectedOptions = selectedOptionIds;
-            } else if (selectedOptionIds.length > 0) {
-              this.selectedOption = selectedOptionIds[0];
-            }
-            
-            console.log('사용자가 선택한 옵션:', this.voteDetail.multipleChoice ? this.selectedOptions : this.selectedOption);
-          } catch (err) {
-            console.error('선택한 옵션 처리 중 오류 발생:', err);
-          }
-        }
-      } catch (error) {
-        console.error('투표 참여 여부 확인에 실패했습니다:', error);
-      }
-    },
-
-    // 투표 제출
-    async submitVote() {
-      try {
-        const loginId = localStorage.getItem('loginId');
-        const voteId = this.$route.params.voteId;
-        
-        // 선택한 옵션들
-        const selectedIds = this.voteDetail.multipleChoice 
-          ? this.selectedOptions 
-          : [this.selectedOption];
-        
-        console.log('투표 제출 - 선택된 옵션 ID:', selectedIds);
-        
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/option`,
-          {
-            voteId: voteId,
-            optionIds: selectedIds
-          },
-          {
-            headers: {
-              'X-User-LoginId': loginId
-            }
-          }
-        );
-        
-        // 투표 결과 업데이트
-        const result = response.data.result;
-        this.voteDetail.participantsCount = result.totalParticipants;
-        this.voteDetail.isParticipating = 'Y';
-        
-        // 각 옵션의 투표 수와 비율 업데이트
-        if (result.options && Array.isArray(result.options)) {
-          result.options.forEach(option => {
-            const existingOption = this.voteDetail.voteOption.find(o => o.id === option.optionId);
-            if (existingOption) {
-              existingOption.voteCount = option.voteCount || 0;
-              existingOption.voteRatio = option.voteRatio || 0;
-            }
-          });
-        }
-
-        // 선택한 옵션 저장
-        if (this.voteDetail.multipleChoice) {
-          this.selectedOptions = selectedIds;
-        } else {
-          this.selectedOption = selectedIds[0];
-        }
-        
-        alert('투표가 완료되었습니다.');
-      } catch (error) {
-        console.error('투표 제출에 실패했습니다:', error);
-        alert('투표 제출에 실패했습니다.');
       }
     },
 
@@ -1066,282 +985,6 @@ export default {
       }
     },
     
-    // 각 투표 옵션의 백분율 계산
-    getVotePercentage(option) {
-      if (!this.voteDetail.participantsCount || this.voteDetail.participantsCount === 0) return 0;
-      
-      const voteCount = option.voteCount || 0;
-      const totalVotes = this.voteDetail.voteOption.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
-      
-      // 다중 선택인 경우 총 투표 수로 계산
-      if (this.voteDetail.multipleChoice) {
-        return totalVotes === 0 ? 0 : Math.round((voteCount / totalVotes) * 100);
-      } else {
-        // 단일 선택인 경우 참여자 수로 계산
-        return Math.round((voteCount / this.voteDetail.participantsCount) * 100);
-      }
-    },
-    
-    // 인스타그램 스타일 댓글 옵션 열기
-    openCommentOptions(commentId) {
-      this.selectedCommentId = commentId;
-      const comment = this.findCommentById(commentId);
-      console.log('댓글 옵션 열기:', {
-        commentId: commentId,
-        comment: comment,
-        isOwner: this.isCommentOwner(comment)
-      });
-      this.optionsDialog = true;
-    },
-
-    // 선택된 댓글 수정 시작
-    editSelectedComment() {
-      const comment = this.findCommentById(this.selectedCommentId);
-      if (comment) {
-        console.log('댓글 수정 시작:', comment);
-        this.startEditComment(comment);
-      }
-      this.optionsDialog = false;
-    },
-
-    // 선택된 댓글 삭제 확인
-    confirmDeleteSelected() {
-      this.commentToDelete = this.selectedCommentId;
-      this.optionsDialog = false;
-      this.deleteDialog = true;
-      console.log('댓글 삭제 확인:', this.commentToDelete);
-    },
-
-    // ID로 댓글 찾기 (댓글과 대댓글 모두 검색)
-    findCommentById(commentId) {
-      // 메인 댓글에서 검색
-      let comment = this.commentList.find(c => c.commentId === commentId);
-      if (comment) return comment;
-      
-      // 대댓글에서 검색
-      for (const mainComment of this.commentList) {
-        if (mainComment.replies && mainComment.replies.length > 0) {
-          const reply = mainComment.replies.find(r => r.commentId === commentId);
-          if (reply) return reply;
-        }
-      }
-      return null;
-    },
-
-    // 댓글/대댓글 수정 시작
-    startEditComment(comment) {
-      this.editingComment = comment.commentId;
-      this.editedCommentContent = comment.content;
-    },
-
-    // 댓글/대댓글 수정 취소
-    cancelEdit() {
-      this.editingComment = null;
-      this.editedCommentContent = '';
-    },
-
-    // 댓글/대댓글 수정 저장
-    async updateComment(commentId) {
-      try {
-        if (!this.editedCommentContent.trim()) {
-          alert('내용을 입력해주세요.');
-          return;
-        }
-        
-        const loginId = localStorage.getItem('loginId');
-        console.log('댓글 수정 요청:', {
-          commentId,
-          content: this.editedCommentContent
-        });
-        
-        const response = await axios.patch(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/update`,
-          {
-            commentId: commentId,
-            content: this.editedCommentContent
-          },
-          {
-            headers: {
-              'X-User-LoginId': loginId
-            }
-          }
-        );
-        
-        console.log('댓글 수정 응답:', response.data);
-        
-        this.editingComment = null;
-        this.editedCommentContent = '';
-        // 수정된 댓글을 반영하기 위해 투표 상세 정보 새로고침
-        this.fetchVoteDetail();
-        alert('댓글이 수정되었습니다.');
-      } catch (error) {
-        console.error('댓글 수정 중 오류가 발생했습니다:', error);
-        alert('댓글 수정 중 오류가 발생했습니다.');
-      }
-    },
-
-    // 댓글 삭제 실행
-    async deleteComment() {
-      try {
-        const loginId = localStorage.getItem('loginId');
-        console.log('댓글 삭제 요청:', this.commentToDelete);
-        
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/delete/${this.commentToDelete}`,
-          null,
-          {
-            headers: {
-              'X-User-LoginId': loginId
-            }
-          }
-        );
-        
-        console.log('댓글 삭제 응답:', response.data);
-        
-        this.deleteDialog = false;
-        this.commentToDelete = null;
-        // 댓글 삭제 후 투표 상세 정보 새로고침
-        this.fetchVoteDetail();
-        alert('댓글이 삭제되었습니다.');
-      } catch (error) {
-        console.error('댓글 삭제 중 오류가 발생했습니다:', error);
-        alert('댓글 삭제 중 오류가 발생했습니다.');
-      }
-    },
-
-    // 대댓글 표시/숨기기 토글
-    toggleReplies(commentId) {
-      if (this.expandedComments.has(commentId)) {
-        this.expandedComments.delete(commentId);
-        this.visibleRepliesCount[commentId] = 0;
-      } else {
-        this.expandedComments.add(commentId);
-        this.visibleRepliesCount[commentId] = 5; // 초기에 5개만 표시
-      }
-    },
-    
-    // 대댓글 더 보기
-    showMoreReplies(comment) {
-      const currentVisible = this.visibleRepliesCount[comment.commentId] || 5;
-      const totalReplies = comment.replies.length;
-      this.visibleRepliesCount[comment.commentId] = Math.min(currentVisible + 5, totalReplies);
-    },
-    
-    // 표시할 대댓글 목록 계산
-    getVisibleReplies(comment) {
-      if (!this.expandedComments.has(comment.commentId)) {
-        return [];
-      }
-      
-      const visibleCount = this.visibleRepliesCount[comment.commentId] || 5;
-      return comment.replies.slice(0, visibleCount);
-    },
-    
-    // 더 보기 버튼 표시 여부
-    hasMoreReplies(comment) {
-      const visibleCount = this.visibleRepliesCount[comment.commentId] || 5;
-      return comment.replies && comment.replies.length > visibleCount;
-    },
-
-    // 게시글 좋아요 목록 표시 (Adapt from PostDetail if needed, currently uses dummy data)
-    async showLikesDialog() {
-      this.likesDialog = true;
-      this.likes = [];
-      // TODO: Implement API call if needed for vote likes
-      // Currently using dummy data as placeholder
-       setTimeout(() => {
-          this.likes = [
-            { userId: 1, nickName: '사용자1', profileImage: null },
-            { userId: 2, nickName: '사용자2', profileImage: null },
-            { userId: 3, nickName: '사용자3', profileImage: null }
-          ];
-        }, 500);
-    },
-
-    // 댓글 좋아요 목록 다이얼로그 표시
-    async showCommentLikesDialog(commentId) {
-      this.commentLikesDialog = true;
-      this.commentLikes = [];
-      this.currentCommentId = commentId;
-      this.commentLikesPage = 0;
-      this.commentLikesLoading = true;
-      
-      try {
-        await this.fetchCommentLikes();
-      } catch (error) {
-        console.error('댓글 좋아요 목록 조회 중 오류 발생:', error);
-      } finally {
-        this.commentLikesLoading = false;
-      }
-    },
-
-    // 댓글 좋아요 목록 가져오기
-    async fetchCommentLikes(page = 0) {
-      try {
-        this.commentLikesLoading = true;
-        const response = await axios.get(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/like/list/${this.currentCommentId}`,
-          {
-            params: {
-              page: page,
-              size: 10
-            },
-            headers: {
-              'X-User-LoginId': localStorage.getItem('loginId')
-            }
-          }
-        );
-        
-        console.log('댓글 좋아요 목록 응답:', response.data);
-        const result = response.data.result;
-        
-        // Page<UserListDto> 형식 응답 처리
-        if (result && result.content) {
-          // 첫 페이지면 데이터 교체, 아니면 추가
-          this.commentLikes = page === 0 ? result.content : [...this.commentLikes, ...result.content];
-          this.commentLikesPage = page;
-          this.commentLikesTotalPages = result.totalPages || 0;
-        } else {
-          console.warn('댓글 좋아요 목록이 비어있거나 응답 형식이 다릅니다:', result);
-        }
-      } catch (error) {
-        console.error('댓글 좋아요 목록을 가져오는데 실패했습니다:', error);
-      } finally {
-        this.commentLikesLoading = false;
-      }
-    },
-
-    // 댓글 좋아요 목록 더 불러오기
-    loadMoreCommentLikes() {
-      if (this.commentLikesPage < this.commentLikesTotalPages - 1 && !this.commentLikesLoading) {
-        this.fetchCommentLikes(this.commentLikesPage + 1);
-      }
-    },
-
-    // 댓글 신고
-    async reportComment() {
-      try {
-        const loginId = localStorage.getItem('loginId');
-        const commentId = this.selectedCommentId;
-        
-        await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/report/${commentId}`,
-          null,
-          {
-            headers: {
-              'X-User-LoginId': loginId
-            }
-          }
-        );
-        
-        this.optionsDialog = false;
-        alert('댓글이 신고되었습니다.');
-      } catch (error) {
-        console.error('댓글 신고 중 오류가 발생했습니다:', error);
-        alert('댓글 신고 중 오류가 발생했습니다.');
-      }
-    },
-
     // 복수 선택 토글 (체크박스)
     toggleMultipleSelection(option) {
       // 마감되었거나 이미 참여한 경우 동작 안함
@@ -1561,6 +1204,97 @@ export default {
         }
       });
     },
+
+    async submitVote() {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const voteId = this.$route.params.voteId;
+        
+        // 선택한 옵션들
+        const selectedIds = this.voteDetail.multipleChoice 
+          ? this.selectedOptions 
+          : [this.selectedOption];
+        
+        console.log('투표 제출 - 선택된 옵션 ID:', selectedIds);
+        
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/option`,
+          {
+            voteId: voteId,
+            optionIds: selectedIds
+          },
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        console.log('투표 제출 응답:', response.data);
+        
+        // 투표 결과 업데이트
+        const result = response.data.result;
+        this.voteDetail.participantsCount = result.totalParticipants;
+        this.voteDetail.isParticipating = 'Y';
+        this.hasUserVoted = true;
+        
+        // 각 옵션의 투표 수 업데이트
+        if (result.options && Array.isArray(result.options)) {
+          result.options.forEach(option => {
+            const existingOption = this.voteDetail.voteOption.find(o => o.id === option.optionId);
+            if (existingOption) {
+              existingOption.voteCount = option.voteCount || 0;
+              // 투표 비율 계산
+              const totalVotes = result.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+              existingOption.voteRatio = totalVotes === 0 ? 0 : Math.round((option.voteCount / totalVotes) * 100);
+            }
+          });
+        }
+
+        // 선택한 옵션 저장
+        if (this.voteDetail.multipleChoice) {
+          this.selectedOptions = selectedIds;
+        } else {
+          this.selectedOption = selectedIds[0];
+        }
+        
+        // localStorage에 투표 상태 저장
+        const voteData = {
+          hasVoted: true,
+          selectedOptions: selectedIds,
+          voteOptions: this.voteDetail.voteOption,
+          participantsCount: this.voteDetail.participantsCount
+        };
+        localStorage.setItem(`vote_${voteId}`, JSON.stringify(voteData));
+        
+        // 투표 결과 로그 출력
+        console.log('업데이트된 투표 옵션:', this.voteDetail.voteOption);
+        console.log('참여자 수:', this.voteDetail.participantsCount);
+        
+        alert('투표가 완료되었습니다.');
+      } catch (error) {
+        console.error('투표 제출에 실패했습니다:', error);
+        alert('투표 제출에 실패했습니다.');
+      }
+    },
+
+    // 각 투표 옵션의 백분율 계산
+    getVotePercentage(option) {
+      if (!option || !this.voteDetail) return 0;
+      
+      // 백엔드에서 계산된 비율이 있으면 사용
+      if (typeof option.voteRatio === 'number') {
+        return option.voteRatio;
+      }
+      
+      // 백엔드에서 비율이 없는 경우에만 클라이언트에서 계산
+      const voteCount = option.voteCount || 0;
+      const totalVotes = this.voteDetail.voteOption.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+      
+      if (totalVotes === 0) return 0;
+      
+      return Math.round((voteCount / totalVotes) * 100);
+    }
   }
 };
 </script>
