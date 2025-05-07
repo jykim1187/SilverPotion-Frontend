@@ -14,12 +14,83 @@
 </template>
 
 <script>
+import WebSocketManager from './WebSocketManager'
 import HeaderComponent from './components/HeaderComponent.vue'
+import axios from 'axios'
+import emitter from './event-bus'
+import { useSse } from './composables/useSse.js'
+
 export default {
   name: 'App',
   components: {
     HeaderComponent
-  }
+  },
+  data() {
+    return {
+      isWebSocketConnected: false,  // WebSocket 연결 상태를 관리
+    };
+  },
+  mounted() {
+    this.checkLoginStatus();
+    
+  },
+  beforeUnmount() {
+    // 앱이 종료될 때 웹소켓 연결을 끊습니다.
+    WebSocketManager.disconnect();
+    // SSE 연결 해제
+    if (this.disconnectSse) this.disconnectSse();
+  },
+  beforeRouteLeave(to, from, next) {
+  WebSocketManager.disconnect();  // 페이지 이동 시 WebSocket 연결 해제
+  next();
+},
+  methods: {
+    async doLogout() {
+    try {
+      const loginId = localStorage.getItem("loginId");
+
+      await axios.post(
+        `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/logout`,
+        {}, 
+        { headers: { "X-User-LoginId": loginId } }
+      );
+
+      localStorage.clear();
+      emitter.emit('loginChanged');  // 로그인 상태 변경 이벤트 발생
+      this.$router.push('/');
+      
+      // 로그아웃 후 웹소켓 연결 종료
+      this.disconnectWebSocket();
+
+    } catch (error) {
+      console.error('로그아웃 실패', error);
+    }
+  },
+    async checkLoginStatus() {
+      const loginId = localStorage.getItem("loginId");
+      const token = localStorage.getItem("token");
+
+      if (loginId && token) {
+      await WebSocketManager.connect();  // WebSocket 연결 시도
+      const { connectSse, disconnectSse } = useSse();
+        connectSse(loginId); // 명시적 호출
+        this.disconnectSse = disconnectSse;
+    }
+    },
+
+    onNewMessage(message) {
+      console.log('새로운 메시지:', message);
+      // 메시지를 처리할 로직
+      emitter.emit("newMessageReceived", { senderNickName: message.senderNickName, roomId: message.roomId, message });
+    },
+    disconnectWebSocket() {
+      // WebSocket 연결 해제
+      WebSocketManager.disconnect();
+      this.isWebSocketConnected = false;
+    }
+  },
+
+  
 }
 </script>
 
