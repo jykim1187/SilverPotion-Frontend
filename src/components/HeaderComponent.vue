@@ -106,7 +106,17 @@
             </v-toolbar>
             <v-divider></v-divider>
             <v-list v-if="notifications.length > 0">
-                <v-list-item v-for="(notification, index) in notifications" :key="index" :title="notification.title" :subtitle="notification.message"></v-list-item>
+                <v-list-item v-for="(notification, index) in notifications" :key="index">
+                    <v-list-item-title class="font-weight-bold">
+                    {{ notification.title }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle class="text-grey-darken-1">
+                    {{ notification.message }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle class="text-caption text-grey">
+                    {{ formatDate(notification.createdAt) }}
+                    </v-list-item-subtitle>
+                </v-list-item>
             </v-list>
             <v-list v-else>
                 <v-list-item title="알림이 없습니다"></v-list-item>
@@ -119,6 +129,7 @@
 <script>
 import emitter from '@/event-bus';
 import axios from 'axios';
+import WebSocketManager from '@/WebSocketManager';
 
 export default {
   data() {
@@ -140,10 +151,12 @@ export default {
   created() {
     this.checkLogin();
     emitter.on('loginChanged', this.checkLogin);
+    emitter.on('newNotification', this.handleNewNotification);
     this.checkNotifications();
   },
   beforeUnmount() {
     emitter.off('loginChanged', this.checkLogin);
+    emitter.off('newNotification', this.handleNewNotification);
   },
   methods: {
     checkLogin() {
@@ -164,7 +177,9 @@ export default {
         );
 
         localStorage.clear();
+
         emitter.emit('loginChanged');
+        WebSocketManager.disconnect();
         this.$router.push('/');
         this.profileMenu = false;
       }
@@ -191,9 +206,44 @@ export default {
         console.log(response.data);
         this.profileImage = response.data.result;
     },
-    toggleNotificationsMenu() {
-      this.notificationsMenu = !this.notificationsMenu;
+    async fetchServerNotifications() {// 알림 리스트 가져오기기
+    const loginId = localStorage.getItem("loginId");
+    try {
+      const res = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat-service/notifications/list`, {
+        headers: {
+          "X-User-LoginId": loginId
+        }
+      });
+      console.log('📦 서버 알림 목록:', res.data);
+      this.notifications = res.data.map(n => ({
+        title: n.title || '알림',
+        message: n.content,
+        read: n.read,
+        createdAt: n.createdAt
+      }));
+      this.hasNotifications = this.notifications.some(n => !n.read);
+    } catch (err) {
+      console.error('❌ 알림 목록 불러오기 실패:', err);
     }
+  },
+    toggleNotificationsMenu() {
+        this.notificationsMenu = !this.notificationsMenu;
+        if (this.notificationsMenu) {
+            this.fetchServerNotifications();
+            this.hasNotifications = false; // 읽음 처리
+        }
+    },
+    handleNewNotification(notification) {
+        this.notifications.unshift({
+        title: '📢 시스템 알림',
+        message: notification.content
+        });
+        this.hasNotifications = true;
+    },
+    formatDate(datetime) {
+        if (!datetime) return '';
+        return new Date(datetime).toLocaleString(); // ex: 2025. 5. 7. 오전 11:03:21
+    },
   },
 };
 </script>
