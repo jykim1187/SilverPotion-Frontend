@@ -15,14 +15,20 @@ class WebSocketManager {
       console.log("✅ 이미 연결됨");
       return Promise.resolve();
     }
-    // 로그인 정보 확인
+    if (this.connecting) {
+      // 연결 중이면 기존 Promise로 기다리기
+      return new Promise((resolve) => {
+        const wait = setInterval(() => {
+          if (this.connected) {
+            clearInterval(wait);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+    this.connecting = true; // 연결 중 상태 추가
     this.loginId = localStorage.getItem("loginId");
     this.token = localStorage.getItem("token");
-
-    if (!this.loginId || !this.token) {
-      console.warn("❌ 로그인 정보가 없습니다. WebSocket 연결을 할 수 없습니다.");
-      return Promise.reject(new Error("No loginId or token"));
-    }
 
     const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.loginId}`);
     this.stompClient = Stomp.over(socket);
@@ -35,17 +41,59 @@ class WebSocketManager {
         },
         () => {
           this.connected = true;
+          this.connecting = false; // 연결 완료 후 상태 초기화
           console.log("✅ WebSocket connected");
           resolve();
         },
         (error) => {
+          this.connected = false;
+          this.connecting = false;
           console.error("❌ WebSocket connection failed", error);
           reject(error);
         }
       );
     });
   }
-
+  subscribeWithoutConnect(destination, callback) {
+    if (this.connected) {
+      return this._subscribe(destination, callback);
+    }
+  
+    return this.connect().then(() => {
+      return this._subscribe(destination, callback);
+    });
+  }
+  // subscribeWithoutConnect(destination, callback) {
+  //   if (!this.connected || !this.stompClient) {
+  //     console.warn(`🚫 WebSocket 연결되지 않음 → ${destination} 구독 생략`);
+  //     return;
+  //   }
+  
+  //   if (this.subscriptions[destination]) {
+  //     console.log(`🔁 이미 ${destination}에 구독 중`);
+  //     return;
+  //   }
+  
+  //   try {
+  //     const sub = this.stompClient.subscribe(destination, (message) => {
+  //       console.log("📨 수신된 원시 메시지:", message);
+  //       if (message.body) {
+  //         try {
+  //           const parsed = JSON.parse(message.body);
+  //           callback(parsed);
+  //         } catch (e) {
+  //           console.error("❌ JSON 파싱 실패:", e, message.body);
+  //         }
+  //       }
+  //     });
+  
+  //     this.subscriptions[destination] = sub;
+  //     console.log(`✅ ${destination}에 구독 성공`);
+  //   } catch (err) {
+  //     console.error(`❌ stompClient.subscribe 실패:`, err);
+  //   }
+  // }
+  
   send(destination, message) {
     return this.connect().then(() => this._send(destination, message));
   }
@@ -85,12 +133,7 @@ class WebSocketManager {
           try {
             const parsed = JSON.parse(message.body);
             callback(parsed);
-            if (typeof callback !== 'function') {
-              console.error(`❌ 구독 콜백이 함수가 아닙니다:`, callback);
-              return;
-            }
             console.log("📨 콜백 타입:", typeof callback, callback);
-            callback(parsed);
           } catch (e) {
             console.error("❌ JSON 파싱 실패:", e, message.body);
           }

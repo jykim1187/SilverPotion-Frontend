@@ -72,11 +72,6 @@ export default {
 
       if (loginId && token) {
       await WebSocketManager.connect();  // WebSocket 연결 시도
-      // const topic = `/user/${loginId}/chat`;
-      // const self = this;  // ✅ 명시적 바인딩
-      // WebSocketManager.replaceSubscribe(topic, (message) => {
-      //   self.onNewMessage(message);
-      // });
       const { connectSse, disconnectSse } = useSse();
         connectSse(loginId); // 명시적 호출
         this.disconnectSse = disconnectSse;

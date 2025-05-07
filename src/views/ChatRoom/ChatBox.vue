@@ -60,7 +60,6 @@ export default {
         this.roomId = this.$route.params.roomId;
         this.userId = localStorage.getItem("userId");
         this.messages = [];
-
         this.page = 0;
         this.hasMore = true;
         await this.loadMessageHistory();
@@ -69,9 +68,9 @@ export default {
 
     },
     mounted() {
+        emitter.on("newMessageReceived", this.onMessageReceived);
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.addEventListener("scroll", this.onScrollTop);
-        emitter.on("newMessageReceived", this.onMessageReceived);
     },
     beforeRouteLeave(to, from, next) {
         this.markAsRead(); // ✅ 나가기 전에 읽음 처리
@@ -93,6 +92,15 @@ export default {
     next();  // 라우트 이동 계속
     },
     methods: {
+        onMessageReceived(message) {
+            const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
+            const notMine = String(message.senderId) !== String(this.userId);
+
+            if (roomMatch && notMine) {
+                this.messages.push(message);
+                this.scrollToBottom();
+            }
+        },
     isMine(senderId) {
         return String(senderId) === String(this.userId);
     },
@@ -153,26 +161,20 @@ export default {
         const loginId = localStorage.getItem("loginId");
         const topic = `/user/${loginId}/chat`;
 
-        WebSocketManager.connect()
-            .then(() => {
-            WebSocketManager.replaceSubscribe(topic, (message) => {
-                if (!message || !message.roomId) return;
+        WebSocketManager.replaceSubscribe(topic, (message) => {
+            if (!message || !message.roomId) return;
 
-                const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
-                const notMine = String(message.senderId) !== String(this.userId);
+            const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
+            const notMine = String(message.senderId) !== String(this.userId);
 
-                if (roomMatch && notMine) {
-                this.messages.push(message);
-                this.scrollToBottom();
-                }
-            });
+            if (roomMatch && notMine) {
+            this.messages.push(message);
+            this.scrollToBottom();
+            }
+        });
 
             this.isSubscribed = true;
             console.log(`✅ 구독 완료: ${topic}`);
-            })
-            .catch((err) => {
-            console.error("❌ WebSocket 연결 실패:", err);
-            });
         },
 
         sendMessage() {

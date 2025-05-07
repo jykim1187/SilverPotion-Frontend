@@ -60,21 +60,24 @@ export default {
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
             unreadCount: 0,
+            isSubscribed: false,
+            roomId: null,
         }
     },
     created() {
         this.loadChatRooms();
+        this.connectWebsocket();
         emitter.on("newMessageReceived", this.updateChatRoom);
     },
     beforeRouteLeave(to, from, next) {
-        // this.disconnectWebSocket();
+        this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
         emitter.off("newMessageReceived", this.updateChatRoom); // 정리
+        this.disconnectWebSocket();
     },
     beforeRouteUpdate(to, from, next) {
-        this.roomId = to.params.roomId;
         this.messages = [];
         this.page = 0;
         this.hasMore = true;
@@ -82,19 +85,13 @@ export default {
         this.loadMessageHistory();
         
         this.markAsRead();
-        this.disconnectWebSocket();
-        this.connectWebsocket();
 
         next();
     },
     methods: {
-        onNewMessage(message) {
-            console.log('🔄 onNewMessage called with:', message);
-            if (message && message.roomId) {
-            this.updateChatRoom(message.roomId, message);  // 실시간 갱신
-            }
-        },
-        updateChatRoom(roomId, message) {
+        updateChatRoom( message) {
+            const roomId = message.roomId;
+            console.log(message)
             console.log('🔄 updateChatRoom called with:', { roomId, message });
             const roomIndex = this.chatRoomList.findIndex(room => room.id == roomId);
             console.log('Found room index:', roomIndex);
@@ -134,10 +131,21 @@ export default {
         isCurrentChatRoom(roomId) {
             return this.$route.path === `/chat/${roomId}`;
         },
+        async connectWebsocket() {
+            if (this.isSubscribed) return;
+
+            WebSocketManager.subscribeWithoutConnect(
+                `/user/${this.senderLoginId}/chat`,
+                this.onNewMessage
+            );
+            this.isSubscribed = true;
+        },
         disconnectWebSocket() {
-            console.log("🛑 disconnectWebSocket 호출됨");
             WebSocketManager.unsubscribe(`/user/${this.senderLoginId}/chat`);
             this.isSubscribed = false;
+        },
+        onNewMessage(message) {
+            emitter.emit("newMessageReceived",message);
         },
         async loadChatRooms() {
             try {
