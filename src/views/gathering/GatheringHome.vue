@@ -577,7 +577,6 @@ export default{
         }
     },
     beforeUnmount() {
-       this.disconnectWebSocket();
     },
 
     computed: {
@@ -607,7 +606,6 @@ export default{
         if (this.isGatheringMember) {
             if (this.chatRoomId) {
                 this.roomId = this.chatRoomId;
-                this.connectWebsocket();
             } else {
                 console.error("❌ chatRoomId가 없습니다.");
             }
@@ -879,53 +877,7 @@ export default{
                 this.showAlert = true;
             }
         },
-        connectWebsocket() {
-            if (this.isSubscribed) {
-                console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
-                return;
-            }
-            
-            const loginId = localStorage.getItem("loginId");
-            const topic = `/user/${loginId}/chat`;
-            console.log("📡 replaceSubscribe 호출 예정 topic:", topic);
-            
-            WebSocketManager.replaceSubscribe(topic, (message) => {
-                console.log('📨 Gathering chat message received:', message);
-                console.log('📨 Message details:', {
-                    roomId: message.roomId,
-                    currentRoomId: this.roomId,
-                    content: message.content,
-                    senderId: message.senderId,
-                    currentUserId: this.userId
-                });
-                
-                if (!message) {
-                    console.warn("❌ message is undefined/null");
-                    return;
-                }
-                
-                if (!message.roomId) {
-                    console.warn("⚠️ message.roomId 없음, 전체 메시지:", message);
-                    return;
-                }
-                
-                if (message.roomId == this.roomId) {
-                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
-                    this.messages.push(message);
-                    this.scrollToBottom();
-                } else {
-                    console.log('📪 다른 방 메시지:', message.roomId, '현재 방:', this.roomId);
-                }
-            });
-            
-            this.isSubscribed = true;
-        },
-        disconnectWebSocket() {
-            const topic = `/user/${localStorage.getItem("loginId")}/chat`;
-            console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
-            WebSocketManager.unsubscribe(topic);
-            this.isSubscribed = false;
-        },
+        
         sendMessage() {
             if (!this.roomId) {
                 console.warn("🚫 roomId가 없습니다. WebSocket 연결 확인 필요.");

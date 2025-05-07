@@ -18,6 +18,7 @@ import WebSocketManager from './WebSocketManager'
 import HeaderComponent from './components/HeaderComponent.vue'
 import axios from 'axios'
 import emitter from './event-bus'
+import { useSse } from './composables/useSse.js'
 
 export default {
   name: 'App',
@@ -34,8 +35,10 @@ export default {
     
   },
   beforeUnmount() {
-  // 앱이 종료될 때 웹소켓 연결을 끊습니다.
-  WebSocketManager.disconnect();
+    // 앱이 종료될 때 웹소켓 연결을 끊습니다.
+    WebSocketManager.disconnect();
+    // SSE 연결 해제
+    if (this.disconnectSse) this.disconnectSse();
   },
   beforeRouteLeave(to, from, next) {
   WebSocketManager.disconnect();  // 페이지 이동 시 WebSocket 연결 해제
@@ -69,11 +72,14 @@ export default {
 
       if (loginId && token) {
       await WebSocketManager.connect();  // WebSocket 연결 시도
-      const topic = `/user/${loginId}/chat`;
-      const self = this;  // ✅ 명시적 바인딩
-      WebSocketManager.replaceSubscribe(topic, (message) => {
-        self.onNewMessage(message);
-      });
+      // const topic = `/user/${loginId}/chat`;
+      // const self = this;  // ✅ 명시적 바인딩
+      // WebSocketManager.replaceSubscribe(topic, (message) => {
+      //   self.onNewMessage(message);
+      // });
+      const { connectSse, disconnectSse } = useSse();
+        connectSse(loginId); // 명시적 호출
+        this.disconnectSse = disconnectSse;
     }
     },
 

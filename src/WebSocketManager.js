@@ -84,7 +84,7 @@ class WebSocketManager {
         if (message.body) {
           try {
             const parsed = JSON.parse(message.body);
-
+            callback(parsed);
             if (typeof callback !== 'function') {
               console.error(`❌ 구독 콜백이 함수가 아닙니다:`, callback);
               return;

@@ -9,24 +9,17 @@
                     <v-card-text>
                         <div class="chat-box">
                             <div 
-                            v-for="(msg, index) in messages"
-                            :key="index"
-                            :class="['chat-message', isMine(msg.senderId) ? 'sent' : 'received']"
-                            >
-                            <template v-if="isMine(msg.senderId)">
+                                v-for="(msg, index) in messages"
+                                :key="index"
+                                :class="['chat-message', isMine(msg.senderId) ? 'sent' : 'received']"
+                                >
                                 <div class="message-content">
-                                {{ msg.content }}
-                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                    <template v-if="!isMine(msg.senderId)">
+                                    <div class="sender-info">{{ msg.senderNickName }}</div>
+                                    </template>
+                                    <span>{{ msg.isDeleted ? '삭제된 메시지입니다.' : msg.content }}</span>
+                                    <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
                                 </div>
-                            </template>
-
-                            <template v-else>
-                                <div class="message-content">
-                                <div class="sender-info">{{ msg.senderNickName }}</div> <!-- ✅ 상대 닉네임 표시 -->
-                                {{ msg.content }}
-                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
-                                </div>
-                            </template>
                             </div>
                         </div>
                         <v-text-field
@@ -72,6 +65,8 @@ export default {
         this.hasMore = true;
         await this.loadMessageHistory();
         this.markAsRead();
+        this.connectWebsocket();
+
     },
     mounted() {
         const chatBox = this.$el.querySelector(".chat-box");
@@ -150,36 +145,33 @@ export default {
     },
 
     connectWebsocket() {
-        console.log("🔧 connectWebsocket 호출됨, 현재 isSubscribed =", this.isSubscribed, "connected =", WebSocketManager.connected);
-
-        // 이미 구독된 상태라면 구독을 다시 시도하지 않음
-        if (this.isSubscribed || WebSocketManager.connected) {
-            console.warn("🚫 이미 구독 또는 연결됨, connect 중단됨");
+        if (this.isSubscribed) {
+            console.log("🚫 이미 구독 중 → 중단");
             return;
         }
-            const loginId = localStorage.getItem("loginId");
-            const topic = `/user/${loginId}/chat`;
 
-            console.log("📡 replaceSubscribe 호출 예정 topic:", topic);
+        const loginId = localStorage.getItem("loginId");
+        const topic = `/user/${loginId}/chat`;
 
-            WebSocketManager.connect().then(() => {
-                WebSocketManager.replaceSubscribe(topic, (message) => {
-                    if (!message || !message.roomId) {
-                        console.warn("❌ Invalid message received:", message);
-                        return;
-                    }
+        WebSocketManager.connect()
+            .then(() => {
+            WebSocketManager.replaceSubscribe(topic, (message) => {
+                if (!message || !message.roomId) return;
 
-                    if (parseInt(message.roomId) === parseInt(this.roomId)) {
-                        if (String(message.senderId) !== String(this.userId)) {
-                            this.messages.push(message);
-                            this.scrollToBottom();
-                        }
-                    }
-                });
+                const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
+                const notMine = String(message.senderId) !== String(this.userId);
 
-                this.isSubscribed = true;
-            }).catch((error) => {
-                console.error("웹소켓 연결 실패:", error);
+                if (roomMatch && notMine) {
+                this.messages.push(message);
+                this.scrollToBottom();
+                }
+            });
+
+            this.isSubscribed = true;
+            console.log(`✅ 구독 완료: ${topic}`);
+            })
+            .catch((err) => {
+            console.error("❌ WebSocket 연결 실패:", err);
             });
         },
 
