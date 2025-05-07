@@ -5,7 +5,7 @@ import GatheringManagement from "@/views/gathering/GatheringManagement.vue";
 import GatheringOpenSearch from "@/views/gathering/GatheringOpenSearch.vue";
 import GatheringSearch from "@/views/gathering/GatheringSearch.vue";
 import GatheringUpdate from "@/views/gathering/GatheringUpdate.vue";
-import KakaoMap from "@/views/gathering/KakaoMap.vue";
+import KakaoMap from "@/views/gathering/RegionSelect.vue";
 import MeetingCreate from "@/views/gathering/MeetingCreate.vue";
 import MeetingUpdate from "@/views/gathering/MeetingUpdate.vue";
 import MyGathering from "@/views/gathering/MyGathering.vue";

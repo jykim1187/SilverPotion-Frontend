@@ -6,14 +6,14 @@
                 class="address-card" 
                 variant="outlined" 
                 hover 
-                @click="goToAddressUpdate"
+                @click="openRegionModal"
             >
                 <div v-if="userInfo" class="d-flex align-center pa-3">
                     <v-avatar color="primary" size="36" class="mr-3">
                         <v-icon color="white">mdi-map-marker</v-icon>
                     </v-avatar>
                     <div>
-                        <div class="text-caption text-grey">내 위치</div>
+                        <div class="text-caption text-grey">활동지역</div>
                         <div class="font-weight-medium">{{ userInfo.region || '주소 정보가 없습니다. 클릭하여 주소를 설정하세요.' }}</div>
                     </div>
                     <v-spacer></v-spacer>
@@ -263,10 +263,22 @@
                                 <div class="d-flex align-center mt-1">
                                     <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
                                     <span class="text-caption">{{ meeting.place }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                    <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
-                                    <span class="text-caption">{{ meeting.cost }}원</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <!-- 인원 정보 -->
+                                    <div class="d-flex align-center">
+                                        <v-icon size="x-small" class="mr-1">mdi-account-multiple</v-icon>
+                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                    </div>
+                                    
+                                    <!-- 구분선 -->
+                                    <v-divider vertical class="mx-2" style="height: 12px;"></v-divider>
+                                    
+                                    <!-- 비용 정보 -->
+                                    <div class="d-flex align-center">
+                                        <v-icon size="x-small" class="mr-1">mdi-currency-krw</v-icon>
+                                        <span class="text-caption">{{ formatCost(meeting.cost) }}</span>
+                                    </div>
                                 </div>
                                 <div class="text-caption text-grey mt-1">
                                     <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
@@ -313,13 +325,56 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- 지역 선택 모달 추가 -->
+        <v-dialog
+          v-model="regionModalOpen"
+          max-width="800px"
+          persistent
+        >
+          <v-card>
+            <v-card-title class="headline">
+              활동지역 선택
+            </v-card-title>
+            
+            <v-card-text>
+              <KakaoMap 
+                ref="kakaoMapRef"
+                @region-selected="handleRegionSelected"
+              />
+            </v-card-text>
+            
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="red"
+                text
+                @click="regionModalOpen = false"
+              >
+                취소
+              </v-btn>
+              <v-btn
+                color="primary"
+                text
+                @click="confirmRegionSelection"
+                :loading="updatingRegion"
+              >
+                확인
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
 <script>
 import axios from 'axios';
+import KakaoMap from '@/views/gathering/RegionSelect.vue';
 
 export default{
+    components: {
+        KakaoMap
+    },
     data(){
         return {
             userInfo: null,
@@ -349,7 +404,12 @@ export default{
             upcomingMeetings: [],
             loadingMeetings: false,
             meetingError: null,
-            selectedDateIndex: 0
+            selectedDateIndex: 0,
+            
+            // 지역 선택 모달 관련 변수 추가
+            regionModalOpen: false,
+            selectedRegion: null,
+            updatingRegion: false
         }
     },
     computed: {
@@ -461,6 +521,52 @@ export default{
         }
     },
     methods: {
+        // 지역 선택 모달 열기
+        openRegionModal() {
+            this.regionModalOpen = true;
+        },
+        
+        // 지역 선택 이벤트 처리
+        handleRegionSelected(region) {
+            this.selectedRegion = region;
+        },
+        
+        // 지역 선택 확인 및 업데이트
+        async confirmRegionSelection() {
+            if (!this.selectedRegion) {
+                this.regionModalOpen = false;
+                return;
+            }
+            
+            this.updatingRegion = true;
+            
+            try {
+                // 선택한 지역으로 사용자 정보 업데이트
+                await axios.patch(
+                    `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/update`,
+                    {
+                        region: this.selectedRegion.name
+                    }
+                );
+                
+                // 사용자 정보 다시 불러오기
+                await this.fetchUserProfile();
+                
+                // 추천 모임 다시 불러오기
+                if (this.userInfo && this.userInfo.detailAddress) {
+                    await this.fetchRecommendedGatherings();
+                }
+                
+                // 성공 메시지 표시 (alert 사용)
+                alert('활동지역이 업데이트되었습니다.');
+            } catch (err) {
+                console.error('활동지역 업데이트 실패:', err);
+                alert('활동지역 업데이트에 실패했습니다.');
+            } finally {
+                this.updatingRegion = false;
+                this.regionModalOpen = false;
+            }
+        },
         async fetchUserProfile() {
             this.loading = true;
             try {
@@ -500,7 +606,7 @@ export default{
             }
         },
         goToAddressUpdate() {
-            this.$router.push('/silverpotion/user/update/adress');
+            // 이 메서드는 이제 사용하지 않음 (모달로 대체)
         },
         goToGatheringDetail(gatheringId) {
             this.$router.push(`/silverpotion/gathering/home/${gatheringId}`);
@@ -547,6 +653,9 @@ export default{
             }
             
             return '';
+        },
+        formatCost(cost) {
+            return cost > 0 ? `${cost.toLocaleString()}원` : '회비없음';
         },
         formatDateForApi(date) {
             const year = date.getFullYear();

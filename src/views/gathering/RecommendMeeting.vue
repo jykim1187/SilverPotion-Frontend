@@ -88,10 +88,22 @@
                                 <div class="d-flex align-center mt-1">
                                     <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
                                     <span class="text-caption">{{ meeting.place }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                    <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
-                                    <span class="text-caption">{{ meeting.cost }}원</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <!-- 인원 정보 -->
+                                    <div class="d-flex align-center">
+                                        <v-icon size="x-small" class="mr-1">mdi-account-multiple</v-icon>
+                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                    </div>
+                                    
+                                    <!-- 구분선 -->
+                                    <v-divider vertical class="mx-2" style="height: 12px;"></v-divider>
+                                    
+                                    <!-- 비용 정보 -->
+                                    <div class="d-flex align-center">
+                                        <v-icon size="x-small" class="mr-1">mdi-currency-krw</v-icon>
+                                        <span class="text-caption">{{ meeting.cost > 0 ? `${meeting.cost}원` : '회비없음' }}</span>
+                                    </div>
                                 </div>
                                 <div class="text-caption text-grey mt-1">
                                     <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
@@ -296,6 +308,9 @@ export default{
             if (index >= 0 && index < this.dateButtons.length) {
                 this.selectedDateIndex = index;
             }
+        },
+        formatCost(cost) {
+            return cost > 0 ? `${cost.toLocaleString()}원` : '회비없음';
         }
     }
 }

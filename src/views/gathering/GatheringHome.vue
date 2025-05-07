@@ -171,15 +171,30 @@
                                                     </div>
                                                     
                                                     <!-- 정모 정보 -->
-                                                    <div class="d-flex align-center mt-2 text-body-2">
-                                                        <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
-                                                        <span class="mr-3">{{ meeting.place }}</span>
+                                                    <div class="mt-2 text-body-2">
+                                                        <!-- 장소 정보 -->
+                                                        <div class="d-flex align-center mb-1">
+                                                            <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
+                                                            <span>{{ meeting.place }}</span>
+                                                        </div>
                                                         
-                                                        <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
-                                                        <span class="mr-3">{{ meeting.attendees.length }}/{{ meeting.maxPeople }}명</span>
-                                                        
-                                                        <v-icon size="small" class="mr-1">mdi-currency-krw</v-icon>
-                                                        <span>{{ formatCost(meeting.cost) }}</span>
+                                                        <!-- 인원 및 비용 정보 (한 줄에 표시) -->
+                                                        <div class="d-flex align-center">
+                                                            <!-- 인원 정보 -->
+                                                            <div class="d-flex align-center">
+                                                                <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
+                                                                <span>{{ meeting.attendees.length }}/{{ meeting.maxPeople }}명</span>
+                                                            </div>
+                                                            
+                                                            <!-- 구분선 -->
+                                                            <v-divider vertical class="mx-2" style="height: 16px;"></v-divider>
+                                                            
+                                                            <!-- 비용 정보 -->
+                                                            <div class="d-flex align-center">
+                                                                <v-icon size="small" class="mr-1">mdi-currency-krw</v-icon>
+                                                                <span>{{ formatCost(meeting.cost) }}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                     
                                                     <!-- 참석자 프로필과 참석/취소 버튼 -->
@@ -684,7 +699,7 @@ export default{
             }
         },
         formatCost(cost) {
-            if (cost === 0) return '무료';
+            if (cost === 0) return '회비없음';
             return cost.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         },
         goToUpdateGathering() {

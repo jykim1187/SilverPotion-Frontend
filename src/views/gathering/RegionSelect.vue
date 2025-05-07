@@ -26,6 +26,7 @@
 </template>
 
 <script setup>
+/* eslint-disable */
 import { ref, onMounted, onUnmounted } from 'vue';
 import sidoJson from '@/assets/map/sido.json';
 import sigJson from '@/assets/map/sig.json';
@@ -43,6 +44,9 @@ const selectedPolygon = ref(null);
 const searchQuery = ref('');
 const searchResults = ref([]);
 const allRegions = ref([]);
+
+// emit 정의 추가
+const emit = defineEmits(['region-selected']);
 
 onMounted(() => {
   // 카카오맵 API 로드
@@ -160,7 +164,7 @@ const selectSearchResult = (result) => {
     map.value.setBounds(bounds);
     
     // 오버레이 위치 및 내용 설정
-    customOverlay.value.setContent('<div class="area">' + targetArea.name + '</div>');
+    customOverlay.value.setContent('<div class="area" style="position: absolute; background: #3949AB; color: #FFFFFF; border: 1px solid #283593; border-radius: 6px; font-size: 16px; font-family: \'Noto Sans KR\', sans-serif; font-weight: 600; padding: 8px 14px; left: -40px; top: -40px; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.2);">' + targetArea.name + '</div>');
     customOverlay.value.setPosition(centerPoint);
     customOverlay.value.setMap(map.value);
     /* eslint-enable */
@@ -178,6 +182,13 @@ const selectSearchResult = (result) => {
     
     // 콘솔에 지역 정보 출력 (CEN_POINT 추가)
     console.log('지역 코드:', targetArea.location, '지역명:', targetArea.name, 'CEN_POINT:', cenPoint);
+    
+    // 지역 선택 이벤트 발생
+    emit('region-selected', {
+      code: targetArea.location,
+      name: targetArea.name,
+      cenPoint: cenPoint
+    });
   }
 };
 
@@ -346,7 +357,7 @@ const displayArea = (area) => {
       selectedPolygon.value = polygon;
       
       // 오버레이 위치 및 내용 설정
-      customOverlay.value.setContent('<div class="area">' + area.name + '</div>');
+      customOverlay.value.setContent('<div class="area" style="position: absolute; background: #3949AB; color: #FFFFFF; border: 1px solid #283593; border-radius: 6px; font-size: 16px; font-family: \'Noto Sans KR\', sans-serif; font-weight: 600; padding: 8px 14px; left: -40px; top: -40px; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.2);">' + area.name + '</div>');
       customOverlay.value.setPosition(mouseEvent.latLng);
       customOverlay.value.setMap(map.value);
       
@@ -359,6 +370,13 @@ const displayArea = (area) => {
       
       // 콘솔에 지역 정보 출력 (CEN_POINT 추가)
       console.log('지역 코드:', area.location, '지역명:', area.name, 'CEN_POINT:', cenPoint);
+      
+      // 지역 선택 이벤트 발생
+      emit('region-selected', {
+        code: area.location,
+        name: area.name,
+        cenPoint: cenPoint
+      });
     }
   });
   /* eslint-enable */
