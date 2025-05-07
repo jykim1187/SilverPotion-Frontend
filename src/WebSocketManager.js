@@ -122,7 +122,7 @@ class WebSocketManager {
     }
 
     if (this.subscriptions[destination]) {
-      console.log(`🔁 이미 ${destination}에 구독 중`);
+      console.log(`🔁 이미 ${destination}에 구독 중 `);
       return;
     }
     try {
