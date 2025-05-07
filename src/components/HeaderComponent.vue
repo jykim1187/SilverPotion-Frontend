@@ -208,6 +208,7 @@ export default {
         }
     },
     toggleNotificationsMenu() {
+        this.hasNotifications = false;
         this.$router.push('/notification');
     },
     handleNewNotification(notification) {
