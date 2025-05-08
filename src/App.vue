@@ -32,7 +32,15 @@ export default {
   },
   mounted() {
     this.checkLoginStatus();
-    
+    const loginId = localStorage.getItem("loginId");
+    if (loginId) {
+      WebSocketManager.connect().then(() => {
+        WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
+          emitter.emit('newMessageReceived', message);
+          emitter.emit('incrementNotificationBadge');
+        });
+      });
+    }
   },
   beforeUnmount() {
     // 앱이 종료될 때 웹소켓 연결을 끊습니다.

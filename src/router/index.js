@@ -12,6 +12,7 @@ import VotePostCreate from '@/views/VotePostCreate.vue'
 import { adminRouter } from "./adminRouter";
 import CalendarView from '@/views/Calendar.vue'
 import UserList from '@/views/UserList.vue'
+import Notification from '@/views/UserNotification.vue';  
 
 const routes = [
     ...chatRouter,
@@ -91,7 +92,14 @@ const routes = [
         path: '/user/list',
         name: 'UserList',
         component: UserList
-    }
+    },
+    {
+        path: '/notification',
+        name: 'notification',
+        component: Notification,
+        props: true
+
+    },
 ]
 
 const router = createRouter({

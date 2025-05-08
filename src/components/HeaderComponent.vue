@@ -85,9 +85,9 @@
                         <v-btn v-if="isLogin" :to="{path:'/chat-service/chat/my/rooms'}" icon class="ml-2" size="small">
                             <img src="@/assets/comments-regular.svg" alt="chat" style="width: 35px; height: 35px;" />
                         </v-btn>
-                        
-                        <v-btn v-if="isLogin" icon class="ml-2 mr-2" color="grey-darken-3" size="small" variant="text" @click="toggleNotificationsMenu">
+                        <v-btn v-if="isLogin" icon class="ml-2 mr-2" color="grey-darken-3" size="small" variant="text" :to="{ path: '/notification' }">
                             <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
+
                             <v-badge
                                 v-if="hasNotifications"
                                 color="error"
@@ -101,32 +101,6 @@
                 </v-col>
             </v-row>
         </div>
-        
-        <v-navigation-drawer v-model="notificationsMenu" location="right" temporary width="300" class="notifications-drawer">
-            <v-toolbar title="알림" flat>
-                <v-spacer></v-spacer>
-                <v-btn icon @click="notificationsMenu = false">
-                    <v-icon>mdi-close</v-icon>
-                </v-btn>
-            </v-toolbar>
-            <v-divider></v-divider>
-            <v-list v-if="notifications.length > 0">
-                <v-list-item v-for="(notification, index) in notifications" :key="index">
-                    <v-list-item-title class="font-weight-bold">
-                    {{ notification.title }}
-                    </v-list-item-title>
-                    <v-list-item-subtitle class="text-grey-darken-1">
-                    {{ notification.message }}
-                    </v-list-item-subtitle>
-                    <v-list-item-subtitle class="text-caption text-grey">
-                    {{ formatDate(notification.createdAt) }}
-                    </v-list-item-subtitle>
-                </v-list-item>
-            </v-list>
-            <v-list v-else>
-                <v-list-item title="알림이 없습니다"></v-list-item>
-            </v-list>
-        </v-navigation-drawer>
     </v-app-bar>
 </template>
 
@@ -192,14 +166,7 @@ export default {
         console.error('로그아웃 실패', error);
       }
     },
-    checkNotifications() {
-      this.hasNotifications = true;
-      
-      this.notifications = [
-        { title: '새로운 메시지', message: '새 메시지가 도착했습니다.' },
-        { title: '모임 알림', message: '내일 모임이 예정되어 있습니다.' }
-      ];
-    },
+    
     async fetchUserProfile() {
        const loginId = localStorage.getItem("loginId");
        console.log("fetchUserProfile 실행");
@@ -211,37 +178,18 @@ export default {
         console.log(response.data);
         this.profileImage = response.data.result;
     },
-    async fetchServerNotifications() {// 알림 리스트 가져오기기
-    const loginId = localStorage.getItem("loginId");
-    try {
-      const res = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat-service/notifications/list`, {
-        headers: {
-          "X-User-LoginId": loginId
-        }
-      });
-      console.log('📦 서버 알림 목록:', res.data);
-      this.notifications = res.data.map(n => ({
-        title: n.title || '알림',
-        message: n.content,
-        read: n.read,
-        createdAt: n.createdAt
-      }));
-      this.hasNotifications = this.notifications.some(n => !n.read);
-    } catch (err) {
-      console.error('❌ 알림 목록 불러오기 실패:', err);
-    }
-  },
+    checkNotifications() {
+        this.hasNotifications = false; // 초기값 false로 설정
+        this.notifications = []; // 빈 배열
+    },
     toggleNotificationsMenu() {
-        this.notificationsMenu = !this.notificationsMenu;
-        if (this.notificationsMenu) {
-            this.fetchServerNotifications();
-            this.hasNotifications = false; // 읽음 처리
-        }
+        this.hasNotifications = false;
+        this.$router.push('/notification');
     },
     handleNewNotification(notification) {
         this.notifications.unshift({
-        title: '📢 시스템 알림',
-        message: notification.content
+            title: '📢 시스템 알림',
+            message: notification.content
         });
         this.hasNotifications = true;
     },
