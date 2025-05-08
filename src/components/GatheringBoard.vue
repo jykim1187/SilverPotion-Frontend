@@ -116,11 +116,11 @@
                       <v-btn 
                         variant="text" 
                         size="small" 
-                        :prepend-icon="isPostLiked(getPostId(post), post.postCategory) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
-                        :color="isPostLiked(getPostId(post), post.postCategory) ? 'red' : ''"
+                        :prepend-icon="isPostLiked(getPostId(post)) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
+                        :color="isPostLiked(getPostId(post)) ? 'red' : ''"
                         @click.stop="toggleLike(post)"
                       >
-                        <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post), post.postCategory) }}</span>
+                        <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post)) }}</span>
                       </v-btn>
                       <v-btn variant="text" size="small" prepend-icon="mdi-comment-outline">
                         <span class="text-caption">댓글 {{ post.commentCount || 0 }}</span>
@@ -148,11 +148,11 @@
                       <v-btn 
                         variant="text" 
                         size="small" 
-                        :prepend-icon="isPostLiked(getPostId(post), post.postCategory) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
-                        :color="isPostLiked(getPostId(post), post.postCategory) ? 'red' : ''"
+                        :prepend-icon="isPostLiked(getPostId(post)) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
+                        :color="isPostLiked(getPostId(post)) ? 'red' : ''"
                         @click.stop="toggleLike(post)"
                       >
-                        <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post), post.postCategory) }}</span>
+                        <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post)) }}</span>
                       </v-btn>
                       <v-btn variant="text" size="small" prepend-icon="mdi-comment-outline">
                         <span class="text-caption">댓글 {{ post.commentCount || 0 }}</span>
@@ -460,11 +460,7 @@ export default {
   methods: {
 
     getPostId(post) {
-      if (post.postCategory === 'vote') {
-        return post.votedId || post.id; // 투표: votedId (or id fallback)
-      } else {
-        return post.postId || post.id;  // 자유/공지: postId (or id fallback)
-      }
+      return `${post.postType}_${post.id}`;
     },
 
     resetAndFetchPosts() {
@@ -597,92 +593,49 @@ export default {
       }
 
       try {
-        const isVote = post.postCategory === 'vote';
-        const postId = this.getPostId(post);
-        
-        console.log('게시물 객체:', post);
-        console.log('게시물 ID:', postId);
-        console.log('게시물 좋아요 시도:', postId);
-        console.log('게시물 카테고리:', post.postCategory);
-        console.log('현재 좋아요 상태:', this.isPostLiked(postId, post.postCategory));
+        const postIdKey = this.getPostId(post);
+        const postType = post.postType;
 
-        if (!postId) {
-          console.error('게시물 ID가 없습니다:', post);
-          return;
-        }
-
-        const endpoint = isVote 
-          ? `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/like/${postId}`
-          : `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${postId}`;
-
-        console.log('요청 URL:', endpoint);
-
-        const response = await axios.post(
-          endpoint,
-          null,
-          {
-            headers: {
-              'X-User-LoginId': this.loginId
-            }
-          }
-        );
-
-        console.log('서버 응답 전체:', response.data);
-        
-        // result 객체에서 데이터 추출
-        const result = response.data.result;
-        console.log('서버 응답 result:', result);
-        
-        const likeCount = result.likeCount;
-        // liked 필드를 사용
-        const isLiked = result.liked;
-        
-        console.log('처리된 응답 데이터:', { likeCount, isLiked });
-        
-        // 게시물 좋아요 수 업데이트
-        post.likeCount = likeCount;
-        post.isLike = isLiked ? 'Y' : 'N';
-        
-        // 좋아요 상태 업데이트
-        const key = `${post.postCategory}_${postId}`;
-        if (isLiked) {
-          this.likedPosts.add(key);
-          console.log('좋아요 추가됨:', key);
+        let response;
+        if (postType === 'VOTE') {
+          response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/like/${post.id}`,
+            null,
+            { headers: { 'X-User-LoginId': this.loginId } }
+          );
         } else {
-          this.likedPosts.delete(key);
-          console.log('좋아요 삭제됨:', key);
+          response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.id}`,
+            null,
+            { headers: { 'X-User-LoginId': this.loginId } }
+          );
         }
-        
-        // localStorage에 저장할 배열 생성
-        const likedPostsArray = Array.from(this.likedPosts);
-        console.log('localStorage에 저장할 데이터:', likedPostsArray);
-        
-        // localStorage에 저장
-        localStorage.setItem('likedPosts', JSON.stringify(likedPostsArray));
-        
-        
-        // 저장된 데이터 확인
-        const stored = localStorage.getItem('likedPosts');
-        const parsed = JSON.parse(stored);
-        console.log('localStorage 저장 확인:', parsed);
-        
+
+        const result = response.data.result;
+        // 현재 게시물의 좋아요 상태만 업데이트
+        post.likeCount = result.likeCount;
+        post.isLike = result.liked ? 'Y' : 'N';
+
+        // 좋아요 상태 저장
+        if (result.liked) {
+          this.likedPosts.add(postIdKey);
+        } else {
+          this.likedPosts.delete(postIdKey);
+        }
+
+        localStorage.setItem('likedPosts', JSON.stringify(Array.from(this.likedPosts)));
       } catch (error) {
-        console.error('좋아요 처리 중 오류가 발생했습니다:', error);
+        console.error('좋아요 처리 중 오류:', error);
         alert('좋아요 처리 중 오류가 발생했습니다.');
       }
     },
     
-    isPostLiked(postId, postCategory) {
-      //localStorae 기반이 아니라 post객체 안의 islike 값으로 먼저 확인
-      const post = this.posts.find(p => this.getPostId(p) === postId && p.postCategory === postCategory);
-      if (post && (post.isLike === 'Y' || post.isLike === true)) {
-        return true;
-      }
-      return this.likedPosts.has(`${postCategory}_${postId}`);
+    isPostLiked(postIdKey) {
+      return this.likedPosts.has(postIdKey);
     },
 
-    getLikeCount(postId, postCategory) {
-      const post = this.posts.find(p => this.getPostId(p) === postId && p.postCategory === postCategory);
+    getLikeCount(postIdKey) {
+      const post = this.posts.find(p => this.getPostId(p) === postIdKey);
       return post && typeof post.likeCount === 'number' ? post.likeCount : 0;
     },
 
