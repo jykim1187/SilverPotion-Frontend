@@ -89,7 +89,13 @@ export default {
         // iceServers는 NAT뒤에 있는 클라이언트끼리 연결 할 수 있도록 STUN/TURN서버 정보를 넣어줌. 구글의 STUN서버 사용
         const configuration ={
           iceServers:[
-            {urls: 'stun:stun.1.google.com.19302'}
+            {urls: 'stun:stun.1.google.com.19302'},
+            //내가 ec2에 구축한 turn서버
+            {
+              urls: 'turn:3.35.48.199:3478',
+              username: 'turnuser',
+              credential: 'turnpassword'
+            }
           ]
         }
 
@@ -187,7 +193,14 @@ export default {
             //   // this.startCall()은 내가 offer를 생성해서 보내는 거고 여기서는 상대방의 offer를 받아서 answer를 보내는 로직이 들어가야하는 것
             //  1.내 RTCpeerConnection객체 생성
               const configuration ={
-                iceServers:[{urls : 'stun:stun.1.google.com.19302'}]
+                iceServers:[{urls : 'stun:stun.1.google.com.19302'},
+                // 내가 ec2에 구축한 turn서버
+                {
+                    urls: 'turn:3.35.48.199:3478',
+                    username: 'turnuser',
+                    credential: 'turnpassword'
+                  }
+                ]
               };
               this.peerConnection = new RTCPeerConnection(configuration);
             // 2. 내 localStream을 트랙에 추가
