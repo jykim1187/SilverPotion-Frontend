@@ -64,7 +64,6 @@ export default {
         this.hasMore = true;
         await this.loadMessageHistory();
         this.markAsRead();
-        this.connectWebsocket();
 
     },
     mounted() {
@@ -92,15 +91,15 @@ export default {
     next();  // 라우트 이동 계속
     },
     methods: {
-        onMessageReceived(message) {
-            const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
-            const notMine = String(message.senderId) !== String(this.userId);
+    onMessageReceived(message) {
+        const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
+        const notMine = String(message.senderId) !== String(this.userId);
 
-            if (roomMatch && notMine) {
-                this.messages.push(message);
-                this.scrollToBottom();
-            }
-        },
+        if (roomMatch && notMine) {
+            this.messages.push(message);
+            this.scrollToBottom();
+        }
+    },
     isMine(senderId) {
         return String(senderId) === String(this.userId);
     },

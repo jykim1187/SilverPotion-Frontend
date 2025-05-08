@@ -1,260 +1,345 @@
 <template>
   <v-container fluid class="pa-0">
-    <!-- Category Filter Buttons -->
-    <v-sheet class="mb-4 pa-2 overflow-x-auto" style="white-space: nowrap;">
-      <v-chip
-        v-for="category in categories"
-        :key="category.value"
-        :color="selectedCategory === category.value ? 'primary' : 'grey-lighten-3'"
-        class="mr-2"
-        @click="selectCategory(category.value)"
-        :disabled="loading" 
-      >
-        {{ category.text }}
-      </v-chip>
-    </v-sheet>
+    <!-- 헤더 -->
+    <v-card flat class="header-card" color="#E8F1FD">
+      <v-card-text class="d-flex align-center pa-2">
+        <v-btn icon @click="$router.back()" class="mr-2" flat>
+          <v-icon>mdi-chevron-left</v-icon>
+        </v-btn>
+        <h1 class="text-h5 font-weight-bold my-2 text-center flex-grow-1 text-primary">게시판</h1>
+      </v-card-text>
+    </v-card>
 
-    <!-- Loading Indicator -->
-    <div v-if="loading && posts.length === 0" class="text-center pa-5">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-    </div>
-
-    <!-- Post List -->
-    <v-list v-else-if="posts.length > 0" class="pa-0 bg-transparent post-list-wrapper">
-      <v-card
-        v-for="(post, index) in filteredPosts" 
-        :key="post.id + '-' + post.postCategory + '-' + index" 
-        class="mb-3 pa-0" 
-        flat 
-        border
-        @click="goToPostDetail(post)"
-      >
-        <v-list-item class="pa-3">
-          <!-- Header: Avatar, Nickname, Time, Menu -->
-          <template v-slot:prepend>
-            <v-avatar size="36" class="mr-3">
-              <!-- Always use default image -->
-              <v-img :src="require('@/assets/default-gathering.png')"></v-img>
-            </v-avatar>
-          </template>
-
-          <!-- Nickname is already displayed here -->
-          <v-list-item-title class="font-weight-bold text-body-2">{{ post.nickname }}</v-list-item-title>
-          <v-list-item-subtitle class="text-caption">{{ formatRelativeDate(post.createdAt) }}</v-list-item-subtitle>
-
-          <!-- 메뉴 버튼 (점 세 개 아이콘) - 모든 게시물에 표시 -->
-          <template v-slot:append>
-            <v-btn 
-              icon 
-              variant="text" 
-              size="small" 
-              @click.stop="openPostMenu(post)"
-            >
-              <v-icon>mdi-dots-vertical</v-icon>
-            </v-btn>
-          </template>
-        </v-list-item>
-
-        <v-divider></v-divider>
-
-        <!-- Content Section -->
-        <div class="pa-3">
-          <!-- VOTE TYPE -->
-          <div v-if="post.postCategory === 'vote'">
-            <div class="d-flex align-start mb-2">
-              <v-icon class="mr-3 mt-1">mdi-checkbox-marked-outline</v-icon>
-              <div class="flex-grow-1">
-                <p class="font-weight-bold mb-1">{{ post.title }}</p>
-                <p v-if="post.description" class="text-caption text-medium-emphasis mb-1">{{ post.description }}</p>
-                <p v-if="post.multipleChoice !== null" class="text-caption text-medium-emphasis">
-                  {{ post.multipleChoice ? '복수선택' : '단일선택' }}
-                </p>
-              </div>
-            </div>
-            <div>
-              <v-chip size="x-small" label class="mt-2">{{ getCategoryText(post.postCategory) }}</v-chip>
-              <div class="px-3 py-1">
-                <v-btn 
-                  variant="text" 
-                  size="small" 
-                  :prepend-icon="isPostLiked(getPostId(post), post.postCategory) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
-                  :color="isPostLiked(getPostId(post), post.postCategory) ? 'red' : ''"
-                  @click.stop="toggleLike(post)"
-                >
-                  <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post), post.postCategory) }}</span>
-                </v-btn>
-                <v-btn variant="text" size="small" prepend-icon="mdi-comment-outline">
-                  <span class="text-caption">댓글 {{ post.commentCount || 0 }}</span>
-                </v-btn>
-              </div>
-            </div>
-             
-          </div>
-
-          <!-- POST TYPE (FREE, NOTICE, etc.) -->
-          <div v-else>
-            <p class="font-weight-bold mb-2">{{ post.title }}</p>
-            <p class="text-body-2 mb-2 text-medium-emphasis content-preview">{{ post.content }}</p>
-            <!-- Image Display -->
-            <v-img 
-              v-if="post.imageUrls && post.imageUrls.length > 0"
-              :src="post.imageUrls[0]" 
-              max-height="200"
-              cover
-              class="rounded mb-2"
-            ></v-img>
-             <!-- Category Chip -->
-            <v-chip size="x-small" label class="mt-2">{{ getCategoryText(post.postCategory) }}</v-chip>
-            <div class="px-3 py-1">
-                <v-btn 
-                  variant="text" 
-                  size="small" 
-                  :prepend-icon="isPostLiked(getPostId(post), post.postCategory) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
-                  :color="isPostLiked(getPostId(post), post.postCategory) ? 'red' : ''"
-                  @click.stop="toggleLike(post)"
-                >
-                  <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post), post.postCategory) }}</span>
-                </v-btn>
-                <v-btn variant="text" size="small" prepend-icon="mdi-comment-outline">
-                  <span class="text-caption">댓글 {{ post.commentCount || 0 }}</span>
-                </v-btn>
-              </div>
-          </div>
-        </div>
-
-        <!-- Footer: Likes & Comments (for non-votes) -->
-        <div v-if="post.postCategory !== 'vote'">
-          <v-divider></v-divider>
-        </div>
-        
-      </v-card>
-      
-      <!-- Load More Button -->
-      <div v-if="showLoadMoreButton" class="text-center my-4">
-          <v-btn 
-            @click="loadMorePosts"
-            :loading="loading"
-            variant="outlined"
-            color="primary"
-          >
-            더보기
-          </v-btn>
-      </div>
-    </v-list>
-
-    <!-- No Posts Message -->
-    <div v-else-if="!loading && posts.length === 0" class="text-center pa-5 grey lighten-4 rounded">
-      <p>표시할 게시글이 없습니다.</p>
-    </div>
-
-    <!-- Floating Action Button and Toggle Menu -->
-    <div class="create-post-wrapper" v-if="!isVoteDetail">
-      <div class="toggle-menu" :class="{ 'show-menu': showMenu }">
-        <div class="menu-items">
-          <v-btn
-            v-for="category in postCategories"
-            :key="category.type"
-            @click.stop="createPost(category.type)"
-            class="menu-item"
-            color="primary"
-            variant="text"
-          >
-            {{ category.label }}
-          </v-btn>
-        </div>
-      </div>
-      
-      <v-btn
-        icon="mdi-plus"
+    <!-- 탭 메뉴 -->
+    <div class="content-wrapper">
+      <v-tabs 
+        v-model="activeTab" 
+        centered 
+        grow 
+        class="tab-container" 
+        bg-color="#E8F1FD"
         color="primary"
-        class="post_create_button"
-        @click.stop="toggleMenu"
-        :style="{ transform: showMenu ? 'rotate(45deg)' : 'none' }"
-      ></v-btn>
+      >
+        <v-tab value="home" class="tab-item" color="primary">
+          <span class="primary--text">홈</span>
+        </v-tab>
+        <v-tab value="board" class="tab-item" color="primary">
+          <span class="primary--text">게시판</span>
+        </v-tab>
+        <v-tab value="chat" class="tab-item" color="primary">
+          <span class="primary--text">채팅</span>
+        </v-tab>
+      </v-tabs>
+
+      <v-window v-model="activeTab" class="mt-12">
+        <!-- 홈 탭 -->
+        <v-window-item value="home">
+          <router-view :gatheringId="gatheringId"></router-view>
+        </v-window-item>
+
+        <!-- 게시판 탭 -->
+        <v-window-item value="board">
+          <!-- Category Filter Buttons -->
+          <v-sheet class="mb-4 pa-2 overflow-x-auto" style="white-space: nowrap;">
+            <v-chip
+              v-for="category in categories"
+              :key="category.value"
+              :color="selectedCategory === category.value ? 'primary' : 'grey-lighten-3'"
+              class="mr-2"
+              @click="selectCategory(category.value)"
+              :disabled="loading" 
+            >
+              {{ category.text }}
+            </v-chip>
+          </v-sheet>
+
+          <!-- Loading Indicator -->
+          <div v-if="loading && posts.length === 0" class="text-center pa-5">
+            <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          </div>
+
+          <!-- Post List -->
+          <v-list v-else-if="posts.length > 0" class="pa-0 bg-transparent post-list-wrapper">
+            <v-card
+              v-for="(post, index) in filteredPosts" 
+              :key="post.id + '-' + post.postCategory + '-' + index" 
+              class="mb-3 pa-0" 
+              flat 
+              border
+              @click="goToPostDetail(post)"
+            >
+              <v-list-item class="pa-3">
+                <!-- Header: Avatar, Nickname, Time, Menu -->
+                <template v-slot:prepend>
+                  <v-avatar size="36" class="mr-3">
+                    <!-- Always use default image -->
+                    <v-img :src="require('@/assets/default-gathering.png')"></v-img>
+                  </v-avatar>
+                </template>
+
+                <!-- Nickname is already displayed here -->
+                <v-list-item-title class="font-weight-bold text-body-2">{{ post.nickname }}</v-list-item-title>
+                <v-list-item-subtitle class="text-caption">{{ formatRelativeDate(post.createdAt) }}</v-list-item-subtitle>
+
+                <!-- 메뉴 버튼 (점 세 개 아이콘) - 모든 게시물에 표시 -->
+                <template v-slot:append>
+                  <v-btn 
+                    icon 
+                    variant="text" 
+                    size="small" 
+                    @click.stop="openPostMenu(post)"
+                  >
+                    <v-icon>mdi-dots-vertical</v-icon>
+                  </v-btn>
+                </template>
+              </v-list-item>
+
+              <v-divider></v-divider>
+
+              <!-- Content Section -->
+              <div class="pa-3">
+                <!-- VOTE TYPE -->
+                <div v-if="post.postCategory === 'vote'">
+                  <div class="d-flex align-start mb-2">
+                    <v-icon class="mr-3 mt-1">mdi-checkbox-marked-outline</v-icon>
+                    <div class="flex-grow-1">
+                      <p class="font-weight-bold mb-1">{{ post.title }}</p>
+                      <p v-if="post.description" class="text-caption text-medium-emphasis mb-1">{{ post.description }}</p>
+                      <p v-if="post.multipleChoice !== null" class="text-caption text-medium-emphasis">
+                        {{ post.multipleChoice ? '복수선택' : '단일선택' }}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <v-chip size="x-small" label class="mt-2">{{ getCategoryText(post.postCategory) }}</v-chip>
+                    <div class="px-3 py-1">
+                      <v-btn 
+                        variant="text" 
+                        size="small" 
+                        :prepend-icon="isPostLiked(getPostId(post), post.postCategory) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
+                        :color="isPostLiked(getPostId(post), post.postCategory) ? 'red' : ''"
+                        @click.stop="toggleLike(post)"
+                      >
+                        <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post), post.postCategory) }}</span>
+                      </v-btn>
+                      <v-btn variant="text" size="small" prepend-icon="mdi-comment-outline">
+                        <span class="text-caption">댓글 {{ post.commentCount || 0 }}</span>
+                      </v-btn>
+                    </div>
+                  </div>
+                   
+                </div>
+
+                <!-- POST TYPE (FREE, NOTICE, etc.) -->
+                <div v-else>
+                  <p class="font-weight-bold mb-2">{{ post.title }}</p>
+                  <p class="text-body-2 mb-2 text-medium-emphasis content-preview">{{ post.content }}</p>
+                  <!-- Image Display -->
+                  <v-img 
+                    v-if="post.imageUrls && post.imageUrls.length > 0"
+                    :src="post.imageUrls[0]" 
+                    max-height="200"
+                    cover
+                    class="rounded mb-2"
+                  ></v-img>
+                   <!-- Category Chip -->
+                  <v-chip size="x-small" label class="mt-2">{{ getCategoryText(post.postCategory) }}</v-chip>
+                  <div class="px-3 py-1">
+                      <v-btn 
+                        variant="text" 
+                        size="small" 
+                        :prepend-icon="isPostLiked(getPostId(post), post.postCategory) ? 'mdi-thumb-up' : 'mdi-thumb-up-outline'"
+                        :color="isPostLiked(getPostId(post), post.postCategory) ? 'red' : ''"
+                        @click.stop="toggleLike(post)"
+                      >
+                        <span class="text-caption">좋아요 {{ getLikeCount(getPostId(post), post.postCategory) }}</span>
+                      </v-btn>
+                      <v-btn variant="text" size="small" prepend-icon="mdi-comment-outline">
+                        <span class="text-caption">댓글 {{ post.commentCount || 0 }}</span>
+                      </v-btn>
+                    </div>
+                </div>
+              </div>
+
+              <!-- Footer: Likes & Comments (for non-votes) -->
+              <div v-if="post.postCategory !== 'vote'">
+                <v-divider></v-divider>
+              </div>
+              
+            </v-card>
+            
+            <!-- Load More Button -->
+            <div v-if="showLoadMoreButton" class="text-center my-4">
+                <v-btn 
+                  @click="loadMorePosts"
+                  :loading="loading"
+                  variant="outlined"
+                  color="primary"
+                >
+                  더보기
+                </v-btn>
+            </div>
+          </v-list>
+
+          <!-- No Posts Message -->
+          <div v-else-if="!loading && posts.length === 0" class="text-center pa-5 grey lighten-4 rounded">
+            <p>표시할 게시글이 없습니다.</p>
+          </div>
+
+          <!-- Floating Action Button and Toggle Menu -->
+          <div class="create-post-wrapper" v-if="!isVoteDetail">
+            <div class="toggle-menu" :class="{ 'show-menu': showMenu }">
+              <div class="menu-items">
+                <v-btn
+                  v-for="category in postCategories"
+                  :key="category.type"
+                  @click.stop="createPost(category.type)"
+                  class="menu-item"
+                  color="primary"
+                  variant="text"
+                >
+                  {{ category.label }}
+                </v-btn>
+              </div>
+            </div>
+            
+            <v-btn
+              icon="mdi-plus"
+              color="primary"
+              class="post_create_button"
+              @click.stop="toggleMenu"
+              :style="{ transform: showMenu ? 'rotate(45deg)' : 'none' }"
+            ></v-btn>
+          </div>
+
+          <!-- 게시물 메뉴 다이얼로그 -->
+          <v-dialog v-model="postMenuDialog" max-width="300" class="post-menu-dialog">
+            <v-card rounded="lg">
+              <v-list density="compact">
+                <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
+                <v-list-item v-if="selectedPost && isMyPost(selectedPost)" @click="confirmDeletePost">
+                  <v-list-item-title class="text-center text-red py-3">삭제</v-list-item-title>
+                </v-list-item>
+                <v-divider v-if="selectedPost && isMyPost(selectedPost)"></v-divider>
+                
+                <!-- 신고하기 버튼 -->
+                <v-list-item @click="openReportDialog" v-if="selectedPost && !isMyPost(selectedPost)">
+                  <v-list-item-title class="text-center py-3">신고하기</v-list-item-title>
+                </v-list-item>
+                <v-divider v-if="selectedPost && !isMyPost(selectedPost)"></v-divider>
+                
+                <!-- 취소 버튼 -->
+                <v-list-item @click="postMenuDialog = false">
+                  <v-list-item-title class="text-center py-3">취소</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </v-dialog>
+
+          <!-- 삭제 확인 다이얼로그 -->
+          <v-dialog v-model="deleteConfirmDialog" max-width="300">
+            <v-card>
+              <v-card-title class="text-h6">게시물 삭제</v-card-title>
+              <v-card-text>
+                <div v-if="selectedPost">
+                  <p><strong>유형:</strong> {{ getCategoryText(selectedPost.postCategory) }}</p>
+                  <p v-if="selectedPost.title"><strong>제목:</strong> {{ selectedPost.title }}</p>
+                  <p class="mt-3 font-weight-bold">이 게시물을 정말 삭제하시겠습니까?</p>
+                  <p class="text-caption text-grey mt-2">삭제한 게시물은 복구할 수 없습니다.</p>
+                </div>
+                <div v-else>
+                  이 게시물을 정말 삭제하시겠습니까?
+                </div>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="error" variant="text" @click="deletePost">삭제</v-btn>
+                <v-btn color="grey" variant="text" @click="deleteConfirmDialog = false">취소</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <!-- 게시물 신고 다이얼로그 -->
+          <v-dialog v-model="showReportDialog" max-width="400">
+            <v-card class="dialog-card">
+              <v-card-title class="dialog-title">게시물 신고</v-card-title>
+              <v-card-text class="dialog-content">
+                <v-select
+                  v-model="reportSmallCategory"
+                  label="신고 사유 선택"
+                  :items="reportCategories"
+                  item-title="text"
+                  item-value="value"
+                  variant="outlined"
+                  required
+                  :rules="[v => !!v || '신고 사유를 선택해주세요']"
+                  class="mb-4 report-field"
+                  rounded="lg"
+                ></v-select>
+                <v-textarea
+                  v-model="reportContent"
+                  label="상세 내용"
+                  hint="신고 사유에 대한 상세 내용을 작성해주세요."
+                  rows="4"
+                  variant="outlined"
+                  :rules="[v => !!v || '상세 내용을 입력해주세요']"
+                  class="report-field"
+                  rounded="lg"
+                ></v-textarea>
+              </v-card-text>
+              <v-card-actions class="dialog-actions">
+                <v-spacer></v-spacer>
+                <v-btn color="grey-darken-1" variant="text" @click="showReportDialog = false">취소</v-btn>
+                <v-btn color="error" variant="text" @click="submitReport">신고</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </v-window-item>
+
+        <!-- 채팅 탭 -->
+        <v-window-item value="chat">
+          <div v-if="isGatheringMember">
+            <v-card class="mt-4">
+              <v-card-title class="text-center text-h6">
+                모임 채팅
+              </v-card-title>
+              <v-card-text>
+                <div class="chat-box">
+                  <div 
+                    v-for="(msg, index) in messages"
+                    :key="index"
+                    :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
+                  >
+                    <template v-if="msg.senderId === userId">
+                      <div class="message-content">
+                        {{ msg.content }}
+                        <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="message-content">
+                        {{ msg.content }}
+                        <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+                <v-text-field
+                  v-model="newMessage"
+                  label="메시지 입력"
+                  @keyup.enter="sendMessage"
+                />
+                <v-btn color="primary" block @click="sendMessage">전송</v-btn>
+              </v-card-text>
+            </v-card>
+          </div>
+          <div v-else class="empty-container">
+            <v-icon size="x-large" color="grey-lighten-1">mdi-account-alert</v-icon>
+            <p class="mt-3 text-grey-darken-1">모임원만 이용 가능합니다.</p>
+          </div>
+        </v-window-item>
+      </v-window>
     </div>
-
-    <!-- 게시물 메뉴 다이얼로그 -->
-    <v-dialog v-model="postMenuDialog" max-width="300" class="post-menu-dialog">
-      <v-card rounded="lg">
-        <v-list density="compact">
-          <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
-          <v-list-item v-if="selectedPost && isMyPost(selectedPost)" @click="confirmDeletePost">
-            <v-list-item-title class="text-center text-red py-3">삭제</v-list-item-title>
-          </v-list-item>
-          <v-divider v-if="selectedPost && isMyPost(selectedPost)"></v-divider>
-          
-          <!-- 신고하기 버튼 -->
-          <v-list-item @click="openReportDialog" v-if="selectedPost && !isMyPost(selectedPost)">
-            <v-list-item-title class="text-center py-3">신고하기</v-list-item-title>
-          </v-list-item>
-          <v-divider v-if="selectedPost && !isMyPost(selectedPost)"></v-divider>
-          
-          <!-- 취소 버튼 -->
-          <v-list-item @click="postMenuDialog = false">
-            <v-list-item-title class="text-center py-3">취소</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-card>
-    </v-dialog>
-
-    <!-- 삭제 확인 다이얼로그 -->
-    <v-dialog v-model="deleteConfirmDialog" max-width="300">
-      <v-card>
-        <v-card-title class="text-h6">게시물 삭제</v-card-title>
-        <v-card-text>
-          <div v-if="selectedPost">
-            <p><strong>유형:</strong> {{ getCategoryText(selectedPost.postCategory) }}</p>
-            <p v-if="selectedPost.title"><strong>제목:</strong> {{ selectedPost.title }}</p>
-            <p class="mt-3 font-weight-bold">이 게시물을 정말 삭제하시겠습니까?</p>
-            <p class="text-caption text-grey mt-2">삭제한 게시물은 복구할 수 없습니다.</p>
-          </div>
-          <div v-else>
-            이 게시물을 정말 삭제하시겠습니까?
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="error" variant="text" @click="deletePost">삭제</v-btn>
-          <v-btn color="grey" variant="text" @click="deleteConfirmDialog = false">취소</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- 게시물 신고 다이얼로그 -->
-    <v-dialog v-model="showReportDialog" max-width="400">
-      <v-card class="dialog-card">
-        <v-card-title class="dialog-title">게시물 신고</v-card-title>
-        <v-card-text class="dialog-content">
-          <v-select
-            v-model="reportSmallCategory"
-            label="신고 사유 선택"
-            :items="reportCategories"
-            item-title="text"
-            item-value="value"
-            variant="outlined"
-            required
-            :rules="[v => !!v || '신고 사유를 선택해주세요']"
-            class="mb-4 report-field"
-            rounded="lg"
-          ></v-select>
-          <v-textarea
-            v-model="reportContent"
-            label="상세 내용"
-            hint="신고 사유에 대한 상세 내용을 작성해주세요."
-            rows="4"
-            variant="outlined"
-            :rules="[v => !!v || '상세 내용을 입력해주세요']"
-            class="report-field"
-            rounded="lg"
-          ></v-textarea>
-        </v-card-text>
-        <v-card-actions class="dialog-actions">
-          <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" variant="text" @click="showReportDialog = false">취소</v-btn>
-          <v-btn color="error" variant="text" @click="submitReport">신고</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>
 
@@ -275,6 +360,7 @@ export default {
   },
   data() {
     return {
+      activeTab: 'board', // 기본값을 'board'로 설정
       posts: [], 
       selectedCategory: 'all', // Default filter (lowercase)
       // Corrected categories to use lowercase values from backend enum
@@ -355,6 +441,14 @@ export default {
         }
       },
     },
+    activeTab(newValue) {
+      if (newValue === 'home') {
+        this.$router.push(`/silverpotion/gathering/home/${this.gatheringId}`);
+      } else if (newValue === 'chat') {
+        // 채팅 탭으로 이동할 때의 처리
+        console.log('채팅 탭 선택됨');
+      }
+    }
   },
   mounted() {
     // 메뉴 외부 클릭 시 메뉴 닫기
@@ -822,6 +916,51 @@ export default {
 </script>
 
 <style scoped>
+/* 헤더 스타일 */
+.header-card {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    max-width: 768px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* 콘텐츠 래퍼 */
+.content-wrapper {
+    margin-top: 56px;
+    padding-bottom: 16px;
+}
+
+/* 탭 스타일링 */
+.tab-container {
+    background-color: white;
+    position: sticky;
+    top: 112px;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.tab-item {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.primary--text {
+    color: #1976d2 !important;
+}
+
+.v-tab--selected {
+    font-weight: 700;
+}
+
+.v-tab--selected .primary--text {
+    color: #1976d2 !important;
+}
+
 .overflow-x-auto {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
@@ -950,4 +1089,122 @@ export default {
   margin-top: 4px; 
 }
 
+.post-menu-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  z-index: 9999;
+}
+
+.dialog-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  z-index: 9999;
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.dialog-content {
+  margin-bottom: 16px;
+}
+
+.report-field {
+  margin-bottom: 16px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* 채팅 관련 스타일 */
+.chat-box {
+  height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  margin-bottom: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.sent {
+  align-self: flex-end;
+}
+
+.received {
+  align-self: flex-start;
+}
+
+.message-content {
+  padding: 8px 12px;
+  border-radius: 12px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.sent .message-content {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border-bottom-right-radius: 0;
+}
+
+.received .message-content {
+  background-color: #f5f5f5;
+  color: #333;
+  border-bottom-left-radius: 0;
+}
+
+.time {
+  font-size: 0.75rem;
+  color: #888;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.empty-container {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 32px;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
 </style> 

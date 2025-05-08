@@ -12,7 +12,7 @@ import AdminPage from "@/views/admin/AdminDashboard.vue";
 import UserDetail from '@/views/admin/user/userDetail.vue';
 import UserList from '@/views/admin/user/adminUserList.vue';
 import UserProfileComponent from '@/components/UserProfileComponet.vue';
-
+import UserListChat from '@/views/UserList.vue';
 export const userRouter = [
     {
         path: '/',
@@ -87,5 +87,10 @@ export const userRouter = [
         name: 'UserProfile',
         component: UserProfileComponent,
         props: true
-    }
+    },
+    {
+        path: '/silverpotion/user/list',
+        name: 'UserListChat',
+        component: UserListChat
+    },
 ];

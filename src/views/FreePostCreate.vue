@@ -238,7 +238,7 @@ export default {
           
           // 게시글 목록으로 이동
           if (this.gatheringId) {
-            this.$router.push(`/silverpotion/gathering/home/${this.gatheringId}`);
+            this.$router.push(`/silverpotion/gathering/board/${this.gatheringId}`);
           } else {
             this.$router.push('/silverpotion/post/list');
           }

@@ -327,7 +327,7 @@
 
                 <!-- 게시판 탭 -->
                 <v-window-item value="board">
-                    <GatheringBoard :gatheringId="gatheringId"/>
+                    <router-view :gatheringId="gatheringId"></router-view>
                 </v-window-item>
 
                 <!-- 채팅 탭 -->
@@ -548,12 +548,13 @@
 <script>
 import axios from 'axios';
 import WebSocketManager from '@/WebSocketManager';
-import GatheringBoard from '@/components/GatheringBoard.vue';
+
+
 import UserProfileComponent from '@/components/UserProfileComponet.vue';
 
 export default{
     components: {
-        GatheringBoard,
+       //GatheringBoard제거
         UserProfileComponent
     },
     data(){
@@ -620,6 +621,13 @@ export default{
                 const dateB = new Date(b.meetingDate + ' ' + b.meetingTime);
                 return dateA - dateB;
             });
+        }
+    },
+    watch: {
+        activeTab(newValue) {
+            if (newValue === 'board') {
+                this.$router.push(`/silverpotion/gathering/board/${this.gatheringId}`);
+            }
         }
     },
     mounted: async function() {
@@ -982,6 +990,7 @@ export default{
                 return '날짜/시간 정보 없음';
             }
         },
+
         showUserProfile(member) {
             this.selectedUser = member;
             this.showUserProfileDialog = true;
