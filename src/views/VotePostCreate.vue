@@ -283,7 +283,7 @@ export default {
           setTimeout(() => {
             // 게시글 목록 또는 상세 페이지로 이동
             if (this.gatheringId) {
-              this.$router.push(`/silverpotion/vote/${createdVoteId}?gatheringId=${this.gatheringId}`);
+              this.$router.push(`/silverpotion/gathering/board/${this.gatheringId}`);
             } else {
               this.$router.push(`/silverpotion/vote/${createdVoteId}`);
             }

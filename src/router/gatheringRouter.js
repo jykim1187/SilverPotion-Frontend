@@ -10,6 +10,7 @@ import MeetingUpdate from "@/views/gathering/MeetingUpdate.vue";
 import MyGathering from "@/views/gathering/MyGathering.vue";
 import RecommendGathering from "@/views/gathering/RecommendGathering.vue";
 import RecommendMeeting from "@/views/gathering/RecommendMeeting.vue";
+import GatheringBoard from "@/components/GatheringBoard.vue";
 
 export const gatheringRouter= [
     {
@@ -72,5 +73,10 @@ export const gatheringRouter= [
         name: 'GatheringOpenSearch',
         component: GatheringOpenSearch
     },
-    
+    {
+        path:'/silverpotion/gathering/board/:gatheringId',
+        name: 'GatheringBoard',
+        component: GatheringBoard,
+        props: true
+    },
 ]

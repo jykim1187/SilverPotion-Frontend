@@ -1,11 +1,10 @@
 import AdminDashboard from "@/views/admin/AdminDashboard.vue";
-import UserDetail from '@/views/admin/user/userDetail.vue';
-import UserList from '@/views/admin/user/adminUserList.vue';
 import ReportList from '@/views/admin/report/reportList.vue';
 import ReportDetail from '@/views/admin/report/reportDetail.vue';
+import AdminUserList from '@/views/admin/user/adminUserList.vue';
+import AdminUserDetail from '@/views/admin/user/userDetail.vue';
 
 export const adminRouter = [
-
     {
         path: '/silverpotion/admins',
         name: 'AdminDashboard',
@@ -15,13 +14,13 @@ export const adminRouter = [
     {
         path: '/silverpotion/admins/users',
         name: 'userList',
-        component: UserList
+        component: AdminUserList
     },
     // 관리자 - 유저 상세
     {
         path: '/silverpotion/admins/detail/:userId',
         name: 'UserDetail',
-        component: UserDetail
+        component: AdminUserDetail
     },
     // 관리자 - 신고 목록
     {
