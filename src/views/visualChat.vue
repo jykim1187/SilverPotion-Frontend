@@ -170,7 +170,7 @@ export default {
        //////// startCall()끝
       async connectSignalingServer(){
         // 1.시그널링 서버 연결(백엔드에서 맞춰놓은 쿼리파라미터 형식으로)
-        this.signalingServer = new WebSocket(`ws://localhost:8080/chat-service/signal?userId=${this.myId}`) //WebSocketConfig에 설정한 url과 경로 맞추어야함
+        this.signalingServer = new WebSocket(`wss://server.silverpotion.site/chat-service/signal?userId=${this.myId}`) //WebSocketConfig에 설정한 url과 경로 맞추어야함
 
         //2. 연결이 열리면 실행
         this.signalingServer.onopen = () =>{
