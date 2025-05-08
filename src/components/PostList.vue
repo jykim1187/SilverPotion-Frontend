@@ -10,6 +10,12 @@
           {{ post.title }}
           <v-chip v-if="post.isVote" size="small" color="primary" class="ml-2">투표</v-chip>
         </v-card-title>
+        <v-btn icon @click.stop="toggleLike(post)">
+          <v-icon :color="post.isLike === 'Y' ? 'red' : ''">
+            {{ post.isLike === 'Y' ? 'mdi-thumb-up' : 'mdi-thumb-up-outline' }}
+          </v-icon>
+        </v-btn>
+        <span class="ml-1">{{ post.likeCount }}</span>
         <v-menu>
           <template v-slot:activator="{ props }">
             <v-btn 
@@ -220,6 +226,34 @@ export default {
       } catch (error) {
         console.error('게시물 삭제에 실패했습니다:', error);
         alert('게시물 삭제에 실패했습니다.');
+      }
+    },
+    async toggleLike(post) {
+      try {
+        console.log("postType 확인:", post.postType);
+        const loginId = localStorage.getItem('loginId');
+        let response;
+        if (post.postType === 'VOTE') {
+          response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/like/${post.id}`,
+            null,
+            { headers: { 'X-User-LoginId': loginId } }
+          );
+        } else if (post.postType === 'POST') {
+          response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/like/${post.id}`,
+            null,
+            { headers: { 'X-User-LoginId': loginId } }
+          );
+        } else {
+          alert('알 수 없는 게시물 유형입니다.');
+          return;
+        }
+        // 응답값을 해당 post에 반영
+        post.likeCount = response.data.result.likeCount;
+        post.isLike = response.data.result.liked ? 'Y' : 'N';
+      } catch (error) {
+        alert('좋아요 처리 중 오류가 발생했습니다.');
       }
     }
   }
