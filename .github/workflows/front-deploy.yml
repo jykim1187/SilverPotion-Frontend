@@ -34,4 +34,4 @@ jobs:
         aws s3 cp ./dist s3://www.silverpotion.site/ --recursive
         
     - name: invalidate cloudfront cache
-      run: aws cloudfront create-invalidation --distribution-id E23NGN3UCVH9U6 --paths "/*" <--클라우드 프론트 무효화,id는 cloudfornt의 id임
+      run: aws cloudfront create-invalidation --distribution-id E23NGN3UCVH9U6 --paths "/*" 
