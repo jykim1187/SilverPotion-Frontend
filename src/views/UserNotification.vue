@@ -12,6 +12,7 @@
                   v-for="(notification, index) in notifications"
                   :key="index"
                   class="chat-list-item"
+                  @click="goTo(notification.route)"
                 >
                   <template v-slot:prepend>
                     <v-avatar color="primary">
@@ -29,6 +30,13 @@
                   <v-list-item-subtitle class="text-truncate">
                     {{ notification.message }}
                   </v-list-item-subtitle>
+                  <!-- 조건부 보호자 요청시 수락 거절 버튼 -->
+                  <template v-if="notification.type === 'CARE_REQUEST'">
+                    <v-list-item-action class="mt-2">
+                      <v-btn small color="success" @click.stop="acceptCare(notification.referenceId)">수락</v-btn>
+                      <v-btn small color="error" @click.stop="rejectCare(notification.referenceId)">거절</v-btn>
+                    </v-list-item-action>
+                  </template>
                 </v-list-item>
               </v-list>
   
@@ -64,10 +72,39 @@
           this.notifications = res.data.map(n => ({
             title: n.title || '알림',
             message: n.content,
-            createdAt: n.createdAt
+            createdAt: n.createdAt,
+            type: n.type,
+            referenceId: n.referenceId,
+            route: this.resolveRoute(n.type, n.referenceId)
           }));
         } catch (err) {
           console.error('❌ 알림 불러오기 실패:', err);
+        }
+      },
+      resolveRoute(type, referenceId) {
+        switch (type) {
+          // 모임 참여 요청
+          case "GATHERING_JOIN_REQUEST":
+            return `/gathering/home/${referenceId}`;
+          // 모임 해체
+          case "GATHERING_DISBAND":
+            return null;
+          // 모임 리더 변경
+          case "GATHERING_LEADER":
+            return `/gathering/home/${referenceId}`;
+          // 모임 차단
+          case "GATHERING_BANNED":
+            return null;
+          // 모임 탈퇴 또는 해체
+          case "GATHERING_DEACTIVATED":
+            return null;
+          // 모임 참여 
+          case "GATHERING_JOINED":
+            return `/gathering/home/${referenceId}`;
+          case "CARE_REQUEST":
+            return null;
+          default:
+            return null;
         }
       },
       formatTime(datetime) {
@@ -84,16 +121,47 @@
         const day = date.getDate();
         return `${month}/${day}`;
       },
-      goToNotification() {
-        this.$router.push('/notification');
-    },
+      goTo(route) {
+        if (route) {
+          this.$router.push(route);
+        }
+      },
+      async acceptCare(referenceId) {
+        try {
+          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/care/accept/${referenceId}`, null, {
+            headers: {
+              "X-User-LoginId": localStorage.getItem("loginId")
+            }
+          });
+          alert("보호 요청을 수락했습니다.");
+          this.fetchNotifications();
+        } catch (err) {
+          console.error("❌ 수락 실패:", err);
+          alert("수락에 실패했습니다.");
+        }
+      },
+
+      async rejectCare(referenceId) {
+        try {
+          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/care/reject/${referenceId}`, null, {
+            headers: {
+              "X-User-LoginId": localStorage.getItem("loginId")
+            }
+          });
+          alert("보호 요청을 거절했습니다.");
+          this.fetchNotifications();
+        } catch (err) {
+          console.error("❌ 거절 실패:", err);
+          alert("거절에 실패했습니다.");
+        }
+      },
     },
   };
   </script>
   
   <style scoped>
   .chat-list-item {
-    cursor: default;
+    cursor: pointer;
     transition: background-color 0.2s;
   }
   .chat-list-item:hover {
