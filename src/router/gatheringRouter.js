@@ -5,11 +5,14 @@ import GatheringManagement from "@/views/gathering/GatheringManagement.vue";
 import GatheringOpenSearch from "@/views/gathering/GatheringOpenSearch.vue";
 import GatheringSearch from "@/views/gathering/GatheringSearch.vue";
 import GatheringUpdate from "@/views/gathering/GatheringUpdate.vue";
+import KakaoMap from "@/views/gathering/RegionSelect.vue";
 import MeetingCreate from "@/views/gathering/MeetingCreate.vue";
 import MeetingUpdate from "@/views/gathering/MeetingUpdate.vue";
 import MyGathering from "@/views/gathering/MyGathering.vue";
 import RecommendGathering from "@/views/gathering/RecommendGathering.vue";
 import RecommendMeeting from "@/views/gathering/RecommendMeeting.vue";
+import AroundGathering from "@/views/gathering/AroundGathering.vue";
+import MyMeeting from "@/views/gathering/MyMeeting.vue";
 import GatheringBoard from "@/components/GatheringBoard.vue";
 
 export const gatheringRouter= [
@@ -72,6 +75,21 @@ export const gatheringRouter= [
         path:'/silverpotion/gathering/opensearch',
         name: 'GatheringOpenSearch',
         component: GatheringOpenSearch
+    },
+    {
+        path:'/silverpotion/kakaomap',
+        name: 'KakaoMap',
+        component: KakaoMap
+    },
+    {
+        path:'/silverpotion/gathering/aroundgathering',
+        name: 'AroundGathering',
+        component: AroundGathering
+    },
+    {
+        path:'/silverpotion/gathering/mymeeting',
+        name: 'MyMeeting',
+        component: MyMeeting
     },
     {
         path:'/silverpotion/gathering/board/:gatheringId',

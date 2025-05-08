@@ -76,6 +76,9 @@
                                 </div>
                                 <div class="d-flex align-center mt-1">
                                     <span class="font-weight-medium">{{ meeting.name }}</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <span class="font-weight-medium">{{ meeting.gatheringName || '모임 정보 없음' }}</span>
                                     <v-chip
                                         size="x-small"
                                         class="ml-2"
@@ -88,13 +91,22 @@
                                 <div class="d-flex align-center mt-1">
                                     <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
                                     <span class="text-caption">{{ meeting.place }}</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-account-multiple</v-icon>
-                                    <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
-                                    <v-icon size="x-small" class="ml-2 mr-1">mdi-currency-krw</v-icon>
-                                    <span class="text-caption">{{ meeting.cost }}원</span>
                                 </div>
-                                <div class="text-caption text-grey mt-1">
-                                    <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
+                                <div class="d-flex align-center mt-1">
+                                    <!-- 인원 정보 -->
+                                    <div class="d-flex align-center">
+                                        <v-icon size="x-small" class="mr-1">mdi-account-multiple</v-icon>
+                                        <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                                    </div>
+                                    
+                                    <!-- 구분선 -->
+                                    <v-divider vertical class="mx-2" style="height: 12px;"></v-divider>
+                                    
+                                    <!-- 비용 정보 -->
+                                    <div class="d-flex align-center">
+                                        <v-icon size="x-small" class="mr-1">mdi-currency-krw</v-icon>
+                                        <span class="text-caption">{{ meeting.cost > 0 ? `${meeting.cost}원` : '회비없음' }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </v-list-item>
@@ -196,6 +208,22 @@ export default{
             this.loadingMeetings = true;
             try {
                 const token = localStorage.getItem('accessToken');
+                
+                // 먼저 내 정모 목록을 가져옵니다
+                const myMeetingsResponse = await axios.get(
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/mymeetings`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+                const myMeetings = myMeetingsResponse.data.result || [];
+                
+                // 내 정모 ID 목록 생성
+                const myMeetingIds = myMeetings.map(meeting => meeting.meetingId);
+                
+                // 추천 정모 가져오기
                 const response = await axios.get(
                     `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/upcoming`,
                     {
@@ -206,9 +234,12 @@ export default{
                 );
                 const meetings = response.data.result || [];
                 
+                // 내 정모가 아닌 것만 필터링
+                const filteredMeetings = meetings.filter(meeting => !myMeetingIds.includes(meeting.meetingId));
+                
                 // 모임 정보 가져오기
                 const meetingsWithGatheringInfo = await Promise.all(
-                    meetings.map(async (meeting) => {
+                    filteredMeetings.map(async (meeting) => {
                         try {
                             const gatheringResponse = await axios.get(
                                 `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`,
@@ -296,6 +327,9 @@ export default{
             if (index >= 0 && index < this.dateButtons.length) {
                 this.selectedDateIndex = index;
             }
+        },
+        formatCost(cost) {
+            return cost > 0 ? `${cost.toLocaleString()}원` : '회비없음';
         }
     }
 }

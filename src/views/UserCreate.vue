@@ -215,7 +215,9 @@
         </div>
         <v-text-field
           v-model="formData.region"
-          placeholder="활동지역을 입력해주세요(예시 : 서울시 동작구, 안양시 만안구)"
+          placeholder="활동지역을 선택해주세요"
+          readonly
+          @click="openRegionModal"
           filled
           dense
           background-color="transparent"
@@ -244,12 +246,55 @@
     <div class="floating-footer">
       <p>이미 계정이 있으신가요? <a href="#" class="primary--text">로그인</a></p>
     </div>
+
+    <!-- 지역 선택 모달 추가 -->
+    <v-dialog
+      v-model="regionModalOpen"
+      max-width="800px"
+      persistent
+    >
+      <v-card>
+        <v-card-title class="headline">
+          활동지역 선택
+        </v-card-title>
+        
+        <v-card-text>
+          <KakaoMap 
+            ref="kakaoMapRef"
+            @region-selected="handleRegionSelected"
+          />
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="red"
+            text
+            @click="regionModalOpen = false"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="primary"
+            text
+            @click="confirmRegionSelection"
+          >
+            확인
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import KakaoMap from '@/views/gathering/RegionSelect.vue';
+
 export default {
+  components: {
+    KakaoMap
+  },
   data() {
     return {
       loading: false,
@@ -265,7 +310,10 @@ export default {
         address: '',
         detailAddress: '',
         zipcode: '',
+        region: '', // 활동지역
       },
+      regionModalOpen: false,
+      selectedRegion: null,
       rules: {
         required: v => !!v || '필수 입력항목입니다',
         email: v => /.+@.+\..+/.test(v) || '올바른 이메일 형식이 아닙니다',
@@ -313,6 +361,24 @@ export default {
     if (name) this.formData.name = name;
   },
   methods: {
+    // 지역 선택 모달 열기
+    openRegionModal() {
+      this.regionModalOpen = true;
+    },
+    
+    // 지역 선택 이벤트 처리
+    handleRegionSelected(region) {
+      this.selectedRegion = region;
+    },
+    
+    // 지역 선택 확인
+    confirmRegionSelection() {
+      if (this.selectedRegion) {
+        this.formData.region = this.selectedRegion.name;
+      }
+      this.regionModalOpen = false;
+    },
+
     handleAddressSearch() {
       // 모바일과 PC 환경을 모두 지원하기 위해 분기 처리
       const width = window.innerWidth;

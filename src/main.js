@@ -5,10 +5,12 @@ import router from '@/router/index.js'
 import axios from 'axios';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@fortawesome/fontawesome-free/css/all.css'
+import { useKakao } from 'vue3-kakao-maps/@utils';
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 
+useKakao('d71cbc8ba66037e7a51920d4429cfeb2');
 const app = createApp(App);
 
 axios.interceptors.request.use(

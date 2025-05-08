@@ -195,6 +195,8 @@
                         density="comfortable"
                         bg-color="white"
                         class="mb-4"
+                        readonly
+                        @click="openMapDialog"
                     ></v-text-field>
                 </div>
 
@@ -234,6 +236,56 @@
                 </div>
             </v-form>
         </div>
+
+        <!-- 카카오맵 검색 다이얼로그 -->
+        <v-dialog
+            v-model="showMapDialog"
+            max-width="800px"
+            persistent
+            :retain-focus="false"
+        >
+            <v-card>
+                <v-card-title class="text-h6">장소 검색</v-card-title>
+                <v-card-text>
+                    <div class="search-container">
+                        <v-text-field
+                            v-model="searchKeyword"
+                            label="장소 검색"
+                            variant="outlined"
+                            density="comfortable"
+                            bg-color="white"
+                            prepend-inner-icon="mdi-magnify"
+                            class="search-input"
+                            @keyup.enter="searchPlaces"
+                        ></v-text-field>
+                        <v-btn color="primary" variant="tonal" class="search-btn" @click="searchPlaces">검색</v-btn>
+                    </div>
+                    
+                    <div class="map-container">
+                        <div id="kakaoMap" style="width:100%; height:400px;"></div>
+                    </div>
+                    
+                    <div class="search-results mt-3" v-if="searchResults.length > 0">
+                        <v-list>
+                            <v-list-item
+                                v-for="(place, index) in searchResults"
+                                :key="index"
+                                @click="selectPlace(place)"
+                                :class="{ 'selected-place': selectedPlace && selectedPlace.id === place.id }"
+                            >
+                                <v-list-item-title>{{ place.place_name }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ place.address_name }}</v-list-item-subtitle>
+                            </v-list-item>
+                        </v-list>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="error" text @click="cancelMapSelection">취소</v-btn>
+                    <v-btn color="primary" @click="confirmMapSelection" :disabled="!selectedPlace">확인</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
@@ -251,7 +303,9 @@ export default{
                 meetingTime: '',
                 place: '',
                 cost: 0,
-                imageUrl: null
+                imageUrl: null,
+                lat: '',
+                lon: ''
             },
             imageFile: null,
             previewImage: null,
@@ -306,6 +360,14 @@ export default{
             imageResizeStartX: 0,
             imageResizeStartY: 0,
             initialImageScale: 1,
+            
+            // 카카오맵 관련 데이터
+            showMapDialog: false,
+            searchKeyword: '',
+            searchResults: [],
+            selectedPlace: null,
+            kakaoMap: null,
+            markers: [],
         }
     },
     methods: {
@@ -361,7 +423,9 @@ export default{
                         meetingTime: formattedTime,
                         place: meetingData.place,
                         cost: meetingData.cost,
-                        imageUrl: meetingData.imageUrl
+                        imageUrl: meetingData.imageUrl,
+                        lat: meetingData.lat || '',
+                        lon: meetingData.lon || ''
                     };
                     
                     // 모임 ID 저장
@@ -388,6 +452,10 @@ export default{
                 formData.append('meetingTime', this.meetingData.meetingTime);
                 formData.append('place', this.meetingData.place);
                 formData.append('cost', this.meetingData.cost);
+                
+                // 위도, 경도 추가
+                if (this.meetingData.lat) formData.append('lat', this.meetingData.lat);
+                if (this.meetingData.lon) formData.append('lon', this.meetingData.lon);
                 
                 // 이미지 파일이 있는 경우에만 추가
                 if (this.imageFile) {
@@ -821,19 +889,199 @@ export default{
             this.isImageResizing = false;
             document.removeEventListener('touchmove', this.onImageResizeTouch);
             document.removeEventListener('touchend', this.stopImageResizeTouch);
-        }
+        },
+        // 카카오맵 스크립트 로드
+        loadKakaoMapScript() {
+            const script = document.createElement('script');
+            /* 여기에 카카오맵 API 키를 넣으세요 */
+            script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=d71cbc8ba66037e7a51920d4429cfeb2&libraries=services&autoload=false";
+            script.onload = () => {
+                // 스크립트 로드 완료 후 카카오맵 초기화
+                window.kakao.maps.load(() => {
+                    console.log('카카오맵 API 로드 완료');
+                });
+            };
+            document.head.appendChild(script);
+        },
+        
+        // 맵 다이얼로그 열기
+        openMapDialog() {
+            this.showMapDialog = true;
+            this.$nextTick(() => {
+                // 다이얼로그가 열린 후 맵 초기화
+                setTimeout(() => {
+                    if (!window.kakao || !window.kakao.maps) {
+                        console.error('카카오맵 API가 로드되지 않았습니다.');
+                        return;
+                    }
+                    
+                    const container = document.getElementById('kakaoMap');
+                    const options = {
+                        center: new window.kakao.maps.LatLng(
+                            this.meetingData.lat || 37.566826, 
+                            this.meetingData.lon || 126.9786567
+                        ),
+                        level: 3
+                    };
+                    this.kakaoMap = new window.kakao.maps.Map(container, options);
+                    
+                    // 기존 장소에 마커 표시
+                    if (this.meetingData.lat && this.meetingData.lon) {
+                        const marker = new window.kakao.maps.Marker({
+                            position: new window.kakao.maps.LatLng(this.meetingData.lat, this.meetingData.lon),
+                            map: this.kakaoMap
+                        });
+                        this.markers.push(marker);
+                    }
+                    
+                    // 장소 검색 객체 생성
+                    if (window.kakao.maps.services) {
+                        this.places = new window.kakao.maps.services.Places();
+                    } else {
+                        console.error('카카오맵 services 라이브러리가 로드되지 않았습니다.');
+                    }
+                }, 300);
+            });
+        },
+        
+        // 장소 검색
+        searchPlaces() {
+            if (!this.searchKeyword.trim()) return;
+            
+            // 기존 마커 제거
+            this.removeAllMarkers();
+            
+            // 카카오 로컬 API를 사용하여 키워드 검색
+            const apiUrl = 'https://dapi.kakao.com/v2/local/search/keyword.json';
+            const params = new URLSearchParams({
+                query: this.searchKeyword,
+                x: this.kakaoMap ? this.kakaoMap.getCenter().getLng() : '',
+                y: this.kakaoMap ? this.kakaoMap.getCenter().getLat() : '',
+                radius: 20000, // 20km 반경 내 검색
+                size: 15 // 최대 15개 결과
+            });
+            
+            fetch(`${apiUrl}?${params}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'KakaoAK 8ad14ad97f82f0975fa434096a7c8052' // REST API 키 입력
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('검색 요청 실패');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.documents && data.documents.length > 0) {
+                    this.searchResults = data.documents;
+                    
+                    // 검색 결과 표시
+                    const bounds = new window.kakao.maps.LatLngBounds();
+                    
+                    for (let i = 0; i < data.documents.length; i++) {
+                        const place = data.documents[i];
+                        const placePosition = new window.kakao.maps.LatLng(place.y, place.x);
+                        
+                        // 마커 생성
+                        const marker = new window.kakao.maps.Marker({
+                            position: placePosition,
+                            map: this.kakaoMap
+                        });
+                        
+                        this.markers.push(marker);
+                        bounds.extend(placePosition);
+                        
+                        // 마커 클릭 이벤트 등록
+                        window.kakao.maps.event.addListener(marker, 'click', () => {
+                            this.selectSearchResult(place);
+                        });
+                    }
+                    
+                    // 검색된 장소 위치를 기준으로 지도 범위 재설정
+                    this.kakaoMap.setBounds(bounds);
+                } else {
+                    alert('검색 결과가 존재하지 않습니다.');
+                    this.searchResults = [];
+                }
+            })
+            .catch(error => {
+                console.error('장소 검색 오류:', error);
+                alert('검색 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 검색 결과 선택
+        selectSearchResult(place) {
+            this.selectedPlace = place;
+        },
+        
+        // 마커 모두 제거
+        removeAllMarkers() {
+            for (let i = 0; i < this.markers.length; i++) {
+                this.markers[i].setMap(null);
+            }
+            this.markers = [];
+        },
+        
+        // 장소 선택
+        selectPlace(place) {
+            this.selectedPlace = place;
+            
+            // 기존 마커 제거
+            this.removeAllMarkers();
+            
+            // 선택한 장소에 마커 표시
+            const marker = new window.kakao.maps.Marker({
+                map: this.kakaoMap,
+                position: new window.kakao.maps.LatLng(place.y, place.x)
+            });
+            
+            this.markers.push(marker);
+            
+            // 선택한 장소로 지도 중심 이동
+            this.kakaoMap.setCenter(new window.kakao.maps.LatLng(place.y, place.x));
+        },
+        
+        // 맵 선택 취소
+        cancelMapSelection() {
+            this.showMapDialog = false;
+            this.searchKeyword = '';
+            this.searchResults = [];
+            this.selectedPlace = null;
+            this.removeAllMarkers();
+        },
+        
+        // 맵 선택 확인
+        confirmMapSelection() {
+            if (this.selectedPlace) {
+                this.meetingData.place = this.selectedPlace.place_name;
+                this.meetingData.lat = this.selectedPlace.y;
+                this.meetingData.lon = this.selectedPlace.x;
+                this.showMapDialog = false;
+            } else {
+                alert('장소를 검색하여 선택해주세요.');
+            }
+        },
     },
     mounted() {
-        // URL 파라미터에서 정모 ID 가져오기
-        this.meetingId = this.$route.params.meetingId;
+        // 카카오맵 API 로드
+        this.loadKakaoMapScript();
         
-        if (this.meetingId) {
-            // 정모 정보 불러오기
-            this.fetchMeetingData();
-        } else {
-            // 정모 ID가 없는 경우 이전 페이지로 이동
-            this.$router.go(-1);
-        }
+        // URL에서 meetingId 가져오기
+        const pathParts = this.$route.path.split('/');
+        this.meetingId = pathParts[pathParts.length - 1];
+        
+        // 정모 데이터 가져오기
+        this.fetchMeetingData();
+    },
+    beforeUnmount() {
+        // 맵 관련 리소스 정리
+        this.removeAllMarkers();
+        
+        // 이벤트 리스너 제거
+        this.removeEventListeners();
     }
 }
 </script>
@@ -1009,5 +1257,40 @@ export default{
     margin: 0 8px;
     min-width: 50px;
     text-align: center;
+}
+
+/* 카카오맵 관련 스타일 */
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.search-btn {
+    height: 40px; /* 높이 줄임 */
+    margin-top: -25px; /* 위로 살짝 올림 */
+}
+
+.map-container {
+    width: 100%;
+    height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-results {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.selected-place {
+    background-color: rgba(33, 150, 243, 0.1);
 }
 </style>

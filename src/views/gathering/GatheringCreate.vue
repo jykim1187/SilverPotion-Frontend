@@ -149,19 +149,21 @@
                             ></v-text-field>
                         </div>
                         
-                        <!-- 활동지역 입력 -->
+                        <!-- 활동지역 입력 - 수정된 부분 -->
                         <div class="form-field">
                             <v-text-field
                                 v-model="gatheringData.region"
                                 label="활동지역"
                                 variant="outlined"
                                 :rules="[v => !!v || '활동지역을 입력해주세요']"
-                                placeholder="예: 서울시 강남구, 부산시 해운대구"
+                                placeholder="지역을 선택해주세요"
                                 class="mb-4"
                                 required
                                 prepend-inner-icon="mdi-map-marker"
                                 density="comfortable"
                                 bg-color="white"
+                                readonly
+                                @click="openRegionModal"
                             ></v-text-field>
                         </div>
                         
@@ -203,7 +205,7 @@
                                     <v-text-field
                                         v-model="gatheringData.maxPeople"
                                         type="number"
-                                        style="width: 70px"
+                                        style="width: 75px"
                                         density="compact"
                                         variant="outlined"
                                         min="2"
@@ -239,13 +241,55 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 지역 선택 모달 추가 -->
+        <v-dialog
+          v-model="regionModalOpen"
+          max-width="800px"
+          persistent
+        >
+          <v-card>
+            <v-card-title class="headline">
+              활동지역 선택
+            </v-card-title>
+            
+            <v-card-text>
+              <KakaoMap 
+                ref="kakaoMapRef"
+                @region-selected="handleRegionSelected"
+              />
+            </v-card-text>
+            
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="red"
+                text
+                @click="regionModalOpen = false"
+              >
+                취소
+              </v-btn>
+              <v-btn
+                color="primary"
+                text
+                @click="confirmRegionSelection"
+              >
+                확인
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
 <script>
 import axios from 'axios';
+import KakaoMap from '@/views/gathering/RegionSelect.vue';
 
 export default {
+    components: {
+        KakaoMap
+    },
     data() {
         return {
             currentStep: 1,
@@ -261,6 +305,10 @@ export default {
                 introduce: '',
                 maxPeople: 10
             },
+            // 지역 선택 모달 관련 변수 추가
+            regionModalOpen: false,
+            selectedRegion: null,
+            
             categories: [
                 { id: 1, name: '운동/스포츠', image: 'sports' },
                 { id: 2, name: '책/글', image: 'book' },
@@ -390,6 +438,24 @@ export default {
         }
     },
     methods: {
+        // 지역 선택 모달 열기
+        openRegionModal() {
+            this.regionModalOpen = true;
+        },
+        
+        // 지역 선택 이벤트 처리
+        handleRegionSelected(region) {
+            this.selectedRegion = region;
+        },
+        
+        // 지역 선택 확인
+        confirmRegionSelection() {
+            if (this.selectedRegion) {
+                this.gatheringData.region = this.selectedRegion.name;
+            }
+            this.regionModalOpen = false;
+        },
+        
         selectCategory(categoryId) {
             if (this.selectedCategory === categoryId) {
                 // 이미 선택된 카테고리를 다시 클릭하면 선택 해제

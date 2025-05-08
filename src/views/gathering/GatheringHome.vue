@@ -171,15 +171,30 @@
                                                     </div>
                                                     
                                                     <!-- 정모 정보 -->
-                                                    <div class="d-flex align-center mt-2 text-body-2">
-                                                        <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
-                                                        <span class="mr-3">{{ meeting.place }}</span>
+                                                    <div class="mt-2 text-body-2">
+                                                        <!-- 장소 정보 -->
+                                                        <div class="d-flex align-center mb-1">
+                                                            <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
+                                                            <span>{{ meeting.place }}</span>
+                                                        </div>
                                                         
-                                                        <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
-                                                        <span class="mr-3">{{ meeting.attendees.length }}/{{ meeting.maxPeople }}명</span>
-                                                        
-                                                        <v-icon size="small" class="mr-1">mdi-currency-krw</v-icon>
-                                                        <span>{{ formatCost(meeting.cost) }}</span>
+                                                        <!-- 인원 및 비용 정보 (한 줄에 표시) -->
+                                                        <div class="d-flex align-center">
+                                                            <!-- 인원 정보 -->
+                                                            <div class="d-flex align-center">
+                                                                <v-icon size="small" class="mr-1">mdi-account-multiple</v-icon>
+                                                                <span>{{ meeting.attendees.length }}/{{ meeting.maxPeople }}명</span>
+                                                            </div>
+                                                            
+                                                            <!-- 구분선 -->
+                                                            <v-divider vertical class="mx-2" style="height: 16px;"></v-divider>
+                                                            
+                                                            <!-- 비용 정보 -->
+                                                            <div class="d-flex align-center">
+                                                                <v-icon size="small" class="mr-1">mdi-currency-krw</v-icon>
+                                                                <span>{{ formatCost(meeting.cost) }}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                     
                                                     <!-- 참석자 프로필과 참석/취소 버튼 -->
@@ -648,7 +663,19 @@ export default{
     },
     methods: {
         handleBackButton() {
-            this.$router.go(-1);
+            // 이전 라우트 경로 확인
+            const previousRoute = this.$router.options.history.state.back;
+            
+            // 이전 경로가 정모 수정 또는 모임 수정인 경우 모임 메인 페이지로 이동
+            if (previousRoute && (
+                previousRoute.includes('/silverpotion/gathering/update/') || 
+                previousRoute.includes('/silverpotion/meeting/update/')
+            )) {
+                this.$router.push('/silverpotion/gathering/main');
+            } else {
+                // 그 외의 경우 일반적인 뒤로가기
+                this.$router.go(-1);
+            }
         },
         async fetchGatheringInfo() {
             try {
@@ -719,7 +746,7 @@ export default{
             }
         },
         formatCost(cost) {
-            if (cost === 0) return '무료';
+            if (cost === 0) return '회비없음';
             return cost.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         },
         goToUpdateGathering() {
