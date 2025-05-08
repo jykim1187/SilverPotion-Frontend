@@ -187,26 +187,6 @@ export default {
         this.hasNotifications = false; // 초기값 false로 설정
         this.notifications = []; // 빈 배열
     },
-    async fetchServerNotifications() {// 알림 리스트 가져오기기
-        const loginId = localStorage.getItem("loginId");
-        try {
-        const res = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat-service/notifications/list`, {
-            headers: {
-            "X-User-LoginId": loginId
-            }
-        });
-        console.log('📦 서버 알림 목록:', res.data);
-        this.notifications = res.data.map(n => ({
-            title: n.title || '알림',
-            message: n.content,
-            read: n.read,
-            createdAt: n.createdAt
-        }));
-        this.hasNotifications = this.notifications.some(n => !n.read);
-        } catch (err) {
-        console.error('❌ 알림 목록 불러오기 실패:', err);
-        }
-    },
     toggleNotificationsMenu() {
         this.hasNotifications = false;
         this.$router.push('/notification');
