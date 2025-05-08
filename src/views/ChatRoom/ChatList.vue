@@ -66,16 +66,13 @@ export default {
     },
     created() {
         this.loadChatRooms();
-        this.connectWebsocket();
         emitter.on("newMessageReceived", this.updateChatRoom);
     },
     beforeRouteLeave(to, from, next) {
-        this.disconnectWebSocket();
         next();
     },
     beforeUnmount() {
         emitter.off("newMessageReceived", this.updateChatRoom); // 정리
-        this.disconnectWebSocket();
     },
     beforeRouteUpdate(to, from, next) {
         this.messages = [];

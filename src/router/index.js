@@ -11,6 +11,7 @@ import NoticePostCreate from '@/views/NoticePostCreate.vue'
 import VotePostCreate from '@/views/VotePostCreate.vue'
 import { adminRouter } from "./adminRouter";
 import CalendarView from '@/views/Calendar.vue'
+import Notification from '@/views/UserNotification.vue';  
 
 const routes = [
     ...chatRouter,
@@ -85,7 +86,14 @@ const routes = [
         name: 'VotePostCreate',
         component: VotePostCreate,
         props: true
-    }
+    },
+    {
+        path: '/notification',
+        name: 'notification',
+        component: Notification,
+        props: true
+
+    },
 ]
 
 const router = createRouter({
