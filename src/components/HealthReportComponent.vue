@@ -533,7 +533,8 @@ export default {
   cursor: pointer;
   transition: color 0.3s ease;
   position: relative;
-  font-size: 1.5rem;
+  font-size: 2.0rem;
+  font-weight: 700;
 }
 
 .user-name-title:hover {
@@ -753,6 +754,15 @@ export default {
   .minimal-paragraph {
     font-size: 0.95rem;
     line-height: 1.6;
+  }
+  
+  .date-picker-container {
+    right: auto;
+    left: 0;
+    max-width: 100vw;
+    width: calc(100vw - 40px);
+    transform: translateX(-11%);
+    left: 50%;
   }
 }
 

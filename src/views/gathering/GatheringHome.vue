@@ -299,6 +299,7 @@
                                     class="member-card mb-2"
                                     elevation="1"
                                     rounded="lg"
+                                    @click="showUserProfile(member)"
                                 >
                                     <div class="d-flex align-center pa-3">
                                         <v-avatar size="40" class="mr-3">
@@ -341,7 +342,7 @@
 
                 <!-- 게시판 탭 -->
                 <v-window-item value="board">
-                    <GatheringBoard :gatheringId="gatheringId"/>
+                    <router-view :gatheringId="gatheringId"></router-view>
                 </v-window-item>
 
                 <!-- 채팅 탭 -->
@@ -485,6 +486,28 @@
             </v-card>
         </v-dialog>
 
+        <!-- 사용자 프로필 다이얼로그 -->
+        <v-dialog v-model="showUserProfileDialog" max-width="500" class="profile-dialog" fullscreen-breakpoint="sm">
+            <v-card class="dialog-card responsive-dialog">
+                <v-card-title class="dialog-title">
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="showUserProfileDialog = false" density="compact">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text class="pa-0">
+                    <user-profile-component
+                        v-if="selectedUser"
+                        :login-id="selectedUser.loginId || ''"
+                        :user-name="selectedUser.nickname || ''"
+                        :user-long-id="selectedUser.userId || 0"
+                        :user-login-id="selectedUser.loginId || ''"
+                        parent-type="post"
+                    ></user-profile-component>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
         <!-- 가입인사 작성 다이얼로그 -->
         <v-dialog v-model="showJoinDialog" max-width="400">
             <v-card class="dialog-card">
@@ -540,11 +563,14 @@
 <script>
 import axios from 'axios';
 import WebSocketManager from '@/WebSocketManager';
-import GatheringBoard from '@/components/GatheringBoard.vue';
+
+
+import UserProfileComponent from '@/components/UserProfileComponet.vue';
 
 export default{
     components: {
-        GatheringBoard
+       //GatheringBoard제거
+        UserProfileComponent
     },
     data(){
         return {
@@ -588,11 +614,12 @@ export default{
             isSubscribed: false,
             showDeleteDialog: false,
             meetingIdToDelete: null,
-            roomId: null
+            roomId: null,
+            showUserProfileDialog: false,
+            selectedUser: null
         }
     },
     beforeUnmount() {
-       this.disconnectWebSocket();
     },
 
     computed: {
@@ -611,6 +638,13 @@ export default{
             });
         }
     },
+    watch: {
+        activeTab(newValue) {
+            if (newValue === 'board') {
+                this.$router.push(`/silverpotion/gathering/board/${this.gatheringId}`);
+            }
+        }
+    },
     mounted: async function() {
         this.gatheringId = this.$route.params.gatheringId;
         this.userId = Number(localStorage.getItem("userId"));
@@ -622,7 +656,6 @@ export default{
         if (this.isGatheringMember) {
             if (this.chatRoomId) {
                 this.roomId = this.chatRoomId;
-                this.connectWebsocket();
             } else {
                 console.error("❌ chatRoomId가 없습니다.");
             }
@@ -666,6 +699,8 @@ export default{
             try {
                 const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}/userList`);
                 this.userList = response.data.result || [];
+                console.log('모임 회원 목록2:', response.data.result);
+
                 
                 // 상태가 ACTIVATE인 멤버만 필터링
                 this.filteredMembers = this.userList.filter(member => member.status === 'ACTIVATE');
@@ -906,53 +941,7 @@ export default{
                 this.showAlert = true;
             }
         },
-        connectWebsocket() {
-            if (this.isSubscribed) {
-                console.warn("🚫 이미 구독되어 있어서 connect 중단됨");
-                return;
-            }
-            
-            const loginId = localStorage.getItem("loginId");
-            const topic = `/user/${loginId}/chat`;
-            console.log("📡 replaceSubscribe 호출 예정 topic:", topic);
-            
-            WebSocketManager.replaceSubscribe(topic, (message) => {
-                console.log('📨 Gathering chat message received:', message);
-                console.log('📨 Message details:', {
-                    roomId: message.roomId,
-                    currentRoomId: this.roomId,
-                    content: message.content,
-                    senderId: message.senderId,
-                    currentUserId: this.userId
-                });
-                
-                if (!message) {
-                    console.warn("❌ message is undefined/null");
-                    return;
-                }
-                
-                if (!message.roomId) {
-                    console.warn("⚠️ message.roomId 없음, 전체 메시지:", message);
-                    return;
-                }
-                
-                if (message.roomId == this.roomId) {
-                    console.log('✅ 현재 방 메시지 수신, 메시지 추가');
-                    this.messages.push(message);
-                    this.scrollToBottom();
-                } else {
-                    console.log('📪 다른 방 메시지:', message.roomId, '현재 방:', this.roomId);
-                }
-            });
-            
-            this.isSubscribed = true;
-        },
-        disconnectWebSocket() {
-            const topic = `/user/${localStorage.getItem("loginId")}/chat`;
-            console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
-            WebSocketManager.unsubscribe(topic);
-            this.isSubscribed = false;
-        },
+        
         sendMessage() {
             if (!this.roomId) {
                 console.warn("🚫 roomId가 없습니다. WebSocket 연결 확인 필요.");
@@ -1027,6 +1016,11 @@ export default{
                 console.error('날짜/시간 변환 오류:', error);
                 return '날짜/시간 정보 없음';
             }
+        },
+
+        showUserProfile(member) {
+            this.selectedUser = member;
+            this.showUserProfileDialog = true;
         }
     },
 }
@@ -1383,6 +1377,61 @@ export default{
 }
 
 .gap-2 {
+    gap: 8px;
+}
+
+/* 프로필 다이얼로그 스타일 */
+.profile-dialog {
+    width: 90%;
+    margin: 0 auto;
+}
+
+.responsive-dialog {
+    overflow: auto !important;
+    max-height: 90vh;
+    margin: 0;
+    padding: 0;
+}
+
+@media (max-width: 600px) {
+    .profile-dialog {
+        width: 100%;
+        margin: 0;
+    }
+    .dialog-card {
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+    .responsive-dialog {
+        height: 100vh;
+        max-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .dialog-title {
+        position: sticky;
+        top: 0;
+        background-color: white;
+        z-index: 1;
+        padding: 8px !important;
+    }
+    .user-profile {
+        padding: 16px !important;
+        min-width: unset !important;
+        min-height: unset !important;
+        box-shadow: none !important;
+    }
+}
+
+.chat-box {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 

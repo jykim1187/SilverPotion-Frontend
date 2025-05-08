@@ -66,7 +66,7 @@ export default {
   mounted: async function() { 
         await this.initLocalMedia();          // localStream 준비 완료 후
         await this.connectSignalingServer();  // signaling 준비 완료 후
-        await this.startCall();               // 이제 safe하게 시작 가능
+        // await this.startCall();               // 이제 safe하게 시작 가능
         // 이 코드는 비동기 작업을 수행하고, 모든 작업이 완료된 후에 실행됨. 즉 initLocalMedia(), connectSignalingServer(), startCall() 순으로 차례로 실행된다는 것
         await this.getNameInfo();
       },
@@ -89,7 +89,13 @@ export default {
         // iceServers는 NAT뒤에 있는 클라이언트끼리 연결 할 수 있도록 STUN/TURN서버 정보를 넣어줌. 구글의 STUN서버 사용
         const configuration ={
           iceServers:[
-            {urls: 'stun:stun.1.google.com.19302'}
+            {urls: 'stun:stun.1.google.com.19302'},
+            //내가 ec2에 구축한 turn서버
+            {
+              urls: 'turn:3.35.48.199:3478',
+              username: 'turnuser',
+              credential: 'turnpassword'
+            }
           ]
         }
 
@@ -168,6 +174,7 @@ export default {
 
         //2. 연결이 열리면 실행
         this.signalingServer.onopen = () =>{
+          this.startCall()
           console.log('시그널링 서버 연결 성공')
         }
 
@@ -186,7 +193,14 @@ export default {
             //   // this.startCall()은 내가 offer를 생성해서 보내는 거고 여기서는 상대방의 offer를 받아서 answer를 보내는 로직이 들어가야하는 것
             //  1.내 RTCpeerConnection객체 생성
               const configuration ={
-                iceServers:[{urls : 'stun:stun.1.google.com.19302'}]
+                iceServers:[{urls : 'stun:stun.1.google.com.19302'},
+                // 내가 ec2에 구축한 turn서버
+                {
+                    urls: 'turn:3.35.48.199:3478',
+                    username: 'turnuser',
+                    credential: 'turnpassword'
+                  }
+                ]
               };
               this.peerConnection = new RTCPeerConnection(configuration);
             // 2. 내 localStream을 트랙에 추가

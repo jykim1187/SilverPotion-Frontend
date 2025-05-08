@@ -83,7 +83,7 @@
         </div>
         
         <!-- 소모 칼로리 -->
-        <div class="stats-card calories" @click="showCaloryTargetModal = true">
+        <div class="stats-card calories">
           <div class="card-top">
             <div class="card-badge">
               <v-icon>mdi-fire</v-icon>
@@ -109,13 +109,13 @@
                   />
                   <path
                     class="circle calories-circle"
-                    :stroke-dasharray="`${(myData.calory / targetCalory) * 100}, 100`"
+                    :stroke-dasharray="`${getCaloryPercentage()}, 100`"
                     d="M18 2.0845
                     a 15.9155 15.9155 0 0 1 0 31.831
                     a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                 </svg>
-                <div class="percentage">{{ Math.round((myData.calory / targetCalory) * 100) }}%</div>
+                <div class="percentage">{{ getCaloryPercentageText() }}</div>
               </div>
             </div>
           </div>
@@ -182,10 +182,10 @@
                   </div>
                   <div class="metric-value-wrapper">
                     <span class="metric-value">{{Math.floor(myData.deepSleepMinutes / 60)}}시간 {{myData.deepSleepMinutes % 60}}분</span>
-                    <span class="metric-percent">{{ Math.round((myData.deepSleepMinutes / myData.totalSleepMinutes) * 100) }}%</span>
+                    <span class="metric-percent">{{ getSleepPercentageText(myData.deepSleepMinutes) }}</span>
                   </div>
                   <v-progress-linear
-                    :value="(myData.deepSleepMinutes / myData.totalSleepMinutes) * 100"
+                    :value="getSleepPercentage(myData.deepSleepMinutes)"
                     height="8"
                     rounded
                     color="deep-purple"
@@ -199,10 +199,10 @@
                   </div>
                   <div class="metric-value-wrapper">
                     <span class="metric-value">{{Math.floor(myData.remSleepMinutes / 60)}}시간 {{myData.remSleepMinutes % 60}}분</span>
-                    <span class="metric-percent">{{ Math.round((myData.remSleepMinutes / myData.totalSleepMinutes) * 100) }}%</span>
+                    <span class="metric-percent">{{ getSleepPercentageText(myData.remSleepMinutes) }}</span>
                   </div>
                   <v-progress-linear
-                    :value="(myData.remSleepMinutes / myData.totalSleepMinutes) * 100"
+                    :value="getSleepPercentage(myData.remSleepMinutes)"
                     height="8"
                     rounded
                     color="indigo"
@@ -216,10 +216,10 @@
                   </div>
                   <div class="metric-value-wrapper">
                     <span class="metric-value">{{Math.floor(myData.lightSleepMinutes / 60)}}시간 {{myData.lightSleepMinutes % 60}}분</span>
-                    <span class="metric-percent">{{ Math.round((myData.lightSleepMinutes / myData.totalSleepMinutes) * 100) }}%</span>
+                    <span class="metric-percent">{{ getSleepPercentageText(myData.lightSleepMinutes) }}</span>
                   </div>
                   <v-progress-linear
-                    :value="(myData.lightSleepMinutes / myData.totalSleepMinutes) * 100"
+                    :value="getSleepPercentage(myData.lightSleepMinutes)"
                     height="8"
                     rounded
                     color="blue lighten-1"
@@ -231,8 +231,329 @@
           </div>
         </div>
       </div>
+      
+  
+      <!-- 헬스 점수 섹션 - 버전 4 -->
+      <div class="health-score-container version-4" v-if="selectedScoreDesign === 4">
+        <div class="score-header-v4">
+          <h2>건강 지수</h2>
+        </div>
+        
+        <div class="score-content-v4">
+          <!-- 상단 점수 카드 섹션 -->
+          <div v-if="didIwriteHealthDetail" class="score-card-hero">
+            <!-- 왼쪽: 설명 텍스트 -->
+            <div class="hero-content">
+              <div class="hero-title">종합 건강 점수</div>
+              <div class="hero-subtitle">{{ getHealthScoreStatus() }}</div>
+              <p class="score-description">
+                {{ getHealthScoreDescription() }}
+              </p>
+            </div>
+            
+            <!-- 오른쪽: 원형 그래프 -->
+            <div class="hero-graphic">
+              <div class="score-ring">
+                <svg viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" class="ring-bg" />
+                  <circle cx="50" cy="50" r="45" class="ring-value" :stroke-dasharray="`${healthScore * 2.83} 283`" />
+                </svg>
+                <div class="ring-content">
+                  <div class="ring-score">{{ healthScore }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 건강 프로필 작성 안내 메시지 -->
+          <div v-else class="health-profile-guide">
+            <div class="guide-content">
+              <v-icon large color="blue" class="guide-icon">mdi-file-document-edit-outline</v-icon>
+              
+              <!-- 자신의 데이터를 보는 경우 -->
+              <template v-if="isCurrentUser">
+                <h3 class="guide-title">건강 프로필을 작성해 건강지수를 확인해보세요!</h3>
+                <p class="guide-description">건강 프로필 작성을 완료하면 맞춤형 건강 점수와 분석 결과를 확인할 수 있습니다.</p>
+                <v-btn 
+                  color="warning" 
+                  class="guide-btn" 
+                  elevation="2" 
+                  @click="goToHealthProfile"
+                >
+                  <v-icon left>mdi-file-document-edit</v-icon>
+                  건강프로필 작성하기
+                </v-btn>
+              </template>
+              
+              <!-- 다른 사람의 데이터를 보는 경우 -->
+              <template v-else>
+                <h3 class="guide-title">건강 프로필 미작성 사용자</h3>
+                <p class="guide-description">아직 건강프로필을 작성하지 않은 사용자입니다.</p>
+              </template>
+            </div>
+          </div>
+          
+          <div class="score-detail-cards">
+            <div class="detail-card activity-card">
+              <div class="card-inner">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <v-icon color="green">mdi-run</v-icon>
+                  </div>
+                  <div class="card-title">활동 점수</div>
+                </div>
+                <div class="card-score">{{ activityScore }}</div>
+                <div class="card-bar">
+                  <div class="card-bar-fill activity-fill" :style="{ width: activityScore + '%' }"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="detail-card physical-card">
+              <div class="card-inner">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <v-icon color="blue">mdi-heart-pulse</v-icon>
+                  </div>
+                  <div class="card-title">신체상태 점수</div>
+                </div>
+                <div class="card-score">{{ physicalScore }}</div>
+                <div class="card-bar">
+                  <div class="card-bar-fill physical-fill" :style="{ width: physicalScore + '%' }"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="detail-card lifestyle-card">
+              <div class="card-inner">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <v-icon color="amber">mdi-food-apple</v-icon>
+                  </div>
+                  <div class="card-title">생활습관 점수</div>
+                </div>
+                <div class="card-score">{{ lifestyleScore }}</div>
+                <div class="card-bar">
+                  <div class="card-bar-fill lifestyle-fill" :style="{ width: lifestyleScore + '%' }"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      
+      
+      <!-- 여기서부터 헬스 점수 그래프 섹션 -->
+      <!-- <div class="health-score-history-container"> -->
+        <!-- <div class="score-history-header">
+          <h2>최근 5일간 건강 점수 추세</h2>
+          <div class="graph-type-selector">
+            <v-btn-toggle v-model="selectedGraphType" mandatory>
+              <v-btn small value="line">선 그래프</v-btn>
+              <v-btn small value="bar">막대 그래프</v-btn>
+              <v-btn small value="area">영역 그래프</v-btn>
+            </v-btn-toggle>
+          </div>
+        </div>
+        
+        선 그래프 버전
+        <div v-if="selectedGraphType === 'line'" class="graph-container line-graph">
+          <div class="graph-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background-color: #2196F3;"></span>
+              <span class="legend-text">종합 건강 점수</span>
+            </div>
+          </div>
+          <div class="graph-content">
+            <svg viewBox="0 0 500 200" class="score-graph">
+              Y축 그리드 라인
+              <line x1="40" y1="20" x2="40" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              <line x1="40" y1="20" x2="480" y2="20" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="60" x2="480" y2="60" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="100" x2="480" y2="100" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="140" x2="480" y2="140" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="180" x2="480" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              
+              Y축 눈금
+              <text x="30" y="25" text-anchor="end" font-size="12" fill="#666">100</text>
+              <text x="30" y="65" text-anchor="end" font-size="12" fill="#666">80</text>
+              <text x="30" y="105" text-anchor="end" font-size="12" fill="#666">60</text>
+              <text x="30" y="145" text-anchor="end" font-size="12" fill="#666">40</text>
+              <text x="30" y="185" text-anchor="end" font-size="12" fill="#666">20</text>
+              
+              X축 눈금 및 날짜
+              <template v-for="(score, index) in lastFiveDaysScores" :key="'date-'+index">
+                <text :x="40 + index * 110" y="200" text-anchor="middle" font-size="12" fill="#666">{{ score.date }}</text>
+              </template>
+              
+              점수 선 그래프
+              <polyline 
+                :points="getLineGraphPoints()"
+                fill="none" 
+                stroke="#2196F3" 
+                stroke-width="3"
+                stroke-linejoin="round"
+                class="score-line"
+              />
+              
+              데이터 포인트
+              <template v-for="(score, index) in lastFiveDaysScores" :key="'point-'+index">
+                <circle 
+                  :cx="40 + index * 110" 
+                  :cy="180 - (score.score * 1.6)" 
+                  r="6" 
+                  fill="#2196F3"
+                  class="data-point"
+                />
+                <text 
+                  :x="40 + index * 110" 
+                  :y="170 - (score.score * 1.6)" 
+                  text-anchor="middle" 
+                  font-size="12" 
+                  fill="#333"
+                  font-weight="bold"
+                  class="point-label"
+                >{{ score.score }}</text>
+              </template>
+            </svg>
+          </div>
+        </div>
+        
+        막대 그래프 버전
+        <div v-if="selectedGraphType === 'bar'" class="graph-container bar-graph">
+          <div class="graph-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background-color: #00BCD4;"></span>
+              <span class="legend-text">종합 건강 점수</span>
+            </div>
+          </div>
+          <div class="graph-content">
+            <svg viewBox="0 0 500 240" class="score-graph">
+              Y축 그리드 라인
+              <line x1="50" y1="20" x2="50" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              <line x1="50" y1="20" x2="480" y2="20" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="50" y1="60" x2="480" y2="60" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="50" y1="100" x2="480" y2="100" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="50" y1="140" x2="480" y2="140" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="50" y1="180" x2="480" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              
+              Y축 눈금
+              <text x="40" y="25" text-anchor="end" font-size="12" fill="#666">100</text>
+              <text x="40" y="65" text-anchor="end" font-size="12" fill="#666">80</text>
+              <text x="40" y="105" text-anchor="end" font-size="12" fill="#666">60</text>
+              <text x="40" y="145" text-anchor="end" font-size="12" fill="#666">40</text>
+              <text x="40" y="185" text-anchor="end" font-size="12" fill="#666">20</text>
+              
+              X축 선
+              <line x1="50" y1="180" x2="480" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              
+              막대 그래프
+              <template v-for="(score, index) in lastFiveDaysScores" :key="'bar-'+index">
+                <rect 
+                  :x="60 + index * 85" 
+                  :y="180 - (score.score * 1.6)" 
+                  width="60" 
+                  :height="score.score * 1.6" 
+                  :fill="getBarColor(score.score)"
+                  rx="4"
+                  ry="4"
+                  class="score-bar"
+                />
+                <text 
+                  :x="90 + index * 85" 
+                  :y="190 - (score.score * 1.6) + (score.score < 50 ? -25 : 15)" 
+                  text-anchor="middle" 
+                  font-size="14" 
+                  :fill="score.score < 50 ? '#333' : '#fff'"
+                  font-weight="bold"
+                >{{ score.score }}</text>
+                <text 
+                  :x="90 + index * 85" 
+                  y="210" 
+                  text-anchor="middle" 
+                  font-size="12" 
+                  fill="#666"
+                >{{ score.date }}</text>
+              </template>
+            </svg>
+          </div>
+        </div> -->
+        
+        <!-- 영역 그래프 버전
+        <div v-if="selectedGraphType === 'area'" class="graph-container area-graph">
+          <div class="graph-legend">
+            <div class="legend-item">
+              <span class="legend-color gradient-legend"></span>
+              <span class="legend-text">종합 건강 점수</span>
+            </div>
+          </div>
+          <div class="graph-content">
+            <svg viewBox="0 0 500 200" class="score-graph">
+              배경 그리드
+              <line x1="40" y1="20" x2="40" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              <line x1="40" y1="20" x2="480" y2="20" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="60" x2="480" y2="60" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="100" x2="480" y2="100" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="140" x2="480" y2="140" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" />
+              <line x1="40" y1="180" x2="480" y2="180" stroke="#e0e0e0" stroke-width="1" />
+              
+              Y축 눈금
+              <text x="30" y="25" text-anchor="end" font-size="12" fill="#666">100</text>
+              <text x="30" y="65" text-anchor="end" font-size="12" fill="#666">80</text>
+              <text x="30" y="105" text-anchor="end" font-size="12" fill="#666">60</text>
+              <text x="30" y="145" text-anchor="end" font-size="12" fill="#666">40</text>
+              <text x="30" y="185" text-anchor="end" font-size="12" fill="#666">20</text>
+              
+              X축 날짜
+              <template v-for="(score, index) in lastFiveDaysScores" :key="'date-'+index">
+                <text :x="40 + index * 110" y="200" text-anchor="middle" font-size="12" fill="#666">{{ score.date }}</text>
+              </template>
+              
+              영역 그래프
+              <defs>
+                <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color: #8E24AA; stop-opacity: 0.8" />
+                  <stop offset="100%" style="stop-color: #8E24AA; stop-opacity: 0.1" />
+                </linearGradient>
+              </defs>
+              
+              <path 
+                :d="getAreaGraphPath()"
+                fill="url(#areaGradient)" 
+                stroke="#8E24AA" 
+                stroke-width="2"
+                class="score-area"
+              />
+              
+              데이터 포인트
+              <template v-for="(score, index) in lastFiveDaysScores" :key="'area-point-'+index">
+                <circle 
+                  :cx="40 + index * 110" 
+                  :cy="180 - (score.score * 1.6)" 
+                  r="6" 
+                  fill="#8E24AA"
+                />
+                <text 
+                  :x="40 + index * 110" 
+                  :y="170 - (score.score * 1.6)" 
+                  text-anchor="middle" 
+                  font-size="12" 
+                  fill="#333"
+                  font-weight="bold"
+                >{{ score.score }}</text>
+              </template>
+            </svg>
+          </div>
+        </div> -->
+      <!-- </div> -->
+<!-- 여기까지 헬스 점수 그래프 섹션 -->
+
+
     </div>
   </div>
+
+  
   <v-dialog v-model="showErrorModal" max-width="400">
     <v-card>
       <v-card-title class="headline">오류 발생</v-card-title>
@@ -240,27 +561,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn color="primary" text @click="showErrorModal = false">닫기</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-  
-  <!-- 목표 칼로리 설정 다이얼로그 -->
-  <v-dialog v-model="showCaloryTargetModal" max-width="400">
-    <v-card>
-      <v-card-title class="headline">소모 칼로리 목표 설정</v-card-title>
-      <v-card-text>
-        <v-text-field
-          v-model="newTargetCalory"
-          label="목표 칼로리 (kcal)"
-          type="number"
-          :rules="[v => !!v || '목표 칼로리를 입력해주세요', v => v > 0 || '0보다 큰 값을 입력해주세요']"
-          outlined
-        ></v-text-field>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn color="grey darken-1" text @click="showCaloryTargetModal = false">취소</v-btn>
-        <v-btn color="primary" text @click="saveTargetCalory">저장</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -335,22 +635,36 @@ export default {
       profileImage : '',
       showErrorModal : false,
       noDataMessage: '',
-      targetCalory: 2000,
+      targetCalory: 0,
+      targetStep: 0,
       showCaloryTargetModal: false,
-      newTargetCalory: 2000,
       showUserProfileModal: false,
       // 유저프로필 컴포넌트에 부모 컴포넌트의 타입을 전달하기 위한 용도
       parentType: 'healthData',
-      isRequestPending: false // 요청 중복 방지 플래그 추가
+      isRequestPending: false, // 요청 중복 방지 플래그 추가
+      didIwriteHealthDetail: false, // 건강세부조사 작성한 유저인지 아닌지
+      //헬스 점수 섹션
+      selectedScoreDesign: 4,
+      healthScore: 0,
+      activityScore: 0,
+      physicalScore: 0,
+      lifestyleScore: 0,
+      
+      // 최근 5일간의 헬스 점수 더미 데이터
+      // selectedGraphType: 'line',
+      // lastFiveDaysScores: [
+      //   { date: '07-15', score: 87 },
+      //   { date: '07-16', score: 82 },
+      //   { date: '07-17', score: 91 },
+      //   { date: '07-18', score: 78 },
+      //   { date: '07-19', score: 85 }
+      // ]
     }
   },
 
   async mounted(){
     // 사용자 프로필 이미지 가져오기
 
-    // 목표 칼로리 불러오기
-    this.loadTargetCalory();
-    
     // 타입에 따라 초기 날짜 설정
     this.setInitialDate();
    
@@ -359,6 +673,10 @@ export default {
     
     // 탭 변경 이벤트 리스너 등록
     window.addEventListener('tab-changed', this.handleTabChange);
+    
+    // 건강세부조사 작성 여부 불러오기
+    this.loadyesOrNoForHealthDetail();
+    // 헬스점수 불러오기는 watch에서 처리
   },
   
   beforeUnmount() {
@@ -369,7 +687,8 @@ export default {
   watch: {
     loginId() {
       this.fetchDataOnce();
-      this.loadTargetCalory();
+      this.loadyesOrNoForHealthDetail();
+      this.loadHealthScore();
     },
     type(newVal, oldVal) {
       // 빈 값이거나 초기화 중인 경우 처리하지 않음
@@ -380,6 +699,7 @@ export default {
       // 타입이 변경되면 그에 맞는 초기 날짜 설정
       this.setInitialDate();
       this.fetchDataOnce();
+      this.loadHealthScore();
     }
   },
 
@@ -500,6 +820,8 @@ export default {
         this.myData.remSleepMinutes = response.data.result.remSleepMinutes;
         this.myData.period = response.data.result.period;
         this.profileImage = response.data.result.imgUrl;
+        this.targetCalory = response.data.result.targetCalories;
+        this.targetStep = response.data.result.targetSteps;
         this.noDataMessage = '';
         console.log(response);
       } catch(error) {
@@ -517,7 +839,7 @@ export default {
      convertDateToWeek(date1){
       console.log('날짜',date1)
       const date = new Date(date1);
-  date.setDate(date.getDate() - 7); // 🔥 전주 월요일로 이동
+  date.setDate(date.getDate() - 7); //  전주 월요일로 이동
 
   // 첫 목요일 구하기
   const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -526,7 +848,7 @@ export default {
     firstDayWeekday <= 4 ? 1 + (4 - firstDayWeekday) : 1 + (7 - firstDayWeekday) + 4
   );
 
-  // 🔥 첫 목요일 기준으로 year, month 고정!
+  // 첫 목요일 기준으로 year, month 고정!
   const fixedYear = firstThursday.getFullYear();
   const fixedMonth = firstThursday.getMonth() + 1;
 
@@ -541,7 +863,7 @@ export default {
         convertDateToYearMonth(date1) {
           const date = new Date(date1);
           let year = date.getFullYear();
-          let month = date.getMonth(); // -1 하지 말고 그냥 가져와!
+          let month = date.getMonth(); 
 
           // 만약 월이 0이면 (1월에서 -1 한 경우), 전년도 12월로 설정
           if (month === 0) {
@@ -562,6 +884,8 @@ export default {
       this.myData.deepSleepMinutes = 0;
       this.myData.lightSleepMinutes = 0;
       this.myData.remSleepMinutes = 0;
+      this.targetCalory = '0';
+      this.targetStep = '0';
       if(this.type === 'DAY'){
         this.myData.period = this.currentDate;
       }
@@ -573,6 +897,12 @@ export default {
       }
       
     },
+    resetHealthScore(){
+      this.healthScore = 0;
+      this.activityScore = 0;
+      this.physicalScore = 0;
+      this.lifestyleScore = 0;
+    },
     handleDateChange(dateRange) {
       console.log('선택된 날짜:', dateRange);
       
@@ -581,10 +911,12 @@ export default {
         this.currentDate = dateRange;
         this.showDatePicker = false;
         this.fetchDataOnce();
+        this.loadHealthScore();
       } else {
         console.error('유효하지 않은 날짜 형식:', dateRange);
         this.noDataMessage = '유효하지 않은 날짜 형식입니다.';
         this.resetData();
+        this.resetHealthScore();
       }
     },
 
@@ -592,24 +924,6 @@ export default {
       this.showDatePicker = !this.showDatePicker;
     },
     
-    // 목표 칼로리 저장
-    saveTargetCalory() {
-      if (this.newTargetCalory > 0) {
-        this.targetCalory = parseInt(this.newTargetCalory);
-        // 로컬 스토리지에 사용자별 목표 칼로리 저장
-        localStorage.setItem(`targetCalory_${this.loginId}`, this.targetCalory);
-        this.showCaloryTargetModal = false;
-      }
-    },
-    
-    // 목표 칼로리 불러오기
-    loadTargetCalory() {
-      const savedTargetCalory = localStorage.getItem(`targetCalory_${this.loginId}`);
-      if (savedTargetCalory) {
-        this.targetCalory = parseInt(savedTargetCalory);
-        this.newTargetCalory = this.targetCalory;
-      }
-    },
     
     // 심장 박동수에 따른 상태 텍스트 반환
     getHeartRateStatus(heartRate) {
@@ -691,7 +1005,139 @@ export default {
         return '수면 시간이 길어요. 7-9시간이 적정 수면입니다.';
       }
     },
+    // 건강세부조사 작성 여부 불러오기
+    async loadyesOrNoForHealthDetail(){
+      const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/havedetailhealthinfo`, {
+        "loginId": this.loginId,
+      });
+      this.didIwriteHealthDetail = response.data.result;
+      console.log('건강세부조사 작성 여부', this.didIwriteHealthDetail);
+    },
   
+    //// 헬스 점수 불러오기 
+    async loadHealthScore() {
+      try{
+      const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/healthscore/create`, {
+        "userId": this.loginId,
+        "type": this.type,
+        "date": this.currentDate
+      });
+
+      console.log('헬스 점수 데이터 가져오기', response);
+
+      this.healthScore = response.data.result.totalScore;
+      this.activityScore = response.data.result.activityScore;
+      this.physicalScore = response.data.result.bodyScore;
+      this.lifestyleScore = response.data.result.habitScore;
+    }
+    catch(error){
+      console.error('헬스 점수 데이터 가져오기 실패:', error);
+      this.resetHealthScore();
+    }
+    
+
+    },
+    
+    // 헬스 점수 상태 반환
+    getHealthScoreStatus() {
+      if (this.healthScore >= 90) {
+        return '최상';
+      } else if (this.healthScore >= 80) {
+        return '좋음';
+      } else if (this.healthScore >= 70) {
+        return '양호';
+      } else if (this.healthScore >= 60) {
+        return '주의';
+      } else {
+        return '관리필요';
+      }
+    },
+    
+    // 헬스 점수 설명 반환
+    getHealthScoreDescription() {
+      if (this.healthScore >= 90) {
+        return '매우 건강한 상태입니다. 현재 습관을 계속 유지하세요!';
+      } else if (this.healthScore >= 80) {
+        return '건강한 상태입니다. 조금만 더 신경써보세요!';
+      } else if (this.healthScore >= 70) {
+        return '양호한 상태입니다. 생활 습관 개선이 필요해요.';
+      } else if (this.healthScore >= 60) {
+        return '주의가 필요합니다. 운동량을 늘려보세요.';
+      } else {
+        return '건강 관리가 필요합니다. 전문가와 상담하세요.';
+      }
+    },
+    
+    //// 그래프 데이터 관련 메소드
+    getLineGraphPoints() {
+      return this.lastFiveDaysScores.map((score, index) => 
+        `${40 + index * 110},${180 - (score.score * 1.6)}`
+      ).join(' ');
+    },
+    
+    getAreaGraphPath() {
+      const points = this.lastFiveDaysScores.map((score, index) => 
+        `${40 + index * 110},${180 - (score.score * 1.6)}`
+      );
+      
+      // 시작점
+      let path = `M ${points[0]}`;
+      
+      // 각 점을 연결하는 선
+      for (let i = 1; i < points.length; i++) {
+        path += ` L ${points[i]}`;
+      }
+      
+      // 마지막 점에서 X축까지 내려오는 선
+      path += ` L ${40 + (this.lastFiveDaysScores.length - 1) * 110},180`;
+      
+      // 시작점의 X축부터 시작점까지 올라가는 선
+      path += ` L 40,180 Z`;
+      
+      return path;
+    },
+    
+    getBarColor(score) {
+      if (score >= 90) return '#4CAF50'; // 초록색 (최상)
+      if (score >= 80) return '#00BCD4'; // 파란색 (좋음)
+      if (score >= 70) return '#FFC107'; // 노란색 (양호)
+      if (score >= 60) return '#FF9800'; // 주황색 (주의)
+      return '#F44336'; // 빨간색 (관리 필요)
+    },
+    ////
+    
+    // 건강 프로필 페이지로 이동하는 메소드 추가
+    goToHealthProfile() {
+      this.$router.push('/silverpotion/userhealthinfodetail');
+    },
+    
+    // 칼로리 퍼센티지 계산 메소드 추가
+    getCaloryPercentage() {
+      if (!this.myData.calory || !this.targetCalory || this.targetCalory <= 0) {
+        return 0;
+      }
+      return Math.min((this.myData.calory / this.targetCalory) * 100, 100);
+    },
+    
+    // 칼로리 퍼센트 텍스트 반환 메소드 추가
+    getCaloryPercentageText() {
+      const percentage = this.getCaloryPercentage();
+      return `${Math.round(percentage)}%`;
+    },
+    
+    // 수면 퍼센티지 계산 메소드 추가
+    getSleepPercentage(sleepMinutes) {
+      if (!sleepMinutes || !this.myData.totalSleepMinutes || this.myData.totalSleepMinutes <= 0) {
+        return 0;
+      }
+      return Math.min((sleepMinutes / this.myData.totalSleepMinutes) * 100, 100);
+    },
+    
+    // 수면 퍼센트 텍스트 반환 메소드 추가
+    getSleepPercentageText(sleepMinutes) {
+      const percentage = this.getSleepPercentage(sleepMinutes);
+      return `${Math.round(percentage)}%`;
+    },
   },
  
   
@@ -717,6 +1163,19 @@ export default {
       else {
         // 기본값
         return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      }
+    },
+    
+    // 현재 로그인한 사용자와 조회 중인 사용자가 같은지 확인하는 계산된 속성
+    isCurrentUser() {
+      try {
+        // localStorage에 접근 가능한지 확인하고, loginId와 비교
+        const currentLoginId = localStorage.getItem('loginId');
+        return this.loginId === currentLoginId;
+      } catch (error) {
+        // localStorage 접근 에러 발생 시 false 반환
+        console.error('localStorage 접근 오류:', error);
+        return false;
       }
     }
   }
@@ -745,6 +1204,18 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   padding: 8px;
+}
+
+/* 모바일 환경에서 달력이 화면 밖으로 넘어가지 않도록 조정 */
+@media (max-width: 768px) {
+  .date-picker-container {
+    right: auto;
+    left: 0;
+    max-width: 100vw;
+    width: calc(100vw - 40px);
+    transform: translateX(-7%);
+    left: 50%;
+  }
 }
 
 .health-dashboard-v5 {
@@ -1292,6 +1763,68 @@ export default {
 }
 
 
+@media (max-width: 768px) {
+  .version-1 .score-content-v1 {
+    flex-direction: column;
+  }
+  
+  .version-2 .sub-score-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .version-2 .card-icon {
+    margin: 0 auto 15px auto;
+  }
+  
+  .version-3 .sub-gauges {
+    flex-direction: column;
+  }
+  
+  .version-4 .score-card-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .version-4 .hero-content {
+    order: 2;
+    margin-top: 15px;
+  }
+  
+  .version-4 .hero-graphic {
+    order: 1;
+    margin: 0 auto;
+  }
+  
+  .version-4 .score-description {
+    text-align: center;
+    margin: 0 auto;
+  }
+  
+  .version-4 .score-detail-cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  
+  .version-4 .card-inner {
+    padding: 15px;
+  }
+  
+  .version-4 .card-score {
+    font-size: 1.8rem;
+  }
+  
+  .version-4 .card-title {
+    font-size: 0.85rem;
+  }
+  
+  .version-5 .score-card-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
 @media (max-width: 480px) {
   .title-section h1 {
     font-size: 1.3rem;
@@ -1338,6 +1871,8 @@ export default {
   cursor: pointer;
   transition: color 0.3s ease;
   position: relative;
+  font-size: 2.0rem;
+  font-weight: 700;
 }
 
 .user-name-title:hover {
@@ -1422,8 +1957,551 @@ export default {
   margin-bottom: 20px;
   width: 100%;
 }
+/* //// */
+/* 헬스 점수 공통 스타일 */
+.health-score-container {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
 
+.health-score-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+
+
+/* 버전 4 스타일  */
+.version-4 {
+  background: #f9f9f9;
+  color: rgb(0, 0, 0);
+}
+
+.version-4 .score-header-v4 {
+  margin-bottom: 30px;
+}
+
+.version-4 .score-header-v4 h1 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: rgb(0, 0, 0);
+}
+
+.version-4 .score-content-v4 {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.version-4 .score-center-ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.version-4 .score-ring {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 20px;
+}
+
+.version-4 .score-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.version-4 .ring-bg {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.1);
+  stroke-width: 8;
+}
+.version-4 .ring-value {
+  fill: none;
+  stroke: #00d4ff;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 1s ease;
+}
+
+.version-4 .ring-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.version-4 .ring-score {
+  font-size: 3rem;
+  font-weight: 700;
+  color: rgb(0, 0, 0);
+}
+
+.version-4 .ring-label {
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.version-4 .ring-status {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-top: 5px;
+}
+
+.version-4 .score-description {
+  text-align: center;
+  font-size: 1.1rem;
+  color: rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
+  max-width: 500px;
+}
+
+.version-4 .score-detail-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 항상 3개의 열을 표시 */
+  gap: 20px;
+  width: 100%;
+}
+
+.version-4 .detail-card {
+  border-radius: 15px;
+  overflow: hidden;
+  min-width: 0; /* 최소 너비 제한 제거 */
+}
+
+.version-4 .card-inner {
+  background: white;
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.01);
+}
+
+.version-4 .card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.version-4 .card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+.version-4 .activity-card .card-icon {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.version-4 .physical-card .card-icon {
+  background: rgba(33, 150, 243, 0.15);
+  color: #2196F3;
+}
+
+.version-4 .lifestyle-card .card-icon {
+  background: rgba(255, 193, 7, 0.15);
+  color: #FFC107;
+}
+
+.version-4 .card-title {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.version-4 .card-score {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 10px 0 20px 0;
+}
+
+.version-4 .card-bar {
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.version-4 .card-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6a11cb, #2575fc);
+  border-radius: 3px;
+  transition: width 1s ease;
+}
+
+.version-4 .activity-card .card-bar-fill {
+  background: linear-gradient(90deg, #43a047, #66bb6a);
+}
+
+.version-4 .physical-card .card-bar-fill {
+  background: linear-gradient(90deg, #1976d2, #42a5f5);
+}
+
+.version-4 .lifestyle-card .card-bar-fill {
+  background: linear-gradient(90deg, #ffa000, #ffca28);
+}
+
+
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .version-1 .score-content-v1 {
+    flex-direction: column;
+  }
+  
+  .version-2 .sub-score-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .version-2 .card-icon {
+    margin: 0 auto 15px auto;
+  }
+  
+  .version-3 .sub-gauges {
+    flex-direction: column;
+  }
+  
+  .version-4 .score-card-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .version-4 .hero-content {
+    order: 2;
+    margin-top: 15px;
+  }
+  
+  .version-4 .hero-graphic {
+    order: 1;
+    margin: 0 auto;
+  }
+  
+  .version-4 .score-description {
+    text-align: center;
+    margin: 0 auto;
+  }
+  
+  .version-4 .score-detail-cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  
+  .version-4 .card-inner {
+    padding: 15px;
+  }
+  
+  .version-4 .card-score {
+    font-size: 1.8rem;
+  }
+  
+  .version-4 .card-title {
+    font-size: 0.85rem;
+  }
+  
+  .version-5 .score-card-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .version-4 .score-detail-cards {
+    grid-template-columns: 1fr !important;
+    gap: 15px;
+  }
+  
+  .version-4 .hero-graphic {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .version-4 .ring-score {
+    font-size: 2.5rem;
+  }
+}
+
+.version-4 .score-card-hero {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.version-4 .hero-content {
+  flex: 1;
+  min-width: 250px;
+}
+
+.version-4 .hero-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.version-4 .hero-subtitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00c2ff;
+  margin-bottom: 15px;
+}
+
+.version-4 .score-description {
+  font-size: 1rem;
+  color: #666;
+  line-height: 1.5;
+  max-width: 500px;
+}
+
+.version-4 .hero-graphic {
+  width: 180px;
+  height: 180px;
+  position: relative;
+}
+
+.version-4 .detail-card {
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  background: white;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.version-4 .detail-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 최근 5일간 건강 점수 그래프 스타일 */
+.health-score-history-container {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.health-score-history-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.score-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.score-history-header h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.graph-type-selector {
+  background: #f5f5f5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.graph-container {
+  margin-top: 20px;
+}
+
+.graph-legend {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.gradient-legend {
+  background: linear-gradient(to bottom, #8E24AA 0%, rgba(142, 36, 170, 0.1) 100%);
+}
+
+.legend-text {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.graph-content {
+  height: 250px;
+  position: relative;
+}
+
+.score-graph {
+  width: 100%;
+  height: 100%;
+}
+
+/* 선 그래프 애니메이션 */
+.line-graph .score-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 1.5s ease-in-out forwards;
+}
+
+.line-graph .data-point {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-in-out forwards 1.2s;
+}
+
+.line-graph .point-label {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-in-out forwards 1.4s;
+}
+
+/* 막대 그래프 애니메이션 */
+.bar-graph .score-bar {
+  transform-origin: bottom;
+  transform: scaleY(0);
+  animation: growBar 1s ease-out forwards;
+}
+
+/* 영역 그래프 애니메이션 */
+.area-graph .score-area {
+  opacity: 0;
+  animation: fadeIn 1.5s ease-in-out forwards;
+}
+
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes growBar {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .score-history-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .graph-content {
+    height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .graph-content {
+    height: 200px;
+  }
+}
+
+/* 건강 프로필 작성 안내 스타일 */
+.health-profile-guide {
+  background: white;
+  border-radius: 15px;
+  padding: 40px 30px;
+  text-align: center;
+  margin-bottom: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  border: 1px dashed rgba(255, 152, 0, 0.3);
+}
+
+.guide-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.guide-icon {
+  font-size: 64px;
+  margin-bottom: 15px;
+  color: #008cff;
+}
+
+.guide-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #008cff;
+  margin-bottom: 15px;
+}
+
+.guide-description {
+  font-size: 1rem;
+  color: #00070c;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.guide-btn {
+  background: linear-gradient(135deg, #57abf0, #48a6f3) !important;
+  color: white;
+  padding: 0 20px;
+  height: 40px;
+  border-radius: 20px;
+  text-transform: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  box-shadow: 0 3px 5px rgba(4, 183, 238, 0.3) !important;
+  transition: all 0.3s ease;
+}
+
+.guide-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(4, 183, 238, 0.4) !important;
+}
 </style>
+
 
 
 
