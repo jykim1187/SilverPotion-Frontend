@@ -676,8 +676,7 @@ export default {
     
     // 건강세부조사 작성 여부 불러오기
     this.loadyesOrNoForHealthDetail();
-    //// 헬스점수 불러오기
-    this.loadHealthScore();
+    // 헬스점수 불러오기는 watch에서 처리
   },
   
   beforeUnmount() {

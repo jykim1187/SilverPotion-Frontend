@@ -284,6 +284,7 @@
                                     class="member-card mb-2"
                                     elevation="1"
                                     rounded="lg"
+                                    @click="showUserProfile(member)"
                                 >
                                     <div class="d-flex align-center pa-3">
                                         <v-avatar size="40" class="mr-3">
@@ -470,6 +471,28 @@
             </v-card>
         </v-dialog>
 
+        <!-- 사용자 프로필 다이얼로그 -->
+        <v-dialog v-model="showUserProfileDialog" max-width="500" class="profile-dialog" fullscreen-breakpoint="sm">
+            <v-card class="dialog-card responsive-dialog">
+                <v-card-title class="dialog-title">
+                    <v-spacer></v-spacer>
+                    <v-btn icon @click="showUserProfileDialog = false" density="compact">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text class="pa-0">
+                    <user-profile-component
+                        v-if="selectedUser"
+                        :login-id="selectedUser.loginId || ''"
+                        :user-name="selectedUser.nickname || ''"
+                        :user-long-id="selectedUser.userId || 0"
+                        :user-login-id="selectedUser.loginId || ''"
+                        parent-type="post"
+                    ></user-profile-component>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
         <!-- 가입인사 작성 다이얼로그 -->
         <v-dialog v-model="showJoinDialog" max-width="400">
             <v-card class="dialog-card">
@@ -526,9 +549,13 @@
 import axios from 'axios';
 import WebSocketManager from '@/WebSocketManager';
 
+
+import UserProfileComponent from '@/components/UserProfileComponet.vue';
+
 export default{
     components: {
-        // GatheringBoard 제거
+       //GatheringBoard제거
+        UserProfileComponent
     },
     data(){
         return {
@@ -572,7 +599,9 @@ export default{
             isSubscribed: false,
             showDeleteDialog: false,
             meetingIdToDelete: null,
-            roomId: null
+            roomId: null,
+            showUserProfileDialog: false,
+            selectedUser: null
         }
     },
     beforeUnmount() {
@@ -643,6 +672,8 @@ export default{
             try {
                 const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}/userList`);
                 this.userList = response.data.result || [];
+                console.log('모임 회원 목록2:', response.data.result);
+
                 
                 // 상태가 ACTIVATE인 멤버만 필터링
                 this.filteredMembers = this.userList.filter(member => member.status === 'ACTIVATE');
@@ -959,6 +990,11 @@ export default{
                 return '날짜/시간 정보 없음';
             }
         },
+
+        showUserProfile(member) {
+            this.selectedUser = member;
+            this.showUserProfileDialog = true;
+        }
     },
 }
 </script>
@@ -1314,6 +1350,61 @@ export default{
 }
 
 .gap-2 {
+    gap: 8px;
+}
+
+/* 프로필 다이얼로그 스타일 */
+.profile-dialog {
+    width: 90%;
+    margin: 0 auto;
+}
+
+.responsive-dialog {
+    overflow: auto !important;
+    max-height: 90vh;
+    margin: 0;
+    padding: 0;
+}
+
+@media (max-width: 600px) {
+    .profile-dialog {
+        width: 100%;
+        margin: 0;
+    }
+    .dialog-card {
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+    .responsive-dialog {
+        height: 100vh;
+        max-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .dialog-title {
+        position: sticky;
+        top: 0;
+        background-color: white;
+        z-index: 1;
+        padding: 8px !important;
+    }
+    .user-profile {
+        padding: 16px !important;
+        min-width: unset !important;
+        min-height: unset !important;
+        box-shadow: none !important;
+    }
+}
+
+.chat-box {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 

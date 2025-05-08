@@ -110,7 +110,7 @@
     </div>
     
     <!-- 소모임 추천 섹션 -->
-    <div class="group-recommendation-container">
+    <div class="group-recommendation-container" v-if="showHealthData && selectedUser === me">
       <div class="recommendation-header">
         <v-icon color="primary" class="mr-2">mdi-account-group</v-icon>
         <h3>소모임 추천</h3>
