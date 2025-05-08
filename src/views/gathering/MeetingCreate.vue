@@ -259,7 +259,7 @@
                                     <v-list-item
                                         v-for="(place, index) in searchResults"
                                         :key="index"
-                                        @click="selectSearchResult(place)"
+                                        @click="selectPlace(place)"
                                         :class="{ 'selected-place': selectedPlace && selectedPlace.id === place.id }"
                                     >
                                         <v-list-item-title>{{ place.place_name }}</v-list-item-title>
@@ -392,6 +392,7 @@ export default{
             imageResizeStartX: 0,
             imageResizeStartY: 0,
             initialImageScale: 1,
+            infowindow: null, // 인포윈도우 객체 추가
         }
     },
     computed: {
@@ -1136,6 +1137,11 @@ export default{
             // 기존 마커 제거
             this.removeAllMarkers();
             
+            // 인포윈도우가 열려있으면 닫기
+            if (this.infowindow) {
+                this.infowindow.close();
+            }
+            
             // 카카오 로컬 API를 사용하여 키워드 검색
             const apiUrl = 'https://dapi.kakao.com/v2/local/search/keyword.json';
             const params = new URLSearchParams({
@@ -1162,6 +1168,14 @@ export default{
                 if (data.documents && data.documents.length > 0) {
                     this.searchResults = data.documents;
                     
+                    // 인포윈도우 생성 (한 번만 생성)
+                    if (!this.infowindow) {
+                        this.infowindow = new window.kakao.maps.InfoWindow({
+                            zIndex: 3,
+                            removable: true
+                        });
+                    }
+                    
                     // 검색 결과 표시
                     const bounds = new window.kakao.maps.LatLngBounds();
                     
@@ -1169,10 +1183,19 @@ export default{
                         const place = data.documents[i];
                         const placePosition = new window.kakao.maps.LatLng(place.y, place.x);
                         
-                        // 마커 생성
+                        // 마커 생성 (선택된 장소인 경우 다른 이미지 사용)
+                        const isSelected = this.selectedPlace && place.id === this.selectedPlace.id;
+                        const markerImage = isSelected ? 
+                            new window.kakao.maps.MarkerImage(
+                                'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
+                                new window.kakao.maps.Size(24, 35)
+                            ) : null;
+                        
                         const marker = new window.kakao.maps.Marker({
+                            map: this.kakaoMap,
                             position: placePosition,
-                            map: this.kakaoMap
+                            image: markerImage,
+                            zIndex: isSelected ? 2 : 1 // 선택된 마커는 더 높은 z-index
                         });
                         
                         this.markers.push(marker);
@@ -1180,7 +1203,32 @@ export default{
                         
                         // 마커 클릭 이벤트 등록
                         window.kakao.maps.event.addListener(marker, 'click', () => {
-                            this.selectSearchResult(place);
+                            // 선택된 장소 정보 저장
+                            this.selectedPlace = place;
+                            this.meeting.place = place.place_name;
+                            this.meeting.lat = place.y;
+                            this.meeting.lon = place.x;
+                            
+                            // 인포윈도우 내용 설정
+                            const content = `
+                                <div style="padding:10px; width:200px; text-align:center; font-size:14px;">
+                                    <strong>${place.place_name}</strong>
+                                    <p style="margin-top:5px; font-size:12px; color:#666;">${place.address_name}</p>
+                                </div>
+                            `;
+                            
+                            // 인포윈도우 표시
+                            this.infowindow.setContent(content);
+                            this.infowindow.open(this.kakaoMap, marker);
+                            
+                            // 모든 마커 업데이트
+                            this.updateMarkers();
+                            
+                            // 선택된 장소로 지도 중심 이동
+                            this.kakaoMap.setCenter(placePosition);
+                            
+                            // 검색 결과 리스트에서 해당 항목 강조
+                            this.highlightSelectedPlace();
                         });
                     }
                     
@@ -1197,17 +1245,104 @@ export default{
             });
         },
         
-        // 검색 결과 선택
-        selectSearchResult(place) {
-            this.selectedPlace = place;
-        },
-        
         // 마커 모두 제거
         removeAllMarkers() {
+            // 인포윈도우가 열려있으면 닫기
+            if (this.infowindow) {
+                this.infowindow.close();
+            }
+            
             for (let i = 0; i < this.markers.length; i++) {
                 this.markers[i].setMap(null);
             }
             this.markers = [];
+        },
+        
+        // 마커 업데이트 (선택된 장소 강조)
+        updateMarkers() {
+            // 기존 마커 제거
+            this.removeAllMarkers();
+            
+            // 검색 결과에 대해 마커 다시 생성
+            if (this.searchResults && this.searchResults.length > 0) {
+                this.searchResults.forEach(place => {
+                    const placePosition = new window.kakao.maps.LatLng(place.y, place.x);
+                    
+                    // 선택된 장소인 경우 다른 이미지 사용
+                    const isSelected = this.selectedPlace && place.id === this.selectedPlace.id;
+                    const markerImage = isSelected ? 
+                        new window.kakao.maps.MarkerImage(
+                            'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
+                            new window.kakao.maps.Size(24, 35)
+                        ) : null;
+                    
+                    const marker = new window.kakao.maps.Marker({
+                        map: this.kakaoMap,
+                        position: placePosition,
+                        image: markerImage,
+                        zIndex: isSelected ? 2 : 1 // 선택된 마커는 더 높은 z-index
+                    });
+                    
+                    this.markers.push(marker);
+                    
+                    // 마커 클릭 이벤트 등록
+                    window.kakao.maps.event.addListener(marker, 'click', () => {
+                        this.selectedPlace = place;
+                        this.meeting.place = place.place_name;
+                        this.meeting.lat = place.y;
+                        this.meeting.lon = place.x;
+                        
+                        // 인포윈도우 내용 설정
+                        const content = `
+                            <div style="padding:10px; width:200px; text-align:center; font-size:14px;">
+                                <strong>${place.place_name}</strong>
+                                <p style="margin-top:5px; font-size:12px; color:#666;">${place.address_name}</p>
+                            </div>
+                        `;
+                        
+                        // 인포윈도우 표시
+                        this.infowindow.setContent(content);
+                        this.infowindow.open(this.kakaoMap, marker);
+                        
+                        this.updateMarkers();
+                        this.kakaoMap.setCenter(placePosition);
+                        this.highlightSelectedPlace();
+                    });
+                    
+                    // 선택된 마커에 인포윈도우 표시
+                    if (isSelected && this.infowindow) {
+                        const content = `
+                            <div style="padding:10px; width:200px; text-align:center; font-size:14px;">
+                                <strong>${place.place_name}</strong>
+                                <p style="margin-top:5px; font-size:12px; color:#666;">${place.address_name}</p>
+                            </div>
+                        `;
+                        
+                        this.infowindow.setContent(content);
+                        this.infowindow.open(this.kakaoMap, marker);
+                    }
+                });
+            }
+        },
+        
+        // 검색 결과 리스트에서 선택된 장소 강조
+        highlightSelectedPlace() {
+            this.$nextTick(() => {
+                const listItems = document.querySelectorAll('.search-result-item');
+                listItems.forEach(item => {
+                    item.classList.remove('selected-place');
+                });
+                
+                if (this.selectedPlace) {
+                    const selectedItem = Array.from(listItems).find(item => 
+                        item.getAttribute('data-id') === this.selectedPlace.id
+                    );
+                    if (selectedItem) {
+                        selectedItem.classList.add('selected-place');
+                        selectedItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
         },
         
         // 장소 선택
@@ -1220,7 +1355,11 @@ export default{
             // 선택한 장소에 마커 표시
             const marker = new window.kakao.maps.Marker({
                 map: this.kakaoMap,
-                position: new window.kakao.maps.LatLng(place.y, place.x)
+                position: new window.kakao.maps.LatLng(place.y, place.x),
+                image: new window.kakao.maps.MarkerImage(
+                    'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
+                    new window.kakao.maps.Size(24, 35)
+                )
             });
             
             this.markers.push(marker);

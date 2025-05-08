@@ -11,6 +11,8 @@ import MeetingUpdate from "@/views/gathering/MeetingUpdate.vue";
 import MyGathering from "@/views/gathering/MyGathering.vue";
 import RecommendGathering from "@/views/gathering/RecommendGathering.vue";
 import RecommendMeeting from "@/views/gathering/RecommendMeeting.vue";
+import AroundGathering from "@/views/gathering/AroundGathering.vue";
+import MyMeeting from "@/views/gathering/MyMeeting.vue";
 
 export const gatheringRouter= [
     {
@@ -77,6 +79,16 @@ export const gatheringRouter= [
         path:'/silverpotion/kakaomap',
         name: 'KakaoMap',
         component: KakaoMap
+    },
+    {
+        path:'/silverpotion/gathering/aroundgathering',
+        name: 'AroundGathering',
+        component: AroundGathering
+    },
+    {
+        path:'/silverpotion/gathering/mymeeting',
+        name: 'MyMeeting',
+        component: MyMeeting
     },
 
 ]

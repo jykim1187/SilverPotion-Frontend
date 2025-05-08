@@ -630,7 +630,19 @@ export default{
     },
     methods: {
         handleBackButton() {
-            this.$router.go(-1);
+            // 이전 라우트 경로 확인
+            const previousRoute = this.$router.options.history.state.back;
+            
+            // 이전 경로가 정모 수정 또는 모임 수정인 경우 모임 메인 페이지로 이동
+            if (previousRoute && (
+                previousRoute.includes('/silverpotion/gathering/update/') || 
+                previousRoute.includes('/silverpotion/meeting/update/')
+            )) {
+                this.$router.push('/silverpotion/gathering/main');
+            } else {
+                // 그 외의 경우 일반적인 뒤로가기
+                this.$router.go(-1);
+            }
         },
         async fetchGatheringInfo() {
             try {

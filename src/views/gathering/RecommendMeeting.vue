@@ -76,6 +76,9 @@
                                 </div>
                                 <div class="d-flex align-center mt-1">
                                     <span class="font-weight-medium">{{ meeting.name }}</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <span class="font-weight-medium">{{ meeting.gatheringName || '모임 정보 없음' }}</span>
                                     <v-chip
                                         size="x-small"
                                         class="ml-2"
@@ -104,9 +107,6 @@
                                         <v-icon size="x-small" class="mr-1">mdi-currency-krw</v-icon>
                                         <span class="text-caption">{{ meeting.cost > 0 ? `${meeting.cost}원` : '회비없음' }}</span>
                                     </div>
-                                </div>
-                                <div class="text-caption text-grey mt-1">
-                                    <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
                                 </div>
                             </div>
                         </v-list-item>
@@ -208,6 +208,22 @@ export default{
             this.loadingMeetings = true;
             try {
                 const token = localStorage.getItem('accessToken');
+                
+                // 먼저 내 정모 목록을 가져옵니다
+                const myMeetingsResponse = await axios.get(
+                    `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/mymeetings`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+                const myMeetings = myMeetingsResponse.data.result || [];
+                
+                // 내 정모 ID 목록 생성
+                const myMeetingIds = myMeetings.map(meeting => meeting.meetingId);
+                
+                // 추천 정모 가져오기
                 const response = await axios.get(
                     `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/upcoming`,
                     {
@@ -218,9 +234,12 @@ export default{
                 );
                 const meetings = response.data.result || [];
                 
+                // 내 정모가 아닌 것만 필터링
+                const filteredMeetings = meetings.filter(meeting => !myMeetingIds.includes(meeting.meetingId));
+                
                 // 모임 정보 가져오기
                 const meetingsWithGatheringInfo = await Promise.all(
-                    meetings.map(async (meeting) => {
+                    filteredMeetings.map(async (meeting) => {
                         try {
                             const gatheringResponse = await axios.get(
                                 `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`,

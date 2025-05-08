@@ -84,7 +84,7 @@
                     hover
                 >
                     <template v-slot:prepend>
-                        <v-avatar size="50" rounded>
+                        <v-avatar size="90" rounded>
                             <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
                                    cover
                                    alt="모임 이미지"></v-img>
@@ -113,7 +113,99 @@
                 </v-list-item>
             </v-list>
         </div>
+
+        <!-- 내 정모 섹션 -->
+        <div class="d-flex justify-space-between align-center mt-6 mb-4">
+            <h2 class="text-h6 font-weight-medium">참가 예정 정모</h2>
+            <v-btn 
+                v-if="myMeetings.length > 0"
+                variant="text" 
+                color="primary"
+                @click="$router.push('/silverpotion/gathering/mymeeting')"
+            >
+                더보기 <v-icon>mdi-chevron-right</v-icon>
+            </v-btn>
+        </div>
         
+        <!-- 내 정모 목록 -->
+        <div v-if="loadingMyMeetings" class="text-center my-4">
+            <v-progress-circular indeterminate color="primary"></v-progress-circular>
+            <p class="mt-2">정모 정보를 불러오는 중...</p>
+        </div>
+        
+        <div v-else-if="myMeetingError" class="text-center pa-4">
+            <v-icon color="error" size="large">mdi-alert-circle</v-icon>
+            <p class="mt-2">{{ myMeetingError }}</p>
+            <v-btn color="primary" class="mt-3" @click="fetchMyMeetings">다시 시도</v-btn>
+        </div>
+        
+        <div v-else-if="myMeetings.length === 0" class="text-center pa-4">
+            <v-icon color="grey-lighten-1" size="large">mdi-calendar-blank</v-icon>
+            <p class="mt-2">참가 예정인 정모가 없습니다.</p>
+        </div>
+        
+        <div v-else>
+            <v-list>
+                <v-list-item 
+                    v-for="meeting in myMeetings.slice(0, 3)" 
+                    :key="meeting.meetingId"
+                    class="mb-2"
+                    @click="goToGatheringDetail(meeting.gatheringId)"
+                    :ripple="true"
+                    hover
+                >
+                    <template v-slot:prepend>
+                        <v-avatar size="90" rounded>
+                            <v-img :src="meeting.imageUrl || require('@/assets/default-gathering.png')" 
+                                   cover
+                                   alt="정모 이미지"></v-img>
+                        </v-avatar>
+                    </template>
+                    
+                    <div>
+                        <div class="d-flex align-center">
+                            <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+                            <span class="text-caption">{{ formatDate(meeting.meetingDate) }} {{ formatTime(meeting.meetingTime) }}</span>
+                        </div>
+                        <div class="d-flex align-center mt-1">
+                            <span class="font-weight-medium">{{ meeting.name }}</span>
+                        </div>
+                        <div class="d-flex align-center mt-1">
+                            <span class="font-weight-medium">{{ meeting.gatheringName || '모임 정보 없음' }}</span>
+                            <v-chip
+                                size="x-small"
+                                class="ml-2"
+                                color="primary"
+                                variant="outlined"
+                            >
+                                {{ meeting.category || '카테고리 정보 없음' }}
+                            </v-chip>
+                        </div>
+                        <div class="d-flex align-center mt-1">
+                            <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                            <span class="text-caption">{{ meeting.place }}</span>
+                        </div>
+                        <div class="d-flex align-center mt-1">
+                            <!-- 인원 정보 -->
+                            <div class="d-flex align-center">
+                                <v-icon size="x-small" class="mr-1">mdi-account-multiple</v-icon>
+                                <span class="text-caption">{{ meeting.attendees ? meeting.attendees.length : 0 }}/{{ meeting.maxPeople }}명</span>
+                            </div>
+                            
+                            <!-- 구분선 -->
+                            <v-divider vertical class="mx-2" style="height: 12px;"></v-divider>
+                            
+                            <!-- 비용 정보 -->
+                            <div class="d-flex align-center">
+                                <v-icon size="x-small" class="mr-1">mdi-currency-krw</v-icon>
+                                <span class="text-caption">{{ formatCost(meeting.cost) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </v-list-item>
+            </v-list>
+        </div>
+
         <!-- 내 주변 모임 섹션 -->
         <div class="mt-8">
             <div class="d-flex justify-space-between align-center mb-4">
@@ -136,7 +228,7 @@
             <div v-else>
                 <v-list>
                     <v-list-item 
-                        v-for="gathering in filteredRecommendedGatherings.slice(0, 5)" 
+                        v-for="gathering in filteredRecommendedGatherings.slice(0, 3)" 
                         :key="gathering.id"
                         class="mb-2"
                         @click="goToGatheringDetail(gathering.id)"
@@ -144,7 +236,7 @@
                         hover
                     >
                         <template v-slot:prepend>
-                            <v-avatar size="50" rounded>
+                            <v-avatar size="90" rounded>
                                 <v-img :src="gathering.imageUrl || require('@/assets/default-gathering.png')" 
                                        cover
                                        alt="모임 이미지"></v-img>
@@ -182,9 +274,14 @@
         <div class="mt-8">
             <div class="d-flex justify-space-between align-center mb-4">
                 <h2 class="text-h6 font-weight-medium">추천 정모</h2>
-                <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/recommendMeeting')">
-                    더보기 <v-icon>mdi-chevron-right</v-icon>
-                </v-btn>
+                <div class="d-flex flex-column align-end">
+                    <v-btn variant="text" color="primary" @click="$router.push('/silverpotion/gathering/recommendMeeting')">
+                        날짜별 정모 더보기 <v-icon>mdi-chevron-right</v-icon>
+                    </v-btn>
+                    <v-btn variant="text" color="primary" class="mb-1" @click="$router.push('/silverpotion/gathering/aroundgathering')">
+                        주변 정모 더보기 <v-icon>mdi-chevron-right</v-icon>
+                    </v-btn>
+                </div>
             </div>
             
             <div v-if="loadingMeetings" class="text-center my-4">
@@ -237,7 +334,7 @@
                             hover
                         >
                             <template v-slot:prepend>
-                                <v-avatar size="50" rounded>
+                                <v-avatar size="90" rounded>
                                     <v-img :src="meeting.imageUrl || require('@/assets/default-gathering.png')" 
                                            cover
                                            alt="정모 이미지"></v-img>
@@ -251,6 +348,9 @@
                                 </div>
                                 <div class="d-flex align-center mt-1">
                                     <span class="font-weight-medium">{{ meeting.name }}</span>
+                                </div>
+                                <div class="d-flex align-center mt-1">
+                                    <span class="font-weight-medium">{{ meeting.gatheringName || '모임 정보 없음' }}</span>
                                     <v-chip
                                         size="x-small"
                                         class="ml-2"
@@ -279,9 +379,6 @@
                                         <v-icon size="x-small" class="mr-1">mdi-currency-krw</v-icon>
                                         <span class="text-caption">{{ formatCost(meeting.cost) }}</span>
                                     </div>
-                                </div>
-                                <div class="text-caption text-grey mt-1">
-                                    <span>{{ meeting.gatheringName || '모임 정보 없음' }}</span>
                                 </div>
                             </div>
                         </v-list-item>
@@ -409,7 +506,10 @@ export default{
             // 지역 선택 모달 관련 변수 추가
             regionModalOpen: false,
             selectedRegion: null,
-            updatingRegion: false
+            updatingRegion: false,
+            myMeetings: [],
+            loadingMyMeetings: false,
+            myMeetingError: null,
         }
     },
     computed: {
@@ -512,6 +612,7 @@ export default{
         this.fetchUserProfile();
         this.fetchMyGatherings();
         this.fetchUpcomingMeetings();
+        this.fetchMyMeetings();
     },
     watch: {
         userInfo(newValue) {
@@ -666,12 +767,23 @@ export default{
         async fetchUpcomingMeetings() {
             this.loadingMeetings = true;
             try {
+                // 먼저 내 정모 목록을 가져옵니다
+                const myMeetingsResponse = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/mymeetings`);
+                const myMeetings = myMeetingsResponse.data.result || [];
+                
+                // 내 정모 ID 목록 생성
+                const myMeetingIds = myMeetings.map(meeting => meeting.meetingId);
+                
+                // 추천 정모 가져오기
                 const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/upcoming`);
                 const meetings = response.data.result || [];
                 
+                // 내 정모가 아닌 것만 필터링
+                const filteredMeetings = meetings.filter(meeting => !myMeetingIds.includes(meeting.meetingId));
+                
                 // 모임 정보 가져오기
                 const meetingsWithGatheringInfo = await Promise.all(
-                    meetings.map(async (meeting) => {
+                    filteredMeetings.map(async (meeting) => {
                         try {
                             const gatheringResponse = await axios.get(
                                 `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`
@@ -711,6 +823,50 @@ export default{
         selectDate(index) {
             if (index >= 0 && index < this.dateButtons.length) {
                 this.selectedDateIndex = index;
+            }
+        },
+        async fetchMyMeetings() {
+            this.loadingMyMeetings = true;
+            try {
+                const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/meeting/mymeetings`);
+                const meetings = response.data.result || [];
+                
+                // 모임 정보 가져오기
+                const meetingsWithGatheringInfo = await Promise.all(
+                    meetings.map(async (meeting) => {
+                        try {
+                            const gatheringResponse = await axios.get(
+                                `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${meeting.gatheringId}`
+                            );
+                            const gatheringInfo = gatheringResponse.data.result;
+                            
+                            return {
+                                ...meeting,
+                                gatheringName: gatheringInfo.gatheringName,
+                                category: gatheringInfo.category,
+                                region: gatheringInfo.region
+                            };
+                        } catch (err) {
+                            console.error(`모임 정보를 불러오는데 실패했습니다 (ID: ${meeting.gatheringId}):`, err);
+                            return {
+                                ...meeting,
+                                gatheringName: '모임 정보 없음',
+                                category: '카테고리 정보 없음',
+                                region: '지역 정보 없음'
+                            };
+                        }
+                    })
+                );
+                
+                // 날짜순으로 정렬
+                this.myMeetings = meetingsWithGatheringInfo.sort((a, b) => 
+                    new Date(a.meetingDate) - new Date(b.meetingDate)
+                );
+            } catch (err) {
+                console.error('내 정모 정보를 불러오는데 실패했습니다:', err);
+                this.myMeetingError = '내 정모 정보를 불러오는데 실패했습니다.';
+            } finally {
+                this.loadingMyMeetings = false;
             }
         }
     }

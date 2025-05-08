@@ -205,7 +205,7 @@
                                     <v-text-field
                                         v-model="gatheringData.maxPeople"
                                         type="number"
-                                        style="width: 70px"
+                                        style="width: 75px"
                                         density="compact"
                                         variant="outlined"
                                         min="2"

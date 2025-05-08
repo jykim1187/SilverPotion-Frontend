@@ -65,16 +65,25 @@
                         <template v-slot:append>
                             <div class="d-flex">
                                 <!-- 가입 대기 중인 멤버 -->
-                                <v-btn
-                                    v-if="member.status === 'WAIT'"
-                                    color="success"
-                                    variant="tonal"
-                                    size="small"
-                                    class="mr-2"
-                                    @click="showApproveDialog(member)"
-                                >
-                                    가입 승인
-                                </v-btn>
+                                <div v-if="member.status === 'WAIT'" class="d-flex">
+                                    <v-btn
+                                        color="primary"
+                                        variant="outlined"
+                                        size="small"
+                                        class="mr-2"
+                                        @click="showGreetingDialog(member)"
+                                    >
+                                        가입인사 보기
+                                    </v-btn>
+                                    <v-btn
+                                        color="success"
+                                        variant="tonal"
+                                        size="small"
+                                        @click="showApproveDialog(member)"
+                                    >
+                                        가입 승인
+                                    </v-btn>
+                                </div>
                                 
                                 <!-- 활성화된 멤버 (모임장 위임, 강퇴 버튼) -->
                                 <template v-else-if="member.status === 'ACTIVATE'">
@@ -165,6 +174,24 @@
             </v-card>
         </v-dialog>
 
+        <!-- 가입인사 다이얼로그 -->
+        <v-dialog v-model="showGreetingMessageDialog" max-width="400">
+            <v-card>
+                <v-card-title class="text-h6">가입인사</v-card-title>
+                <v-card-text>
+                    <p class="font-weight-medium mb-2">{{ selectedMember?.nickname }}님의 가입인사</p>
+                    <v-card flat outlined class="pa-3">
+                        <p v-if="selectedMember?.introduce" class="text-body-1">{{ selectedMember.introduce }}</p>
+                        <p v-else class="text-body-2 text-grey">작성된 가입인사가 없습니다.</p>
+                    </v-card>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" variant="text" @click="showGreetingMessageDialog = false">닫기</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- 알림 다이얼로그 -->
         <v-dialog v-model="showAlert" max-width="300">
             <v-card>
@@ -199,7 +226,8 @@ export default{
             showAlert: false,
             alertMessage: '',
             showApproveMemberDialog: false,
-            roomId: null
+            roomId: null,
+            showGreetingMessageDialog: false
         }
     },
     computed: {
@@ -290,6 +318,10 @@ export default{
         showApproveDialog(member) {
             this.selectedMember = member;
             this.showApproveMemberDialog = true;
+        },
+        showGreetingDialog(member) {
+            this.selectedMember = member;
+            this.showGreetingMessageDialog = true;
         },
         async approveMember() {
             if (!this.selectedMember) return;
