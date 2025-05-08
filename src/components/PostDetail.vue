@@ -973,12 +973,11 @@ export default {
 }
 
 .comment-input {
-  width: 780px;
+  width: 100%;
   position: fixed;
   bottom: 0;
-  left: 50%;
+  left: 0;
   right: 0;
-  transform: translateX(-50%);
   padding: 0;
   background-color: white;
   display: flex;
@@ -992,7 +991,6 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: calc(100% - 32px);
   padding: 8px 16px;
   margin: 0 auto;
 }
@@ -1000,13 +998,23 @@ export default {
 /* Container의 반응형 너비에 맞추기 위한 미디어 쿼리 */
 @media (min-width: 1264px) {
   .comment-input-container {
-    max-width: 1185px; /* Vuetify의 .container.v-container--fluid 너비 */
+    max-width: 1185px;
   }
 }
 
 @media (min-width: 960px) and (max-width: 1263px) {
   .comment-input-container {
-    max-width: 900px; /* Vuetify의 .container.v-container--fluid 너비 */
+    max-width: 900px;
+  }
+}
+
+@media (max-width: 959px) {
+  .comment-input-container {
+    max-width: 100%;
+  }
+  
+  .v-container {
+    padding-bottom: 80px; /* 모바일에서 댓글 입력창 높이만큼 여백 추가 */
   }
 }
 

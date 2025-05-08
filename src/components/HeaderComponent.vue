@@ -1,14 +1,65 @@
 <template>
-    <v-app-bar dark elevation="1" height="56" class="header-app-bar">
+    <v-app-bar elevation="1" height="56" class="header-app-bar">
         <div class="header-container">
             <v-row no-gutters align="center" justify="space-between" class="header-row">
                 <v-col cols="4" class="d-flex align-center">
-                    <v-btn :to="{path: '/'}" class="logo-btn" style="height: auto; background: transparent; box-shadow: none;">
-                        <img src="@/assets/logo.png" alt="Silver Potion" style="height: 28px; width: auto;">
-                    </v-btn>
-                    
-                    <v-btn :to="{path:'/silverpotion/user/list'}" variant="text" class="text-body-2 text-truncate ml-2">회원목록</v-btn>
-                    
+                    <v-menu v-if="isLogin" v-model="profileMenu" :close-on-content-click="false" location="bottom end" min-width="200">
+                        <template v-slot:activator="{ props }">
+                            <v-btn class="ml-2" icon v-bind="props">
+                                <v-avatar size="36">
+                                    <img :src="profileImage || require('@/assets/default-profile.png')" alt="프로필"
+                                    style="object-fit: cover; width: 100%; height: 100%; border-radius: 50%;" >
+                                </v-avatar>
+                            </v-btn>
+                        </template>
+                        <v-card>
+                            <v-list>
+                                <v-list-item>
+                                    <v-list-item-title>
+                                        <v-btn :to="{path:'/silverpotion/mypage'}" variant="text" block class="justify-start" @click="profileMenu = false">
+                                            <v-icon start>mdi-account</v-icon> 마이페이지
+                                        </v-btn>
+                                    </v-list-item-title>
+                                </v-list-item>
+                                <v-list-item>
+                                    <v-list-item-title>
+                                        <v-btn :to="{path:'/calendar'}" variant="text" block class="justify-start" @click="profileMenu = false">
+                                            <v-icon start>mdi-calendar</v-icon> 캘린더
+                                        </v-btn>
+                                    </v-list-item-title>
+                                </v-list-item>
+                                <v-list-item>
+                                    <v-list-item-title>
+                                        <v-btn :to="{path:'/chat-service/chat/my/rooms'}" variant="text" block class="justify-start" @click="profileMenu = false">
+                                            <v-icon start>mdi-chat</v-icon> 채팅목록
+                                        </v-btn>
+                                    </v-list-item-title>
+                                </v-list-item>
+                                <v-list-item>
+                                    <v-list-item-title>
+                                        <v-btn :to="{path:'/user/list'}" variant="text" block class="justify-start" @click="profileMenu = false">
+                                            <v-icon start>mdi-account-group</v-icon> 회원목록
+                                        </v-btn>
+                                    </v-list-item-title>
+                                </v-list-item>
+                                <v-list-item v-if="isAdmin">
+                                    <v-list-item-title>
+                                        <v-btn :to="{path:'/silverpotion/admin'}" variant="text" block class="justify-start" @click="profileMenu = false">
+                                            <v-icon start>mdi-shield-account</v-icon> 관리자 페이지
+                                        </v-btn>
+                                    </v-list-item-title>
+                                </v-list-item>
+                                <v-divider></v-divider>
+                                <v-list-item>
+                                    <v-list-item-title>
+                                        <v-btn @click="doLogout" variant="text" block class="justify-start">
+                                            <v-icon start>mdi-logout</v-icon> 로그아웃
+                                        </v-btn>
+                                    </v-list-item-title>
+                                </v-list-item>
+                            </v-list>
+                        </v-card>
+                    </v-menu>
                     <v-btn 
                         v-if="isGatheringMainPage" 
                         icon 
@@ -21,27 +72,22 @@
                 </v-col>
                 
                 <v-col cols="4" class="text-center d-flex align-center justify-center">
+                    <v-btn :to="{path: '/'}" class="logo-btn" style="height: 100%; background: transparent; box-shadow: none;">
+                        <img src="@/assets/app.logo 1.png" alt="Silver Potion" style="height: 42px;">
+                    </v-btn>
                 </v-col>
                 
                 <v-col cols="4" class="d-flex align-center justify-end">
-                    <div class="button-group">
+                    <div class="button-group" style="transform: translateX(0);">
                         <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/create'}" variant="text" class="text-body-2 text-truncate">회원가입</v-btn>
                         <v-btn v-if="!isLogin" :to="{path:'/silverpotion/user/login'}" variant="text" class="text-body-2 text-truncate">로그인</v-btn>
                         
                         <v-btn v-if="isLogin" :to="{path:'/chat-service/chat/my/rooms'}" icon class="ml-2" size="small">
-                            <v-icon size="20">mdi-message-outline</v-icon>
+                            <img src="@/assets/comments-regular.svg" alt="chat" style="width: 35px; height: 35px;" />
                         </v-btn>
-                        
-                        <v-btn
-                            v-if="isLogin"
-                            icon
-                            class="ml-2"
-                            color="grey-darken-3"
-                            size="small"
-                            variant="text"
-                            :to="{ path: '/notification' }"
-                            >
-                            <v-icon size="24">mdi-bell-ring-outline</v-icon>
+                        <v-btn v-if="isLogin" icon class="ml-2 mr-2" color="grey-darken-3" size="small" variant="text" :to="{ path: '/notification' }">
+                            <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
+
                             <v-badge
                                 v-if="hasNotifications"
                                 color="error"
@@ -51,57 +97,6 @@
                                 offset-y="3"
                             ></v-badge>
                         </v-btn>
-                        
-                        <v-menu v-if="isLogin" v-model="profileMenu" :close-on-content-click="false" location="bottom end" min-width="200">
-                            <template v-slot:activator="{ props }">
-                                <v-btn class="ml-2" icon v-bind="props">
-                                    <v-avatar size="45">
-                                        <img :src="profileImage || require('@/assets/default-profile.png')" alt="프로필"
-                                        style="object-fit: cover; width: 100%; height: 100%;" >
-                                    </v-avatar>
-                                </v-btn>
-                            </template>
-                            <v-card>
-                                <v-list>
-                                    <v-list-item>
-                                        <v-list-item-title>
-                                            <v-btn :to="{path:'/silverpotion/mypage'}" variant="text" block class="justify-start">
-                                                <v-icon start>mdi-account</v-icon> 마이페이지
-                                            </v-btn>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item>
-                                        <v-list-item-title>
-                                            <v-btn :to="{path:'/calendar'}" variant="text" block class="justify-start">
-                                                <v-icon start>mdi-calendar</v-icon> 캘린더
-                                            </v-btn>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item>
-                                        <v-list-item-title>
-                                            <v-btn :to="{path:'/chat-service/chat/my/rooms'}" variant="text" block class="justify-start">
-                                                <v-icon start>mdi-chat</v-icon> 채팅목록
-                                            </v-btn>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item v-if="isAdmin">
-                                        <v-list-item-title>
-                                            <v-btn :to="{path:'/silverpotion/admin'}" variant="text" block class="justify-start">
-                                                <v-icon start>mdi-shield-account</v-icon> 관리자 페이지
-                                            </v-btn>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                    <v-divider></v-divider>
-                                    <v-list-item>
-                                        <v-list-item-title>
-                                            <v-btn @click="doLogout" variant="text" block class="justify-start">
-                                                <v-icon start>mdi-logout</v-icon> 로그아웃
-                                            </v-btn>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                </v-list>
-                            </v-card>
-                        </v-menu>
                     </div>
                 </v-col>
             </v-row>
@@ -214,12 +209,14 @@ export default {
     left: 50% !important;
     transform: translateX(-50%) !important;
     position: fixed;
+    background: #fff !important;
+    color: #222 !important;
 }
 
 .header-container {
     width: 100%;
-    padding: 0 16px;
-    overflow: hidden;
+    padding: 0 8px;
+    overflow: visible;
 }
 
 .header-row {
@@ -230,7 +227,7 @@ export default {
 .button-group {
     display: flex;
     align-items: center;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .text-truncate {
@@ -247,12 +244,25 @@ export default {
 
 @media (max-width: 768px) {
     .header-content {
-        padding: 0 8px;
+        padding: 0 4px;
     }
     
     .v-btn {
         min-width: 0;
-        padding: 0 8px;
+        padding: 0 4px;
+    }
+
+    .button-group {
+        margin-right: 0 !important;
+    }
+
+    .v-avatar {
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    .v-btn .v-avatar {
+        margin: 0 !important;
     }
 }
 </style>
