@@ -115,7 +115,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, reactive } from 'vue';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -151,30 +151,6 @@ export default {
       return element ? new bootstrap.Modal(element, { backdrop: false }) : null;
     };
 
-    const calendarOptions = {
-      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-      initialView: 'timeGridWeek',
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-      },
-      locale: 'ko',
-      slotMinTime: '00:00:00',
-      slotMaxTime: '24:00:00',
-      allDaySlot: true,
-      editable: true,
-      selectable: true,
-      selectMirror: true,
-      dayMaxEvents: true,
-      weekends: true,
-      events: [],
-      eventClick: handleEventClick,
-      dateClick: handleDateClick,
-      eventDrop: handleEventDrop,
-      eventResize: handleEventResize
-    };
-
     async function handleEventClick(info) {
       try {
         const response = await axios.get(
@@ -196,19 +172,21 @@ export default {
 
     function formatDateForInput(date) {
       if (!date) return '';
-      const d = new Date(date);
-      return d.toISOString().slice(0, 16);
+      return format(new Date(date), 'yyyy-MM-dd\'T\'HH:mm:ss');
     }
 
     function handleDateClick(info) {
       const clickedDate = new Date(info.date);
-      clickedDate.setHours(9, 0, 0, 0); // 기본 시작 시간을 오전 9시로 설정
+      clickedDate.setHours(9, 0, 0, 0);
+      
+      const endDate = new Date(clickedDate);
+      endDate.setHours(clickedDate.getHours() + 1);
       
       newEvent.value = {
         title: '',
         description: '',
         start: formatDateForInput(clickedDate),
-        end: '',
+        end: formatDateForInput(endDate),
         place: '',
         allDay: false
       };
@@ -242,6 +220,33 @@ export default {
       }
     }
 
+    const calendarOptions = reactive({
+      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      },
+      locale: 'ko',
+      slotMinTime: '00:00:00',
+      slotMaxTime: '24:00:00',
+      allDaySlot: true,
+      editable: true,
+      selectable: true,
+      selectMirror: true,
+      dayMaxEventRows: false,
+      dayMaxEvents: false,
+      height: 'parent',
+      expandRows: true,
+      weekends: true,
+      events: [],
+      eventClick: handleEventClick,
+      dateClick: handleDateClick,
+      eventDrop: handleEventDrop,
+      eventResize: handleEventResize
+    });
+
     function formatDateArrayToISO(dateArray) {
       if (!dateArray || !Array.isArray(dateArray)) return null;
       const [year, month, day, hour = 0, minute = 0] = dateArray;
@@ -252,14 +257,11 @@ export default {
     async function fetchEvents() {
       try {
         const loginId = localStorage.getItem('loginId');
-        console.log('Fetching events with loginId:', loginId);
         
         const response = await axios.get(
           `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/calendar/my`,
           { headers: { 'X-User-LoginId': loginId } }
         );
-        
-        console.log('API Response:', response.data);
         
         let events = [];
         if (Array.isArray(response.data)) {
@@ -271,8 +273,6 @@ export default {
         } else if (response.data.calendars) {
           events = response.data.calendars;
         }
-
-        console.log('Processed events:', events);
 
         const formattedEvents = events.map(event => {
           const formattedEvent = {
@@ -289,15 +289,12 @@ export default {
               source: event.source
             }
           };
-          console.log('Formatted event:', formattedEvent);
           return formattedEvent;
         });
 
         calendarOptions.events = formattedEvents;
-        console.log('Calendar options events:', calendarOptions.events);
 
         if (calendar.value) {
-          console.log('Refreshing calendar events');
           calendar.value.getApi().removeAllEvents();
           calendar.value.getApi().addEventSource(formattedEvents);
         }
@@ -331,16 +328,16 @@ export default {
       try {
         const loginId = localStorage.getItem('loginId');
         const eventData = {
-          id: editingEvent.value ? editingEvent.value.id : null,
           title: newEvent.value.title,
           description: newEvent.value.description,
-          start: new Date(newEvent.value.start),
-          end: newEvent.value.end ? new Date(newEvent.value.end) : null,
+          start: format(new Date(newEvent.value.start), 'yyyy-MM-dd\'T\'HH:mm:ss'),
+          end: newEvent.value.end ? format(new Date(newEvent.value.end), 'yyyy-MM-dd\'T\'HH:mm:ss') : null,
           place: newEvent.value.place,
           allDay: newEvent.value.allDay
         };
 
         if (editingEvent.value) {
+          eventData.id = editingEvent.value.id;
           await axios.put(
             `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/calendar/update`,
             eventData,
@@ -429,115 +426,447 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
+/* 날짜 숫자의 기본 a 태그 스타일 제거 (전역 적용) */
+.fc-daygrid-day-number a {
+  all: unset;
+  color: #222 !important;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+/* 오늘 날짜 강조 */
+.fc-day-today .fc-daygrid-day-number a {
+  color: #1976d2 !important;
+  font-weight: 700;
+}
+
+/* 일요일 빨간색 */
+.fc-day-sun .fc-daygrid-day-number a {
+  color: #e74c3c !important;
+}
+
+/* 토요일도 일반색 */
+.fc-day-sat .fc-daygrid-day-number a {
+  color: #222 !important;
+}
+
+.container-fluid {
+  min-height: 100vh;
+  padding: 2rem;
+  margin-bottom: 4rem;
+}
+
 .card {
-  border-radius: 0.5rem;
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
 }
 
-.modal-content {
-  border-radius: 0.5rem;
-}
-
-.modal-dialog {
-  margin-top: 100px !important;
-}
-
-.modal {
-  z-index: 1050 !important;
-}
-
-.form-control:focus {
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+.card-header {
+  background-color: #e8f4ff !important;
+  border-bottom: 2px solid #d1e7ff;
 }
 
 .btn-primary {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: #7eb6ff;
+  border-color: #7eb6ff;
+  transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-  background-color: #0b5ed7;
-  border-color: #0a58ca;
+  background-color: #5ca0ff;
+  border-color: #5ca0ff;
+  transform: translateY(-1px);
 }
 
-.btn-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
-}
-
-.btn-danger:hover {
-  background-color: #bb2d3b;
-  border-color: #b02a37;
+.card-body {
+  height: 700px;
+  overflow-y: auto;
+  position: relative;
+  padding: 1.5rem;
 }
 
 .fc {
-  height: calc(100vh - 200px) !important;
+  min-height: 700px;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  margin-bottom: 2rem;
+}
+
+/* FullCalendar 헤더 고정 */
+.fc-scrollgrid {
+  border: none !important;
+}
+
+.fc .fc-scrollgrid-section-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 999 !important;
+  background: #f8fbff !important;
+}
+
+.fc-scrollgrid-section-header table {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: white !important;
+}
+
+.fc-scrollgrid-section-header th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: white !important;
+  border-bottom: 2px solid #e8f4ff !important;
+}
+
+.fc-scrollgrid-section-header .fc-scrollgrid-sync-inner {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: white !important;
+}
+
+/* 내부 스크롤러 설정 */
+.fc-scroller {
+  overflow: visible !important;
+}
+
+.fc-scroller-liquid-absolute {
+  position: relative !important;
+}
+
+.fc .fc-scrollgrid-section-body {
+  overflow-y: auto !important;
+  max-height: 500px;
+}
+
+.fc-scrollgrid-section-body table {
+  min-height: 100% !important;
+}
+
+.fc-daygrid-day-frame {
+  min-height: 100px;
 }
 
 .fc-event {
   cursor: pointer;
-  margin: 1.5px 0 !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-  height: calc(100% - 3px) !important;
-  border-radius: 2px !important;
-  min-height: 20px !important;
+  margin: 2px 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  min-height: 24px !important;
+  transition: all 0.2s ease;
 }
 
 .fc-event:hover {
-  opacity: 0.9;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .fc-toolbar-title {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
+  color: #4a90e2;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .fc-button-primary {
-  background-color: #0d6efd !important;
-  border-color: #0d6efd !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: -0.3px;
 }
 
 .fc-button-primary:hover {
-  background-color: #0b5ed7 !important;
-  border-color: #0a58ca !important;
+  background-color: #5ca0ff !important;
+  border-color: #5ca0ff !important;
+  transform: translateY(-1px);
 }
 
 .fc-button-primary:not(:disabled).fc-button-active {
-  background-color: #0a58ca !important;
-  border-color: #0a58ca !important;
+  background-color: #4a90e2 !important;
+  border-color: #4a90e2 !important;
 }
 
-/* 이벤트 간격 추가 */
 .fc-timegrid-event {
-  margin: 1.5px 0 !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-  height: calc(100% - 3px) !important;
-  border-radius: 2px !important;
-  min-height: 20px !important;
+  margin: 2px 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  min-height: 24px !important;
 }
 
 .fc-daygrid-event {
-  margin: 1.5px 0 !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-  height: calc(100% - 3px) !important;
-  border-radius: 2px !important;
-  min-height: 20px !important;
+  margin: 2px 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  min-height: 24px !important;
 }
 
-/* 이벤트 내용 스타일 */
 .fc-event-title {
   font-weight: 500;
-  padding: 0 4px;
-  font-size: 0.9em;
+  font-size: 0.9rem;
+  letter-spacing: -0.2px;
+  padding: 2px 6px;
 }
 
 .fc-event-time {
-  font-size: 0.8em;
-  opacity: 0.8;
-  padding: 0 4px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.9;
+  padding: 2px 6px;
+}
+
+.fc-day-today {
+  background-color: #f0f7ff !important;
+}
+
+.fc-day-today .fc-daygrid-day-number {
+  font-weight: 700;
+  color: #1976d2;
+}
+
+.fc-day-today .fc-daygrid-day-number:hover {
+  text-decoration: none !important;
+  color: #4a90e2 !important;
+}
+
+.fc-day-other {
+  background-color: #fafafa;
+}
+
+.fc-day-other .fc-daygrid-day-number {
+  color: #9e9e9e;
+  text-decoration: none !important;
+}
+
+.fc-day-other .fc-daygrid-day-number:hover {
+  text-decoration: none !important;
+  color: #4a90e2 !important;
+}
+
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: #e8f4ff;
+}
+
+/* 날짜 숫자를 기본 검정색으로 설정 (링크 스타일 제거) */
+.fc-daygrid-day-number {
+  color: #222 !important;
+  text-decoration: none !important;
+  cursor: default !important;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+/* 오늘 날짜 강조 */
+.fc-day-today .fc-daygrid-day-number {
+  font-weight: 700;
+  color: #1976d2;
+}
+
+/* 일요일 빨간색 */
+.fc-day-sun .fc-daygrid-day-number {
+  color: #e74c3c !important;
+}
+
+/* 토요일도 일반색 */
+.fc-day-sat .fc-daygrid-day-number {
+  color: #222 !important;
+}
+
+/* hover 효과 제거 */
+.fc-daygrid-day-number:hover {
+  color: inherit !important;
+  text-decoration: none !important;
+  cursor: default !important;
+}
+
+.modal-content {
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  background-color: #e8f4ff;
+  border-bottom: 2px solid #d1e7ff;
+  border-radius: 1rem 1rem 0 0;
+}
+
+.form-control:focus {
+  border-color: #7eb6ff;
+  box-shadow: 0 0 0 0.2rem rgba(126, 182, 255, 0.25);
+}
+
+.form-control {
+  border-radius: 8px;
+  border: 1px solid #d1e7ff;
+}
+
+.form-control:hover {
+  border-color: #7eb6ff;
+}
+
+.btn-danger {
+  background-color: #ff9eb6;
+  border-color: #ff9eb6;
+}
+
+.btn-danger:hover {
+  background-color: #ff7a9a;
+  border-color: #ff7a9a;
+}
+
+.btn-secondary {
+  background-color: #b4c6ff;
+  border-color: #b4c6ff;
+}
+
+.btn-secondary:hover {
+  background-color: #9ab0ff;
+  border-color: #9ab0ff;
+}
+
+/* 모달 스타일 수정 */
+.modal-dialog {
+  margin: 1.75rem auto;
+  max-width: 500px;
+}
+
+/* 페이지 전체 여백 조정 */
+body {
+  padding-bottom: 4rem;
+  min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7eb6ff;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5ca0ff;
+}
+
+.fc-day-sun .fc-daygrid-day-number {
+  color: #e74c3c !important;
+}
+.fc-day-mon .fc-daygrid-day-number,
+.fc-day-tue .fc-daygrid-day-number,
+.fc-day-wed .fc-daygrid-day-number,
+.fc-day-thu .fc-daygrid-day-number,
+.fc-day-fri .fc-daygrid-day-number,
+.fc-day-sat .fc-daygrid-day-number {
+  color: #222 !important;
+}
+
+/* 날짜 숫자의 기본 a 태그 스타일 제거 */
+.fc-daygrid-day-number a {
+  all: unset;
+  color: #222 !important;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+::v-deep(.fc-daygrid-day-number a) {
+  all: unset;
+  color: #222 !important;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.fc-col-header-cell {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: -0.5px;
+  background: #f8fbff;
+  border-bottom: 2px solid #e8f4ff;
+  padding: 12px 0;
+}
+
+.fc-col-header-cell-cushion {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: -0.5px;
+  background: transparent;
+  padding: 0 2px;
+  user-select: none;
+}
+
+/* 요일 헤더 - 일요일 빨간색 */
+.fc-day-sun .fc-col-header-cell-cushion {
+  color: #e74c3c !important;
+}
+
+/* 요일 헤더 - 토요일 파란색 */
+.fc-day-sat .fc-col-header-cell-cushion {
+  color: #1976d2 !important;
+}
+
+/* 월간/주간/일간: 요일 헤더 고정 */
+.fc .fc-scrollgrid-section-header,
+.fc .fc-col-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
+  background: #f8fbff !important;
+}
+
+/* 주간/일간: 시간 헤더(09:00 등) 고정 */
+.fc .fc-timegrid-axis,
+.fc .fc-timegrid-slot-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 998 !important;
+  background: #f8fbff !important;
+}
+
+@media (max-width: 600px) {
+  .fc-header-toolbar,
+  .fc-toolbar,
+  .fc-toolbar-ltr {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .fc-toolbar-title {
+    font-size: 1.1rem !important;
+    text-align: center !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .fc .fc-button-group,
+  .fc .fc-button {
+    width: 100% !important;
+    margin: 0.1rem 0 !important;
+    font-size: 0.95rem !important;
+    padding: 0.5rem 0 !important;
+  }
+  .fc .fc-button {
+    min-width: 0 !important;
+  }
 }
 </style>
