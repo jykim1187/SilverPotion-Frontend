@@ -176,7 +176,7 @@ export default {
                                 merchant_uid: rsp.merchant_uid
                             };
                         console.log(verifyData)
-                        const verifyRes = await axios.post("http://localhost:8080/user-service/silverpotion/payment/afterPayment",verifyData,{headers :{"X-User-LoginId" : this.loginId}})        
+                        const verifyRes = await axios.post("${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/payment/afterPayment",verifyData,{headers :{"X-User-LoginId" : this.loginId}})        
                         const result =verifyRes.data.result;
                         console.log(result)
                         this.showSuccessMessage = true;

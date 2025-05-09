@@ -21,36 +21,36 @@
                         <label class="section-label">질병 <span class="required">*</span></label>
                         <div class="checkbox-container">
                             <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="없음">
+                                <input type="checkbox" v-model="userInfo.disease" value="없음" @change="handleNoneDisease">
                                 <span class="option-text">없음</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="고혈압">
+                            <label class="checkbox-label" :class="{ 'disabled': isNoneDiseaseSelected }">
+                                <input type="checkbox" v-model="userInfo.disease" value="고혈압" :disabled="isNoneDiseaseSelected" @change="handleDiseaseChange">
                                 <span class="option-text">고혈압</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="당뇨">
+                            <label class="checkbox-label" :class="{ 'disabled': isNoneDiseaseSelected }">
+                                <input type="checkbox" v-model="userInfo.disease" value="당뇨" :disabled="isNoneDiseaseSelected" @change="handleDiseaseChange">
                                 <span class="option-text">당뇨</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="관절염">
+                            <label class="checkbox-label" :class="{ 'disabled': isNoneDiseaseSelected }">
+                                <input type="checkbox" v-model="userInfo.disease" value="관절염" :disabled="isNoneDiseaseSelected" @change="handleDiseaseChange">
                                 <span class="option-text">관절염</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="고지혈증">
+                            <label class="checkbox-label" :class="{ 'disabled': isNoneDiseaseSelected }">
+                                <input type="checkbox" v-model="userInfo.disease" value="고지혈증" :disabled="isNoneDiseaseSelected" @change="handleDiseaseChange">
                                 <span class="option-text">고지혈증</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="심혈관질환">
+                            <label class="checkbox-label" :class="{ 'disabled': isNoneDiseaseSelected }">
+                                <input type="checkbox" v-model="userInfo.disease" value="심혈관질환" :disabled="isNoneDiseaseSelected" @change="handleDiseaseChange">
                                 <span class="option-text">심혈관질환</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="userInfo.disease" value="기타" @change="toggleOtherDisease">
+                            <label class="checkbox-label" :class="{ 'disabled': isNoneDiseaseSelected }">
+                                <input type="checkbox" v-model="userInfo.disease" value="기타" @change="toggleOtherDisease" :disabled="isNoneDiseaseSelected">
                                 <span class="option-text">기타</span>
                             </label>
                         </div>
                         <div v-if="showOtherDiseaseInput" class="other-disease-input">
-                            <input type="text" v-model="otherDisease" placeholder="기타 질병을 입력하세요" @blur="addOtherDisease">
+                            <input type="text" v-model="otherDisease" placeholder="기타 질병을 입력하세요" @blur="addOtherDisease" :disabled="isNoneDiseaseSelected">
                         </div>
                         <div v-if="errors.disease" class="error-message">{{ errors.disease }}</div>
                     </div>
@@ -369,6 +369,7 @@ export default {
             currentStep: 1, // 1: 신체 건강, 2: 정신 건강
             showOtherDiseaseInput: false,
             otherDisease: '',
+            isNoneDiseaseSelected: false,
             userInfo: {
                 height: '',
                 weight: '',
@@ -423,6 +424,24 @@ export default {
         }
     },
     methods: {
+        handleNoneDisease(event) {
+            if (event.target.checked) {
+                // '없음'이 선택되면 다른 모든 질병 체크 해제
+                this.userInfo.disease = ['없음'];
+                this.isNoneDiseaseSelected = true;
+                this.showOtherDiseaseInput = false;
+                this.otherDisease = '';
+            } else {
+                this.isNoneDiseaseSelected = false;
+            }
+        },
+        handleDiseaseChange() {
+            // 다른 질병이 선택되면 '없음' 체크 해제
+            if (this.userInfo.disease.includes('없음')) {
+                this.userInfo.disease = this.userInfo.disease.filter(d => d !== '없음');
+                this.isNoneDiseaseSelected = false;
+            }
+        },
         toggleOtherDisease(event) {
             this.showOtherDiseaseInput = event.target.checked;
             // 체크 해제 시 기타 질병 정보 삭제
@@ -433,6 +452,8 @@ export default {
                 }
                 this.otherDisease = '';
             }
+            // 다른 질병이 선택되면 '없음' 체크 해제
+            this.handleDiseaseChange();
         },
         addOtherDisease() {
             if (this.otherDisease.trim() !== '') {
@@ -853,5 +874,14 @@ export default {
 
 .info {
     background-color: #2196f3;
+}
+
+.checkbox-label.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.checkbox-label.disabled span {
+    color: #999;
 }
 </style>
