@@ -31,8 +31,16 @@
             </v-btn>
           </template>
           <v-list>
-            <v-list-item @click="showReportDialog = true">
-              <v-list-item-title>신고하기</v-list-item-title>
+            <v-list-item @click="openReportDialog(post)" v-if="!isAuthor(post)">
+              <v-list-item-title>
+                신고하기
+              </v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="deletePost(post)" v-if="isAuthor(post)">
+              <v-list-item-title class="text-red">
+                <v-icon color="error" size="small" class="mr-2">mdi-delete</v-icon>
+                삭제하기
+              </v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
@@ -509,8 +517,14 @@ export default {
         { text: '폭력', value: 'VIOLENCE' },
         { text: '불법', value: 'ILLEGAL_ACT' },
         { text: '따돌림', value: 'BULLYING' }
-      ]
+      ],
+      selectedPost: null,
     };
+  },
+  computed: {
+    isPostOwner() {
+      return this.loginId && String(this.post.userId) === String(this.loginId);
+    }
   },
   created() {
     this.fetchPostDetail();
@@ -895,16 +909,20 @@ export default {
     },
 
     async submitReport() {
+      if (!this.reportSmallCategory || !this.reportContent) {
+        alert('신고 사유와 상세 내용을 모두 입력해주세요.');
+        return;
+      }
       try {
         const loginId = localStorage.getItem('loginId');
         await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/report/create`,
           {
-            referenceId: this.post.postId,
+            referenceId: this.selectedPost.postId,
             reportBigCategory: 'POST',
             reportSmallCategory: this.reportSmallCategory,
             content: this.reportContent,
-            reportedId: this.post.userId
+            reportedId: this.selectedPost.userId
           },
           {
             headers: {
@@ -916,11 +934,39 @@ export default {
         this.showReportDialog = false;
         this.reportSmallCategory = '';
         this.reportContent = '';
-        this.$router.push('/silverpotion/gathering/home/1');
+        this.selectedPost = null;
       } catch (error) {
         alert('신고 처리 중 오류가 발생했습니다.');
       }
-    }
+    },
+
+    async deletePost(post) {
+      if (!confirm('이 게시물을 삭제하시겠습니까?')) return;
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const endpoint = post.isVote
+          ? `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/delete/${post.postId}`
+          : `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/delete/${post.postId}`;
+        await axios.post(endpoint, null, {
+          headers: { 'X-User-LoginId': loginId }
+        });
+        alert('게시물이 삭제되었습니다.');
+        this.$router.push(`/silverpotion/gathering/board/1`);
+      } catch (error) {
+        alert('게시물 삭제에 실패했습니다.');
+      }
+    },
+
+    isAuthor(post) {
+      const loginId = localStorage.getItem('loginId');
+      console.log('작성자 확인:', { loginId, postUserId: post.userId, post });
+      return String(loginId) === String(post.userId);
+    },
+
+    openReportDialog(post) {
+      this.selectedPost = post;
+      this.showReportDialog = true;
+    },
   }
 };
 </script>
@@ -974,10 +1020,6 @@ export default {
 
 .comment-input {
   width: 100%;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   padding: 0;
   background-color: white;
   display: flex;
@@ -993,6 +1035,7 @@ export default {
   width: 100%;
   padding: 8px 16px;
   margin: 0 auto;
+  max-width: 1185px;
 }
 
 /* Container의 반응형 너비에 맞추기 위한 미디어 쿼리 */
@@ -1012,15 +1055,14 @@ export default {
   .comment-input-container {
     max-width: 100%;
   }
-  
   .v-container {
-    padding-bottom: 80px; /* 모바일에서 댓글 입력창 높이만큼 여백 추가 */
+    /* padding-bottom: 80px; */
   }
 }
 
-.v-container {
+/* .v-container {
   padding-bottom: 64px;
-}
+} */
 
 /* 인스타그램 스타일 옵션 다이얼로그 */
 :deep(.instagram-options-dialog .v-card) {
