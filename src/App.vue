@@ -141,6 +141,9 @@ html, body {
 }
 
 .main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 2rem;
   margin-top: 60px; /* HeaderComponent의 높이에 맞게 조정 */
   padding-left: 16px !important;
   padding-right: 16px !important;
@@ -163,5 +166,12 @@ html, body {
 
 .v-main {
   padding: 0 !important;
+}
+
+#app {
+  min-height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 </style>
