@@ -292,7 +292,7 @@
 
 ## 🚀 배포 및 운영
 
-- 운영 URL : [https://www.silverpotion.site](https://silverpotion.site)
+- 운영 URL : [https://www.silverpotion.site](https://www.silverpotion.site)
 - 배포 환경 : AWS
 
 ---
