@@ -136,8 +136,12 @@
         }
       },
       async acceptCare(referenceId) {
-        try {
-          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/carelink/accept/${referenceId}`);
+          try {
+            await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/carelink/accept/${referenceId}`,{
+              headers: {
+                "X-User-LoginId": localStorage.getItem("loginId")
+              }
+            });
           alert("보호 요청을 수락했습니다.");
           this.fetchNotifications();
         } catch (err) {
@@ -148,7 +152,11 @@
 
       async rejectCare(referenceId) {
         try {
-          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/carelink/reject/${referenceId}`);
+          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/carelink/reject/${referenceId}`,{
+            headers: {
+              "X-User-LoginId": localStorage.getItem("loginId")
+            }
+          });
           alert("보호 요청을 거절했습니다.");
           this.fetchNotifications();
         } catch (err) {
