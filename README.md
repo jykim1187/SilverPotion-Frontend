@@ -279,7 +279,9 @@
 
 ## 📑 배포 후 통합 테스트 결과서 (시스템 통합)
 - 통합 테스트 항목 및 결과 요약
-    #### - 로그인 및 회원가입-
+
+#### - 로그인 및 회원가입-
+<details>
   <summary> 메인페이지</summary>
   <img src="https://github.com/user-attachments/assets/fea35d41-6871-48ba-a5e1-db53834cc43">
 </details>
@@ -291,9 +293,6 @@
   <summary> 회원가입</summary>
   <img src="https://github.com/user-attachments/assets/b87ae5bd-9da7-4964-80a7-7139e1f5911d">
 </details>
-<details>
-
-
 
 #### - 건강데이터-
 <details>
