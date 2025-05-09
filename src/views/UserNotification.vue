@@ -19,7 +19,16 @@
                       <v-icon>mdi-bell-ring-outline</v-icon>
                     </v-avatar>
                   </template>
-  
+                  <!-- 삭제 버튼 -->
+                  <template v-slot:append>
+                    <v-icon
+                      small
+                      class="ml-2 text-grey"
+                      @click.stop="removeNotification(index)"
+                    >
+                      mdi-close
+                    </v-icon>
+                  </template>
                   <v-list-item-title class="d-flex justify-space-between">
                     <span class="font-weight-bold">{{ notification.title }}</span>
                     <span class="text-caption text-medium-emphasis">
@@ -83,26 +92,26 @@
       },
       resolveRoute(type, referenceId) {
         switch (type) {
-          // 모임 참여 요청
-          case "GATHERING_JOIN_REQUEST":
-            return `/gathering/home/${referenceId}`;
-          // 모임 해체
-          case "GATHERING_DISBAND":
+          case "GATHERING_JOIN_REQUEST":// 모임 참여 요청
+            return `/silverpotion/gathering/home/${referenceId}`;
+          case "GATHERING_DISBAND":// 모임 해체
             return null;
-          // 모임 리더 변경
-          case "GATHERING_LEADER":
-            return `/gathering/home/${referenceId}`;
-          // 모임 차단
-          case "GATHERING_BANNED":
+          case "GATHERING_LEADER":// 모임 리더 변경
             return null;
-          // 모임 탈퇴 또는 해체
-          case "GATHERING_DEACTIVATED":
+          case "GATHERING_BANNED":// 모임 차단
             return null;
-          // 모임 참여 
-          case "GATHERING_JOINED":
-            return `/gathering/home/${referenceId}`;
-          case "CARE_REQUEST":
+          case "GATHERING_DEACTIVATED":// 모임 탈퇴 또는 해체
             return null;
+          case "GATHERING_JOINED":// 모임 참여 
+            return `/silverpotion/gathering/home/${referenceId}`;
+          case "CARE_REQUEST": // 보호자 요청
+            return null;
+          case "POST_LIKE": // 좋아요시 알림
+            return `/silverpotion/gathering/board/${referenceId}`;
+          case "POST_COMMENT": // 댓글시 알림
+            return `/silverpotion/gathering/board/${referenceId}`;
+          case "NOTICE_UPDATED": // 공지글 알림
+            return `/silverpotion/gathering/board/${referenceId}`;
           default:
             return null;
         }
@@ -154,6 +163,9 @@
           console.error("❌ 거절 실패:", err);
           alert("거절에 실패했습니다.");
         }
+      },
+      removeNotification(index) {
+        this.notifications.splice(index, 1);
       },
     },
   };
