@@ -30,7 +30,7 @@ class WebSocketManager {
     this.loginId = localStorage.getItem("loginId");
     this.token = localStorage.getItem("token");
 
-    const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.loginId}`);
+    const socket = new SockJS(`wss://server.silverpotion.site/chat-service/connect?loginId=${this.loginId}`);
     this.stompClient = Stomp.over(socket);
 
     return new Promise((resolve, reject) => {
