@@ -1053,34 +1053,104 @@
     left: 50%;
     transform: translate(-50%, -50%);
     width: 400px;
-    max-width: 100%;
-    max-height: 100%;
+    max-width: 90%;
+    max-height: 90vh;
     overflow: auto;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0;
     z-index: 9999;
   }
 
   .dialog-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: 16px;
+    padding: 24px 24px 16px;
+    color: #1a1a1a;
+    border-bottom: 1px solid #f0f0f0;
   }
 
   .dialog-content {
-    margin-bottom: 16px;
+    padding: 24px;
+    background-color: #ffffff;
   }
 
   .report-field {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+  }
+
+  .report-field :deep(.v-field) {
+    border-radius: 12px;
+    background-color: #f8f9fa;
+  }
+
+  .report-field :deep(.v-field__input) {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+
+  .report-field :deep(.v-field__outline) {
+    border-color: #e0e0e0;
+  }
+
+  .report-field :deep(.v-field--focused .v-field__outline) {
+    border-color: #1976d2;
   }
 
   .dialog-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 16px;
+    gap: 12px;
+    padding: 16px 24px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #f0f0f0;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+  }
+
+  .dialog-actions :deep(.v-btn) {
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 0 20px;
+    height: 40px;
+    border-radius: 8px;
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text) {
+    color: #666;
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text:hover) {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text.v-btn--color-error) {
+    color: #d32f2f;
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text.v-btn--color-error:hover) {
+    background-color: rgba(211, 47, 47, 0.04);
+  }
+
+  /* 스크롤바 스타일링 */
+  .dialog-card::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .dialog-card::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  .dialog-card::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+
+  .dialog-card::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
   }
 
   /* 채팅 관련 스타일 */

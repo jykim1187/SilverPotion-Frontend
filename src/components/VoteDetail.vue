@@ -622,7 +622,6 @@
           <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
           <v-list-item v-if="isAuthor" @click="deleteVote">
             <v-list-item-title class="text-center text-red py-3">
-              <v-icon size="small" color="error" class="mr-2">mdi-delete</v-icon>
               삭제
             </v-list-item-title>
           </v-list-item>
@@ -1350,8 +1349,8 @@ export default {
         const loginId = localStorage.getItem('loginId');
         const voteId = this.$route.params.voteId;
         
-        await axios.delete(
-          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/${voteId}`,
+        await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/delete/${voteId}`,
           {
             headers: {
               'X-User-LoginId': loginId

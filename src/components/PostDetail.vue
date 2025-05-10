@@ -276,7 +276,6 @@
           <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
           <v-list-item v-if="isAuthor(post)" @click="confirmDeletePost">
             <v-list-item-title class="text-center text-red py-3">
-              <v-icon size="small" color="error" class="mr-2">mdi-delete</v-icon>
               삭제
             </v-list-item-title>
           </v-list-item>
