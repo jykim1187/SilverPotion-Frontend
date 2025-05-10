@@ -1347,11 +1347,11 @@ export default {
 }
 
 .comment-input {
-  width: 100%;
+  width: 767px;
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0;
   background-color: white;
   display: flex;
@@ -1365,24 +1365,21 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
+  max-width: 767px;
   padding: 8px 16px;
   margin: 0 auto;
 }
 
 /* Container의 반응형 너비에 맞추기 위한 미디어 쿼리 */
-@media (min-width: 1264px) {
-  .comment-input-container {
-    max-width: 1185px;
-  }
-}
-
-@media (min-width: 960px) and (max-width: 1263px) {
-  .comment-input-container {
-    max-width: 900px;
-  }
+.comment-input-container {
+  max-width: 767px;
 }
 
 @media (max-width: 959px) {
+  .comment-input {
+    width: 100%;
+  }
+  
   .comment-input-container {
     max-width: 100%;
   }
