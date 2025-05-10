@@ -213,9 +213,9 @@
             </div>
 
             <!-- 게시물 메뉴 다이얼로그 -->
-            <v-dialog v-model="postMenuDialog" max-width="300" class="post-menu-dialog">
+            <v-dialog v-model="postMenuDialog" max-width="300" :scrim="false">
               <v-card rounded="lg">
-                <v-list density="compact">
+                <v-list density="compact" class="text-center">
                   <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
                   <v-list-item v-if="selectedPost && isMyPost(selectedPost)" @click="confirmDeletePost">
                     <v-list-item-title class="text-center text-red py-3">삭제</v-list-item-title>
@@ -1023,6 +1023,28 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     padding: 16px;
     z-index: 9999;
+  }
+
+  /* 리스트 아이템 중앙 정렬을 위한 스타일 */
+  :deep(.v-list-item) {
+    justify-content: center !important;
+  }
+
+  :deep(.v-list-item__content) {
+    justify-content: center !important;
+  }
+
+  /* 다이얼로그 위치 조정 */
+  :deep(.v-dialog) {
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  :deep(.v-overlay__content) {
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
   }
 
   .dialog-card {

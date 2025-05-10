@@ -29,18 +29,9 @@
           </div>
         </div>
         <v-spacer></v-spacer>
-        <v-menu>
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props">
-              <v-icon>mdi-dots-vertical</v-icon>
-            </v-btn>
-          </template>
-          <v-list>
-            <v-list-item @click="showReportDialog = true">
-              <v-list-item-title>신고하기</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
+        <v-btn icon @click.stop="openVoteMenu">
+          <v-icon>mdi-dots-vertical</v-icon>
+        </v-btn>
       </div>
 
       <!-- 투표 내용 -->
@@ -623,6 +614,35 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- 게시물 메뉴 다이얼로그 -->
+    <v-dialog v-model="voteMenuDialog" max-width="300" :scrim="false">
+      <v-card rounded="lg">
+        <v-list density="compact" class="text-center">
+          <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
+          <v-list-item v-if="isAuthor" @click="deleteVote">
+            <v-list-item-title class="text-center text-red py-3">
+              <v-icon size="small" color="error" class="mr-2">mdi-delete</v-icon>
+              삭제
+            </v-list-item-title>
+          </v-list-item>
+          <v-divider v-if="isAuthor"></v-divider>
+          
+          <!-- 신고하기 버튼 -->
+          <v-list-item @click="openReportDialog" v-if="!isAuthor">
+            <v-list-item-title class="text-center py-3">
+              신고하기
+            </v-list-item-title>
+          </v-list-item>
+          <v-divider v-if="!isAuthor"></v-divider>
+          
+          <!-- 취소 버튼 -->
+          <v-list-item @click="voteMenuDialog = false">
+            <v-list-item-title class="text-center py-3">취소</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -690,6 +710,8 @@ export default {
       voteUsersDialog: false,
       voteUsers: {},
       expandedOptions: new Set(),
+      voteMenuDialog: false,
+      deleteConfirmDialog: false,
     };
   },
   computed: {
@@ -711,8 +733,11 @@ export default {
     },
     // 작성자 여부
     isAuthor() {
-      // 백엔드에서 투표 상세 조회 시 필요한 정보로 판단
-      return false;
+      const userId = localStorage.getItem('userId');
+      if (!userId || !this.voteDetail || !this.voteDetail.writerId) {
+        return false;
+      }
+      return this.voteDetail.writerId === parseInt(userId);
     }
   },
   created() {
@@ -1067,30 +1092,46 @@ export default {
     },
 
     async submitReport() {
+      if (!this.voteDetail || !this.loginId) return;
+      
       try {
-        const loginId = localStorage.getItem('loginId');
-        await axios.post(
+        const reportData = {
+          referenceId: this.voteDetail.voteId,
+          reportBigCategory: 'POST',
+          reportSmallCategory: this.reportSmallCategory,
+          content: this.reportContent,
+          reportedId: this.voteDetail.writerId
+        };
+        
+        const response = await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/report/create`,
-          {
-            referenceId: this.voteDetail.voteId,
-            reportBigCategory: 'POST',
-            reportSmallCategory: this.reportSmallCategory,
-            content: this.reportContent,
-            reportedId: this.voteDetail.writerId
-          },
+          reportData,
           {
             headers: {
-              'X-User-LoginId': loginId
+              'X-User-LoginId': this.loginId
             }
           }
         );
-        alert('신고가 접수되었습니다.');
-        this.showReportDialog = false;
-        this.reportSmallCategory = '';
-        this.reportContent = '';
-        this.$router.push('/silverpotion/gathering/home/1');
+        
+        if (response.status === 201) {
+          alert('신고가 접수되었습니다.');
+          this.showReportDialog = false;
+          this.reportSmallCategory = '';
+          this.reportContent = '';
+          this.$router.push('/silverpotion/gathering/home/1');
+        }
       } catch (error) {
-        alert('신고 처리 중 오류가 발생했습니다.');
+        if (error.response && error.response.status === 404) {
+          if (error.response.data.message === 'Self Report') {
+            alert('자신의 게시물은 신고할 수 없습니다.');
+          } else if (error.response.data.message === 'Duplicate Report') {
+            alert('이미 신고한 게시물입니다.');
+          } else {
+            alert('신고 처리 중 오류가 발생했습니다.');
+          }
+        } else {
+          alert('신고 처리 중 오류가 발생했습니다.');
+        }
       }
     },
 
@@ -1301,7 +1342,47 @@ export default {
       if (totalVotes === 0) return 0;
       
       return Math.round((voteCount / totalVotes) * 100);
-    }
+    },
+
+    // 게시물 삭제
+    async deleteVote() {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const voteId = this.$route.params.voteId;
+        
+        await axios.delete(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/${voteId}`,
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        alert('투표가 삭제되었습니다.');
+        this.$router.push('/silverpotion/gathering/home/1');
+      } catch (error) {
+        console.error('투표 삭제 중 오류가 발생했습니다:', error);
+        alert('투표 삭제 중 오류가 발생했습니다.');
+      }
+    },
+
+    // 게시물 메뉴 열기
+    openVoteMenu() {
+      this.voteMenuDialog = true;
+    },
+
+    // 삭제 확인 다이얼로그 열기
+    confirmDeleteVote() {
+      this.voteMenuDialog = false;
+      this.deleteConfirmDialog = true;
+    },
+
+    // 신고 다이얼로그 열기
+    openReportDialog() {
+      this.voteMenuDialog = false;
+      this.showReportDialog = true;
+    },
   }
 };
 </script>
@@ -1562,5 +1643,67 @@ export default {
 }
 .text-grey-lighten-1 {
   color: #bbb !important;
+}
+
+/* 메뉴 다이얼로그 스타일 */
+:deep(.v-dialog) {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+:deep(.v-overlay__content) {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+:deep(.v-list-item) {
+  justify-content: center !important;
+}
+
+:deep(.v-list-item__content) {
+  justify-content: center !important;
+}
+
+.text-red {
+  color: #ff5252 !important;
+}
+
+/* 다이얼로그 스타일 */
+.dialog-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  z-index: 9999;
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.dialog-content {
+  margin-bottom: 16px;
+}
+
+.report-field {
+  margin-bottom: 16px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style> 
