@@ -1049,9 +1049,16 @@ export default {
         this.voteDetail.isParticipating = 'N';
         this.selectedOption = null;
         this.selectedOptions = [];
+        this.hasUserVoted = false;
         
         // 투표 정보 새로고침
         await this.fetchVoteDetail();
+        
+        // 상태 업데이트를 강제로 트리거
+        this.$nextTick(() => {
+          this.voteDetail = { ...this.voteDetail };
+        });
+        
         alert('다시 투표할 수 있습니다.');
       } catch (error) {
         console.error('다시 투표하기 처리 중 오류가 발생했습니다:', error);
