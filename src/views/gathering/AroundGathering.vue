@@ -92,7 +92,7 @@ export default {
             kakaoMap: null,
             markers: [],
             nearbyMeetings: [],
-            searchRadius: 2, // 5km 반경
+            searchRadius: 4, // 5km 반경
             selectedMeetingId: null, // 선택된 정모 ID 추가
             mapInitialized: false, // 맵 초기화 상태 추적
             infowindow: null // 이제 CustomOverlay 참조를 저장
