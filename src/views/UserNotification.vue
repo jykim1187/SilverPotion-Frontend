@@ -131,7 +131,7 @@
         const day = date.getDate();
         return `${month}/${day}`;
       },
-      async goTo(route) {
+      async goTo(route, notification, index) {
         if (route) {
           try {
             // 1. 알림 읽음 처리
