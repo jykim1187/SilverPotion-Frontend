@@ -563,8 +563,7 @@
 <script>
 import axios from 'axios';
 import WebSocketManager from '@/WebSocketManager';
-
-
+import emitter from '@/event-bus';
 import UserProfileComponent from '@/components/UserProfileComponet.vue';
 
 export default{
@@ -607,21 +606,35 @@ export default{
             greetingMessage: '',
             showDisbandDialog: false,
             disbandConfirmText: '',
-            messages: [],
-            newMessage: "",
             userId: null,
             chatRoomId: null,
-            isSubscribed: false,
             showDeleteDialog: false,
             meetingIdToDelete: null,
-            roomId: null,
             showUserProfileDialog: false,
-            selectedUser: null
+            selectedUser: null,
+            roomId: null,
+            token: localStorage.getItem("token"),
+            senderLoginId: localStorage.getItem("loginId"),
+            page: 0,
+            hasMore: true,
+            isSubscribed: false,
+            messages: [],
+            newMessage: "",
         }
     },
     beforeUnmount() {
+        emitter.off("newMessageReceived", this.onMessageReceived);
+        const chatBox = this.$el.querySelector(".chat-box");
+        if (chatBox) chatBox.removeEventListener("scroll", this.onScrollTop);
     },
-
+    created() {
+        this.roomId = this.chatRoomId;
+        this.userId = localStorage.getItem("userId");
+        this.page = 0;
+        this.hasMore = true;
+        this.messages = [];
+        this.loadMessageHistory();
+    },
     computed: {
         isGatheringLeader() {
             const currentUserId = parseInt(localStorage.getItem('userId'), 10);
@@ -653,13 +666,16 @@ export default{
         await this.fetchGatheringMembers();
         await this.fetchMeetings();
         
-        if (this.isGatheringMember) {
-            if (this.chatRoomId) {
-                this.roomId = this.chatRoomId;
-            } else {
-                console.error("❌ chatRoomId가 없습니다.");
-            }
+        if (this.isGatheringMember && this.chatRoomId) {
+            this.roomId = this.chatRoomId;
+
+            // WebSocket 수신 구독
+            emitter.on("newMessageReceived", this.onMessageReceived);
+            // 스크롤 이벤트 등록
+            const chatBox = this.$el.querySelector(".chat-box");
+            if (chatBox) chatBox.addEventListener("scroll", this.onScrollTop);
         }
+
     },
     methods: {
         handleBackButton() {
@@ -957,24 +973,79 @@ export default{
                 createdAt: new Date().toISOString()
             };
 
-            console.log('📤 Sending message:', message);
+            this.messages.push(message);
+            this.scrollToBottom();
 
+            console.log('📤 Sending message:', message);
+            // WebSocket으로 메시지 전송
             WebSocketManager.send(
                 `/pub/room/${this.roomId}`,
                 message
             );
 
-            this.newMessage = "";
+            this.newMessage = ""; // 메시지 입력 초기화
+            this.isSending = false; // 전송 완료 후 상태 초기화
+
         },
 
-        
+        onMessageReceived(message) {
+            const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
+            const notMine = String(message.senderId) !== String(this.userId);
+
+            if (roomMatch && notMine) {
+                this.messages.push(message);
+                this.scrollToBottom();
+            }
+        },
         scrollToBottom() {
             this.$nextTick(() => {
                 const chatBox = this.$el.querySelector(".chat-box");
                 chatBox.scrollTop = chatBox.scrollHeight;
             });
         },
-        
+        async onScrollTop(e) {
+            const el = e.target;
+            if (el.scrollTop < 50 && this.hasMore && !this.loadingHistory) {
+                this.page++;
+                await this.loadMessageHistory();
+            }
+        },
+
+        async loadMessageHistory() {
+            this.loadingHistory = true;
+            try {
+                const response = await fetch(
+                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${this.roomId}/messages?page=${this.page}&size=30`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${this.token}`,
+                            "X-User-LoginId": this.senderLoginId
+                        }
+                    }
+                );
+                const result = await response.json();
+                const reversed = result.content.reverse();
+
+                if (reversed.length === 0) {
+                    this.hasMore = false;
+                    return;
+                }
+
+                const chatBox = this.$el.querySelector(".chat-box");
+                const oldScrollHeight = chatBox.scrollHeight;
+
+                this.messages = [...reversed, ...this.messages];
+
+                this.$nextTick(() => {
+                    const newScrollHeight = chatBox.scrollHeight;
+                    chatBox.scrollTop = newScrollHeight - oldScrollHeight;
+                });
+            } catch (error) {
+                console.error("❌ 채팅 히스토리 불러오기 실패", error);
+            } finally {
+                this.loadingHistory = false;
+            }
+        },
         formatTime(timeValue) {
             if (!timeValue) return '';
             

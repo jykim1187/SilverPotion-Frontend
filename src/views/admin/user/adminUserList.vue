@@ -44,14 +44,15 @@
 
     <!-- 사용자 목록 -->
     <v-card>
-      <v-data-table
+      <v-data-table-server
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="headers"
         :items="users"
         :loading="loading"
-        :items-per-page="10"
-        :page="page"
-        :total-items="totalItems"
+        :items-length="totalItems"
         @update:page="handlePageChange"
+        @update:items-per-page="handleItemsPerPageChange"
         class="elevation-1"
         @click:row="goToUserDetail"
       >
@@ -93,7 +94,7 @@
             해제
           </v-btn>
         </template>
-      </v-data-table>
+      </v-data-table-server>
     </v-card>
   </v-container>
 </template>
@@ -107,6 +108,7 @@ export default {
       loading: false,
       users: [],
       page: 1,
+      itemsPerPage: 10,
       totalItems: 0,
       search: {
         name: '',
@@ -127,6 +129,8 @@ export default {
     };
   },
   created() {
+    console.log('=== Component Created ===');
+    console.log('localStorage userId:', localStorage.getItem('userId'));
     this.fetchUsers();
   },
   methods: {
@@ -134,7 +138,29 @@ export default {
       // 토큰과 역할 확인
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
-      
+      const userId = localStorage.getItem('userId');
+
+      console.log('=== Debug Info ===');
+      console.log('1. Raw userId from localStorage:', userId);
+      console.log('2. userId type:', typeof userId);
+      console.log('3. userId === null:', userId === null);
+      console.log('4. userId === "null":', userId === "null");
+      console.log('5. userId === undefined:', userId === undefined);
+      console.log('6. userId length:', userId?.length);
+      console.log('7. All localStorage items:', {
+        token: localStorage.getItem('token'),
+        role: localStorage.getItem('role'),
+        userId: localStorage.getItem('userId'),
+        loginId: localStorage.getItem('loginId')
+      });
+      console.log('=================');
+
+      if (!userId || userId === "null") {
+        alert("로그인이 만료되었거나 잘못된 접근입니다.");
+        this.$router.push("/silverpotion/user/login");
+        return;
+      }
+
       if (!token) {
         alert('로그인이 필요합니다.');
         this.$router.push('/silverpotion/user/login');
@@ -172,15 +198,7 @@ export default {
         );
         console.log('API Response:', response.data);
         
-        // 응답 데이터가 예상한 구조인지 확인
         if (response.data?.result?.content) {
-          console.log('Raw user data:', response.data.result.content);
-          console.log('User roles:', response.data.result.content.map(user => ({
-            id: user.id,
-            name: user.name,
-            role: user.role,
-            rawRole: user.role
-          })));
           this.users = response.data.result.content.map(user => ({
             ...user,
             banYn: user.banYn || 'N',
@@ -188,7 +206,6 @@ export default {
           }));
           this.totalItems = response.data.result.totalElements;
         } else {
-          console.error('Unexpected API response structure:', response.data);
           this.users = [];
           this.totalItems = 0;
         }
@@ -207,7 +224,14 @@ export default {
       this.fetchUsers();
     },
     handlePageChange(newPage) {
+      console.log('Page changed to:', newPage);
       this.page = newPage;
+      this.fetchUsers();
+    },
+    handleItemsPerPageChange(newItemsPerPage) {
+      console.log('Items per page changed to:', newItemsPerPage);
+      this.itemsPerPage = newItemsPerPage;
+      this.page = 1;
       this.fetchUsers();
     },
     async banUser(user) {

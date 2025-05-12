@@ -1,5 +1,5 @@
 <template>
-    <v-container>
+    <v-container style="padding-top: 0; margin-top: 0;">
         <v-card flat class="primary fixed-header" color="primary">
             <v-card-text class="d-flex align-center pa-2">
                 <v-btn icon @click="handleBackButton" class="mr-2" flat>
@@ -9,7 +9,7 @@
             </v-card-text>
         </v-card>
 
-        <div class="content-wrapper">
+        <div class="content-wrapper" ref="contentWrapper">
             <div v-if="loading" class="d-flex justify-center align-center" style="height: 400px;">
                 <v-progress-circular indeterminate color="primary"></v-progress-circular>
             </div>
@@ -22,7 +22,7 @@
                 <div ref="mapContainer" id="map" class="map-container"></div>
                 
                 <div v-if="nearbyMeetings.length === 0" class="text-center mt-4">
-                    <p>주변 2km 내에 정모가 없습니다.</p>
+                    <p>주변 5km 내에 정모가 없습니다.</p>
                 </div>
                 <div v-else class="mt-4">
                     <h3 class="text-h6 mb-3">주변 정모 목록</h3>
@@ -92,24 +92,80 @@ export default {
             kakaoMap: null,
             markers: [],
             nearbyMeetings: [],
-            searchRadius: 2, // 5km 반경
+            searchRadius: 5, // 5km 반경
             selectedMeetingId: null, // 선택된 정모 ID 추가
             mapInitialized: false, // 맵 초기화 상태 추적
             infowindow: null // 이제 CustomOverlay 참조를 저장
         };
     },
+    beforeCreate() {
+        // 컴포넌트 생성 전에도 스크롤 위치 설정
+        window.scrollTo(0, 0);
+    },
+    created() {
+        // 컴포넌트 생성 시점에도 스크롤 위치 설정
+        window.scrollTo(0, 0);
+    },
+    beforeMount() {
+        // 마운트 전에도 스크롤 위치 설정
+        window.scrollTo(0, 0);
+    },
     mounted() {
+        // 페이지 로드 시 스크롤 위치를 맨 위로 설정
+        window.scrollTo(0, 0);
+        
         this.getCurrentLocation();
+        
+        // 추가: 여러 시점에서 스크롤 위치 재설정
+        this.$nextTick(() => {
+            window.scrollTo(0, 0);
+        });
+        
+        // 추가: 약간의 지연 후에도 스크롤 위치 재설정
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 100);
+        
+        // 더 긴 지연 후에도 스크롤 위치 재설정
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 500);
+        
+        // 데이터 로딩 완료 후에도 스크롤 위치 재설정
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 2000);
+    },
+    updated() {
+        // 컴포넌트 업데이트 시에도 스크롤 위치 설정
+        window.scrollTo(0, 0);
     },
     methods: {
         handleBackButton() {
             this.$router.go(-1);
         },
         
+        // 스크롤 위치 강제 재설정 메소드 추가
+        resetScroll() {
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            
+            if (this.$refs.contentWrapper) {
+                this.$refs.contentWrapper.scrollTop = 0;
+            }
+            
+            window.scrollTo({
+                top: 0,
+                left: 0,
+                behavior: 'auto'
+            });
+        },
+        
         // 현재 위치 가져오기
         getCurrentLocation() {
             this.loading = true;
             this.error = null;
+            this.resetScroll(); // 수정된 메소드 사용
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -294,10 +350,12 @@ export default {
                 }, 2000); // 2초 지연
                 
                 this.loading = false;
+                window.scrollTo(0, 0); // 데이터 로딩 완료 후에도 스크롤 재설정
             } catch (error) {
                 console.error('주변 정모를 가져오는데 실패했습니다:', error);
                 this.error = '주변 정모를 가져오는데 실패했습니다. 다시 시도해주세요.';
                 this.loading = false;
+                window.scrollTo(0, 0); // 에러 발생 시에도 스크롤 재설정
             }
         },
         
@@ -535,6 +593,24 @@ export default {
             
             return `${month}/${day} ${timeStr}`;
         }
+    },
+    
+    // 라우터 가드 추가
+    beforeRouteEnter(to, from, next) {
+        next(vm => {
+            // 컴포넌트 인스턴스에 접근 가능한 시점
+            vm.resetScroll();
+            
+            // 약간의 지연 후 다시 스크롤 재설정
+            setTimeout(() => {
+                vm.resetScroll();
+            }, 100);
+            
+            // 더 긴 지연 후에도 스크롤 위치 재설정
+            setTimeout(() => {
+                vm.resetScroll();
+            }, 500);
+        });
     }
 };
 </script>
@@ -554,6 +630,7 @@ export default {
 .content-wrapper {
     margin-top: 110px; /* 헤더 높이 + 기존 헤더 컴포넌트 높이에 맞게 조정 */
     padding: 0 16px;
+    position: relative;
 }
 
 .map-container {
@@ -577,5 +654,18 @@ export default {
 
 .meeting-marker:hover {
     transform: scale(1.1);
+}
+
+/* 스크롤 제거 */
+.v-container {
+    overflow: hidden !important;
+}
+
+.content-wrapper {
+    overflow: visible !important;
+}
+
+html, body {
+    overflow: hidden !important;
 }
 </style>

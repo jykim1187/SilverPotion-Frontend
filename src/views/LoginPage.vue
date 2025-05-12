@@ -122,12 +122,12 @@ export default {
       userName: "",
       googleUrl: "https://accounts.google.com/o/oauth2/auth",
       googleClientId: "73727762121-skf00kqrlnfjput7t493mmdifss29170.apps.googleusercontent.com",
-      googleRedirectUri: "http://localhost:3000/oauth/google/redirect",
+      googleRedirectUri: "https://www.silverpotion.site/oauth/google/redirect",
       googleScope: "openid email profile",
       googleResponseType: "code",
       kakaoUrl: "https://kauth.kakao.com/oauth/authorize",
       kakaoClientId: "740a1fc6969a1fc6c821d81a2236d3fe",
-      kakaoRedirectUri: "http://localhost:3000/oauth/kakao/redirect",
+      kakaoRedirectUri: "https://www.silverpotion.site/oauth/kakao/redirect",
     }
   },
   methods: {
@@ -169,7 +169,12 @@ export default {
         localStorage.setItem("userName", response.data.result.name);
         localStorage.setItem("nickName", response.data.result.nickName);
         localStorage.setItem("profileImage", response.data.result.profileImage);
-        localStorage.setItem("userId", response.data.result.userId);
+        
+        // userId가 null이 아닐 때만 저장
+        const userId = response.data.result.userId;
+        if (userId != null) {
+          localStorage.setItem('userId', userId);
+        }
 
         // 저장된 값 확인
         console.log('Stored Token:', localStorage.getItem('token'));

@@ -688,6 +688,7 @@ export default {
   border-radius: 1rem;
   border: none;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-top: 100px;
 }
 
 .modal-header {
@@ -732,8 +733,12 @@ export default {
 
 /* 모달 스타일 수정 */
 .modal-dialog {
-  margin: 1.75rem auto;
+  margin: 8rem auto 1.75rem;
   max-width: 500px;
+}
+
+.modal.show .modal-dialog {
+  transform: translateY(100px);
 }
 
 /* 페이지 전체 여백 조정 */

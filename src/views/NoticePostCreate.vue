@@ -229,8 +229,7 @@ export default {
           formData,
           {
             headers: {
-              'X-User-LoginId': loginId,
-              'Content-Type': 'multipart/form-data'
+              'X-User-LoginId': loginId
             }
           }
         );

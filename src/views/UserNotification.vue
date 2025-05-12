@@ -79,6 +79,7 @@
             headers: { "X-User-LoginId": loginId }
           });
           this.notifications = res.data.map(n => ({
+            id: n.id,
             title: n.title || '알림',
             message: n.content,
             createdAt: n.createdAt,
@@ -135,9 +136,19 @@
           this.$router.push(route);
         }
       },
+      async removeNotification(index) {
+        const notification = this.notifications[index];
+        try {
+          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/chat-service/notifications/${notification.id}/read`);
+          this.notifications.splice(index, 1);
+        } catch (err) {
+          console.error("❌ 읽음 처리 실패:", err);
+        }
+      },
       async acceptCare(referenceId) {
           try {
             await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/carelink/accept/${referenceId}`);
+            await this.markNotificationAsReadByRef(referenceId);
           alert("보호 요청을 수락했습니다.");
           this.fetchNotifications();
         } catch (err) {
@@ -149,6 +160,7 @@
       async rejectCare(referenceId) {
         try {
           await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/carelink/reject/${referenceId}`);
+          await this.markNotificationAsReadByRef(referenceId);
           alert("보호 요청을 거절했습니다.");
           this.fetchNotifications();
         } catch (err) {
@@ -156,8 +168,16 @@
           alert("거절에 실패했습니다.");
         }
       },
-      removeNotification(index) {
-        this.notifications.splice(index, 1);
+      async markNotificationAsReadByRef(referenceId) {
+        const index = this.notifications.findIndex(n => n.referenceId === referenceId && n.type === 'CARE_REQUEST');
+        if (index !== -1) {
+          try {
+            await axios.post(`${process.env.VUE_APP_API_BASE_URL}/chat-service/notifications/${this.notifications[index].id}/read`);
+            this.notifications.splice(index, 1);
+          } catch (e) {
+            console.error('❌ 보호자 알림 읽음 처리 실패:', e);
+          }
+        }
       },
     },
   };

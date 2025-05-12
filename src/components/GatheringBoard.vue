@@ -213,9 +213,9 @@
             </div>
 
             <!-- 게시물 메뉴 다이얼로그 -->
-            <v-dialog v-model="postMenuDialog" max-width="300" class="post-menu-dialog">
+            <v-dialog v-model="postMenuDialog" max-width="300" :scrim="false">
               <v-card rounded="lg">
-                <v-list density="compact">
+                <v-list density="compact" class="text-center">
                   <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
                   <v-list-item v-if="selectedPost && isMyPost(selectedPost)" @click="confirmDeletePost">
                     <v-list-item-title class="text-center text-red py-3">삭제</v-list-item-title>
@@ -1025,40 +1025,132 @@
     z-index: 9999;
   }
 
+  /* 리스트 아이템 중앙 정렬을 위한 스타일 */
+  :deep(.v-list-item) {
+    justify-content: center !important;
+  }
+
+  :deep(.v-list-item__content) {
+    justify-content: center !important;
+  }
+
+  /* 다이얼로그 위치 조정 */
+  :deep(.v-dialog) {
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  :deep(.v-overlay__content) {
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
   .dialog-card {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 400px;
-    max-width: 100%;
-    max-height: 100%;
+    max-width: 90%;
+    max-height: 90vh;
     overflow: auto;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0;
     z-index: 9999;
   }
 
   .dialog-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: 16px;
+    padding: 24px 24px 16px;
+    color: #1a1a1a;
+    border-bottom: 1px solid #f0f0f0;
   }
 
   .dialog-content {
-    margin-bottom: 16px;
+    padding: 24px;
+    background-color: #ffffff;
   }
 
   .report-field {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+  }
+
+  .report-field :deep(.v-field) {
+    border-radius: 12px;
+    background-color: #f8f9fa;
+  }
+
+  .report-field :deep(.v-field__input) {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+
+  .report-field :deep(.v-field__outline) {
+    border-color: #e0e0e0;
+  }
+
+  .report-field :deep(.v-field--focused .v-field__outline) {
+    border-color: #1976d2;
   }
 
   .dialog-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 16px;
+    gap: 12px;
+    padding: 16px 24px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #f0f0f0;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+  }
+
+  .dialog-actions :deep(.v-btn) {
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 0 20px;
+    height: 40px;
+    border-radius: 8px;
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text) {
+    color: #666;
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text:hover) {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text.v-btn--color-error) {
+    color: #d32f2f;
+  }
+
+  .dialog-actions :deep(.v-btn--variant-text.v-btn--color-error:hover) {
+    background-color: rgba(211, 47, 47, 0.04);
+  }
+
+  /* 스크롤바 스타일링 */
+  .dialog-card::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .dialog-card::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  .dialog-card::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+
+  .dialog-card::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
   }
 
   /* 채팅 관련 스타일 */

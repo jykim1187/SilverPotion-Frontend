@@ -24,26 +24,9 @@
           </div>
         </div>
         <v-spacer></v-spacer>
-        <v-menu>
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props">
-              <v-icon>mdi-dots-vertical</v-icon>
-            </v-btn>
-          </template>
-          <v-list>
-            <v-list-item @click="openReportDialog(post)" v-if="!isAuthor(post)">
-              <v-list-item-title>
-                신고하기
-              </v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="deletePost(post)" v-if="isAuthor(post)">
-              <v-list-item-title class="text-red">
-                <v-icon color="error" size="small" class="mr-2">mdi-delete</v-icon>
-                삭제하기
-              </v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
+        <v-btn icon @click.stop="openPostMenu">
+          <v-icon>mdi-dots-vertical</v-icon>
+        </v-btn>
       </div>
 
       <!-- 게시글 제목과 내용 -->
@@ -114,7 +97,14 @@
             <div class="d-flex justify-space-between align-start">
               <div class="comment-bubble">
                 <div v-if="editingComment !== comment.commentId" class="d-flex align-center">
-                  <div class="comment-content">{{ comment.content }}</div>
+                  <div class="comment-content">
+                    <div class="font-weight-bold">{{ comment.nickName }}</div>
+                    <div>{{ comment.content }}</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      {{ formatDate(comment.createdTime) }}
+                      <span v-if="comment.isUpdate === 'Y'" class="ml-2">(수정됨)</span>
+                    </div>
+                  </div>
                 </div>
                 <v-textarea
                   v-else
@@ -286,22 +276,47 @@
       </div>
     </div>
 
-    <!-- 인스타그램 스타일 옵션 다이얼로그 -->
-    <v-dialog v-model="optionsDialog" max-width="300" class="instagram-options-dialog">
+    <!-- 게시물 메뉴 다이얼로그 -->
+    <v-dialog v-model="postMenuDialog" max-width="300" :scrim="false">
       <v-card rounded="lg">
-        <v-list density="compact">
-          <v-list-item @click="editSelectedComment">
-            <v-list-item-title class="text-center py-3">수정</v-list-item-title>
+        <v-list density="compact" class="text-center">
+          <!-- 내 게시물일 경우에만 삭제 버튼 표시 -->
+          <v-list-item v-if="isAuthor(post)" @click="confirmDeletePost">
+            <v-list-item-title class="text-center text-red py-3">
+              삭제
+            </v-list-item-title>
           </v-list-item>
-          <v-divider></v-divider>
-          <v-list-item @click="confirmDeleteSelected" color="error">
-            <v-list-item-title class="text-center text-red py-3">삭제</v-list-item-title>
+          <v-divider v-if="isAuthor(post)"></v-divider>
+          
+          <!-- 신고하기 버튼 -->
+          <v-list-item @click="openReportDialog(post)" v-if="!isAuthor(post)">
+            <v-list-item-title class="text-center py-3">
+              신고하기
+            </v-list-item-title>
           </v-list-item>
-          <v-divider></v-divider>
-          <v-list-item @click="optionsDialog = false">
+          <v-divider v-if="!isAuthor(post)"></v-divider>
+          
+          <!-- 취소 버튼 -->
+          <v-list-item @click="postMenuDialog = false">
             <v-list-item-title class="text-center py-3">취소</v-list-item-title>
           </v-list-item>
         </v-list>
+      </v-card>
+    </v-dialog>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <v-dialog v-model="deleteConfirmDialog" max-width="300">
+      <v-card>
+        <v-card-title class="text-h6">게시물 삭제</v-card-title>
+        <v-card-text>
+          <p class="mt-3 font-weight-bold">이 게시물을 정말 삭제하시겠습니까?</p>
+          <p class="text-caption text-grey mt-2">삭제한 게시물은 복구할 수 없습니다.</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" variant="text" @click="deletePost">삭제</v-btn>
+          <v-btn color="grey" variant="text" @click="deleteConfirmDialog = false">취소</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -519,6 +534,8 @@ export default {
         { text: '따돌림', value: 'BULLYING' }
       ],
       selectedPost: null,
+      postMenuDialog: false,
+      deleteConfirmDialog: false,
     };
   },
   computed: {
@@ -940,32 +957,49 @@ export default {
       }
     },
 
-    async deletePost(post) {
-      if (!confirm('이 게시물을 삭제하시겠습니까?')) return;
+    async deletePost() {
       try {
         const loginId = localStorage.getItem('loginId');
-        const endpoint = post.isVote
-          ? `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/delete/${post.postId}`
-          : `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/delete/${post.postId}`;
-        await axios.post(endpoint, null, {
-          headers: { 'X-User-LoginId': loginId }
-        });
+        await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/delete/${this.post.postId}`,
+          null,
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
         alert('게시물이 삭제되었습니다.');
-        this.$router.push(`/silverpotion/gathering/board/1`);
+        this.deleteConfirmDialog = false;
+        this.$router.push('/silverpotion/gathering/board/1');
       } catch (error) {
-        alert('게시물 삭제에 실패했습니다.');
+        console.error('게시물 삭제 중 오류가 발생했습니다:', error);
+        alert('게시물 삭제 중 오류가 발생했습니다.');
       }
     },
 
     isAuthor(post) {
-      const loginId = localStorage.getItem('loginId');
-      console.log('작성자 확인:', { loginId, postUserId: post.userId, post });
-      return String(loginId) === String(post.userId);
+      const userId = localStorage.getItem('userId');
+      if (!userId || !post || !post.userId) {
+        return false;
+      }
+      return post.userId === parseInt(userId);
     },
 
     openReportDialog(post) {
       this.selectedPost = post;
       this.showReportDialog = true;
+      this.postMenuDialog = false;
+    },
+
+    openPostMenu() {
+      this.postMenuDialog = true;
+    },
+
+    confirmDeletePost() {
+      this.postMenuDialog = false;
+      this.deleteConfirmDialog = true;
     },
   }
 };
@@ -1019,7 +1053,11 @@ export default {
 }
 
 .comment-input {
-  width: 100%;
+  width: 767px;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0;
   background-color: white;
   display: flex;
@@ -1033,36 +1071,33 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
+  max-width: 767px;
   padding: 8px 16px;
   margin: 0 auto;
-  max-width: 1185px;
 }
 
 /* Container의 반응형 너비에 맞추기 위한 미디어 쿼리 */
-@media (min-width: 1264px) {
-  .comment-input-container {
-    max-width: 1185px;
-  }
-}
-
-@media (min-width: 960px) and (max-width: 1263px) {
-  .comment-input-container {
-    max-width: 900px;
-  }
+.comment-input-container {
+  max-width: 767px;
 }
 
 @media (max-width: 959px) {
+  .comment-input {
+    width: 100%;
+  }
+  
   .comment-input-container {
     max-width: 100%;
   }
+  
   .v-container {
-    /* padding-bottom: 80px; */
+    padding-bottom: 80px; /* 모바일에서 댓글 입력창 높이만큼 여백 추가 */
   }
 }
 
-/* .v-container {
+.v-container {
   padding-bottom: 64px;
-} */
+}
 
 /* 인스타그램 스타일 옵션 다이얼로그 */
 :deep(.instagram-options-dialog .v-card) {
