@@ -65,11 +65,13 @@ export default {
     async checkLoginStatus() {
       const loginId = localStorage.getItem("loginId");
       const token = localStorage.getItem("token");
+      console.log("🟡 로그인 상태 확인 중:", { loginId, token });
 
       if (!loginId || !token || this.isWebSocketConnected) return;
 
       try {
         await WebSocketManager.connect();
+        console.log("🟢 WebSocket 연결 성공, 구독 시도");   
 
         // ✅ WebSocket 구독
         WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
@@ -84,7 +86,7 @@ export default {
         this.disconnectSse = disconnectSse;
 
         this.isWebSocketConnected = true;
-        console.log("🟢 실시간 연결 완료");
+        console.log("✅ 실시간 연결 및 구독 완료");
       } catch (e) {
         console.error('❌ 실시간 연결 실패:', e);
       }

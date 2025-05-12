@@ -11,6 +11,8 @@ class WebSocketManager {
   }
 
   connect() {
+    this.loginId = localStorage.getItem("loginId");
+    this.token = localStorage.getItem("token");
     if (this.connected) {
       console.log("✅ 이미 연결됨");
       return Promise.resolve(this.stompClient);
@@ -27,8 +29,7 @@ class WebSocketManager {
       });
     }
     this.connecting = true; // 연결 중 상태 추가
-    this.loginId = localStorage.getItem("loginId");
-    this.token = localStorage.getItem("token");
+    
 
     const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/chat-service/connect?loginId=${this.loginId}`);
     this.stompClient = Stomp.over(socket);

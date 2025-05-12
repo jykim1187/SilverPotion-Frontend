@@ -185,8 +185,10 @@ export default {
         console.log("Login 성공! now routing to /");
         WebSocketManager.token = token;
         WebSocketManager.loginId = response.data.result.id;
-        emitter.emit('loginChanged');//로그인 상태 감지지
         this.$router.push('/');
+        this.$nextTick(() => {
+            emitter.emit('loginChanged');
+        });
 
        // 앱에 로그인 아이디 전달  
         if(window.AndroidBridge && window.AndroidBridge.sendLoginId) {
