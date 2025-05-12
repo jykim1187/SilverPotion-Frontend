@@ -34,7 +34,7 @@ export default {
     this.checkLoginStatus();
     const loginId = localStorage.getItem("loginId");
     if (loginId) {
-      WebSocketManager.connect().then((client) => {
+      WebSocketManager.connect().then(() => {
         WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
           emitter.emit('newMessageReceived', message);
           emitter.emit('incrementNotificationBadge');
