@@ -989,6 +989,10 @@ export default{
         },
 
         onMessageReceived(message) {
+            console.log('📩 받은 메시지:', message);
+            console.log('📩 roomMatch:', parseInt(message.roomId), this.roomId);
+            console.log('📩 notMine:', message.senderId, this.userId);
+            
             const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
             const notMine = String(message.senderId) !== String(this.userId);
 
