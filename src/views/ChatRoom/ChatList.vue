@@ -60,7 +60,6 @@ export default {
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
             unreadCount: 0,
-            isSubscribed: false,
             roomId: null,
         }
     },
@@ -129,10 +128,6 @@ export default {
             return this.$route.path === `/chat/${roomId}`;
         },
         
-        disconnectWebSocket() {
-            WebSocketManager.unsubscribe(`/user/${this.senderLoginId}/chat`);
-            this.isSubscribed = false;
-        },
         async loadChatRooms() {
             try {
                 const response = await axios.get(
