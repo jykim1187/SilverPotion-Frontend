@@ -40,10 +40,15 @@ class WebSocketManager {
           "X-User-LoginId": this.loginId,
         },
         () => {
-          this.connected = true;
-          this.connecting = false; // 연결 완료 후 상태 초기화
-          console.log("✅ WebSocket connected");
-          resolve(this.stompClient);
+          const waitUntilReady = setInterval(() => {
+            if (this.stompClient.connected) {
+              clearInterval(waitUntilReady);
+              this.connected = true;
+              this.connecting = false;
+              console.log("✅ WebSocket connected (확실히 ready)");
+              resolve(this.stompClient);
+            }
+          }, 50);
         },
         (error) => {
           this.connected = false;
@@ -111,7 +116,10 @@ class WebSocketManager {
   }
 
   subscribe(destination, callback) {
-    return this.connect().then(() => this._subscribe(destination, callback));
+    if (!this.stompClient || !this.stompClient.connected) {
+      console.warn("⏳ stompClient 아직 연결 안 됨 → 재시도");
+      return this.connect().then(() => this._subscribe(destination, callback));
+    }
   }
 
   _subscribe(destination, callback) {
