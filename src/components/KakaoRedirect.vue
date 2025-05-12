@@ -16,7 +16,7 @@ export default{
     },
     methods: {
         async sendCodeToServer(code){
-            const response = await axios.post("http://localhost:8080/user-service/silverpotion/user/kakao/login", {code});
+            const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/kakao/login`, {code});
             console.log(response);
             if(response.data.status_message === "need_sign_up"){
                 const userData = response.data.result;
