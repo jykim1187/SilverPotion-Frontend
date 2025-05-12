@@ -13,8 +13,8 @@
         <v-row>
           <v-col cols="12" sm="6" md="3">
             <v-text-field
-              v-model="search.name"
-              label="신고자 이름"
+              v-model="search.reporterNickname"
+              label="신고자 유저 닉네임"
               variant="outlined"
               density="comfortable"
               @input="searchReports"
@@ -112,7 +112,7 @@ export default {
       page: 1,
       totalItems: 0,
       search: {
-        name: '',
+        reporterNickname: '',
         nickname: '',
         reportBigCategory: null,
         reportSmallCategory: null,
@@ -140,8 +140,8 @@ export default {
       ],
       headers: [
         { title: '신고 ID', key: 'reportId', align: 'center' },
-        { title: '신고자 ID', key: 'reporterId', align: 'center' },
-        { title: '신고당한 ID', key: 'reportedId', align: 'center' },
+        { title: '신고자 유저 닉네임', key: 'reporterNickname', align: 'center' },
+        { title: '신고당한 유저 닉네임', key: 'reportedNickname', align: 'center' },
         { title: '대유형', key: 'reportBigCategory', align: 'center' },
         { title: '소유형', key: 'reportSmallCategory', align: 'center' },
         { title: '내용', key: 'content', align: 'center' },
@@ -151,25 +151,35 @@ export default {
     };
   },
   created() {
-    this.fetchReports();
+    this.checkAuthAndFetchData();
   },
   methods: {
-    async fetchReports() {
+    checkAuthAndFetchData() {
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
-      
-      if (!token) {
+      const loginId = localStorage.getItem('loginId');
+      const userId = localStorage.getItem('userId');
+
+      if (!token || !role || !loginId || !userId) {
         alert('로그인이 필요합니다.');
         this.$router.push('/silverpotion/user/login');
         return;
       }
 
-      if (role !== 'ADMIN') {
+      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
         alert('관리자 권한이 필요합니다.');
         this.$router.push('/');
         return;
       }
 
+      this.fetchReports();
+    },
+    async fetchReports() {
+      const token = localStorage.getItem('token');
+      const role = localStorage.getItem('role');
+      const loginId = localStorage.getItem('loginId');
+      const userId = localStorage.getItem('userId');
+      
       this.loading = true;
       try {
         const params = {
@@ -179,7 +189,7 @@ export default {
         };
 
         // 검색 조건이 있는 경우에만 파라미터에 추가
-        if (this.search.name) params.name = this.search.name;
+        if (this.search.reporterNickname) params.name = this.search.reporterNickname;
         if (this.search.nickname) params.nickname = this.search.nickname;
         if (this.search.reportBigCategory) params.reportBigCategory = this.search.reportBigCategory;
         if (this.search.reportSmallCategory) params.reportSmallCategory = this.search.reportSmallCategory;
@@ -190,8 +200,9 @@ export default {
           {
             headers: {
               'Authorization': `Bearer ${token}`,
-              'X-User-LoginId': localStorage.getItem('loginId'),
-              'X-User-Role': 'ADMIN'
+              'X-User-LoginId': loginId,
+              'X-User-Role': role,
+              'X-User-Id': userId
             },
             params: params
           }
@@ -208,6 +219,9 @@ export default {
         if (error.response?.status === 403) {
           alert('관리자 권한이 필요합니다.');
           this.$router.push('/');
+        } else if (error.response?.status === 401) {
+          alert('로그인이 필요합니다.');
+          this.$router.push('/silverpotion/user/login');
         }
       } finally {
         this.loading = false;
@@ -237,9 +251,8 @@ export default {
     },
     getStatusColor(status) {
       switch (status) {
-        case 'PENDING': return 'warning';
-        case 'PROCESSING': return 'info';
-        case 'COMPLETED': return 'success';
+        case 'WAIT': return 'error';
+        case 'COMPLETE': return 'success';
         default: return 'grey';
       }
     },

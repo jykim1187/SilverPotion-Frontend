@@ -97,7 +97,14 @@
             <div class="d-flex justify-space-between align-start">
               <div class="comment-bubble">
                 <div v-if="editingComment !== comment.commentId" class="d-flex align-center">
-                  <div class="comment-content">{{ comment.content }}</div>
+                  <div class="comment-content">
+                    <div class="font-weight-bold">{{ comment.nickName }}</div>
+                    <div>{{ comment.content }}</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      {{ formatDate(comment.createdTime) }}
+                      <span v-if="comment.isUpdate === 'Y'" class="ml-2">(수정됨)</span>
+                    </div>
+                  </div>
                 </div>
                 <v-textarea
                   v-else

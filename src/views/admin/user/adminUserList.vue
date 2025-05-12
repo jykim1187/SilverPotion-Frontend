@@ -127,14 +127,40 @@ export default {
     };
   },
   created() {
+    console.log('=== Component Created ===');
+    console.log('localStorage userId:', localStorage.getItem('userId'));
     this.fetchUsers();
   },
   methods: {
     async fetchUsers() {
+      console.log('=== fetchUsers Started ===');
+      
       // 토큰과 역할 확인
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
-      
+      const userId = localStorage.getItem('userId');
+
+      console.log('=== Debug Info ===');
+      console.log('1. Raw userId from localStorage:', userId);
+      console.log('2. userId type:', typeof userId);
+      console.log('3. userId === null:', userId === null);
+      console.log('4. userId === "null":', userId === "null");
+      console.log('5. userId === undefined:', userId === undefined);
+      console.log('6. userId length:', userId?.length);
+      console.log('7. All localStorage items:', {
+        token: localStorage.getItem('token'),
+        role: localStorage.getItem('role'),
+        userId: localStorage.getItem('userId'),
+        loginId: localStorage.getItem('loginId')
+      });
+      console.log('=================');
+
+      if (!userId || userId === "null") {
+        alert("로그인이 만료되었거나 잘못된 접근입니다.");
+        this.$router.push("/silverpotion/user/login");
+        return;
+      }
+
       if (!token) {
         alert('로그인이 필요합니다.');
         this.$router.push('/silverpotion/user/login');
@@ -149,27 +175,35 @@ export default {
 
       this.loading = true;
       try {
-        console.log('Requesting with token:', token);
-        console.log('User role:', role);
-        
+        console.log('=== API Request Start ===');
+        console.log('1. Token:', token);
+        console.log('2. Role:', role);
+        console.log('3. UserId:', userId);
 
-        const response = await axios.get(
-          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/admins/users`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-User-Role': role
-            },
-            params: {
-              page: this.page - 1,
-              size: 10,
-              sort: 'id,desc',
-              name: this.search.name || undefined,
-              email: this.search.email || undefined,
-              nickname: this.search.nickname || undefined
-            }
+        // 헤더 구성
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'X-User-LoginId': localStorage.getItem('loginId'),
+          'X-User-Role': role,
+          'X-User-Id': userId
+        };
+
+        console.log('4. Headers:', headers);
+        console.log('=== API Request End ===');
+
+        const response = await axios({
+          method: 'get',
+          url: `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/admins/users`,
+          headers: headers,
+          params: {
+            page: this.page - 1,
+            size: 10,
+            sort: 'id,desc',
+            name: this.search.name || undefined,
+            email: this.search.email || undefined,
+            nickname: this.search.nickname || undefined
           }
-        );
+        });
         console.log('API Response:', response.data);
         
         // 응답 데이터가 예상한 구조인지 확인
