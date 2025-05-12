@@ -119,6 +119,8 @@ class WebSocketManager {
     if (!this.stompClient || !this.stompClient.connected) {
       console.warn("⏳ stompClient 아직 연결 안 됨 → 재시도");
       return this.connect().then(() => this._subscribe(destination, callback));
+    } else {
+      return this._subscribe(destination, callback); // 💡 이 줄이 빠져 있음
     }
   }
 
