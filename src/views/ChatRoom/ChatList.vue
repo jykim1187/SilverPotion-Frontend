@@ -128,21 +128,10 @@ export default {
         isCurrentChatRoom(roomId) {
             return this.$route.path === `/chat/${roomId}`;
         },
-        async connectWebsocket() {
-            if (this.isSubscribed) return;
-
-            WebSocketManager.subscribeWithoutConnect(
-                `/user/${this.senderLoginId}/chat`,
-                this.onNewMessage
-            );
-            this.isSubscribed = true;
-        },
+        
         disconnectWebSocket() {
             WebSocketManager.unsubscribe(`/user/${this.senderLoginId}/chat`);
             this.isSubscribed = false;
-        },
-        onNewMessage(message) {
-            emitter.emit("newMessageReceived",message);
         },
         async loadChatRooms() {
             try {
