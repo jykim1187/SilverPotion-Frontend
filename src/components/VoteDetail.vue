@@ -276,7 +276,7 @@
                   <v-btn variant="text" size="small" @click="cancelEdit">취소</v-btn>
                 </div>
               </div>
-              <div v-if="comment.likeCount && comment.likeCount > 0" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(comment.commentId)">
+              <div v-if="comment.likeCount && comment.likeCount > 0" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(comment.commentId)" style="align-self: flex-start; margin-top: 8px;">
                 <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
                 <span class="text-caption">{{ comment.likeCount }}</span>
               </div>
@@ -307,7 +307,7 @@
             </div>
           </div>
           
-          <!-- 댓글 메뉴 (인스타그램 스타일) -->
+          <!-- 댓글 좋아요 및 메뉴 -->
           <v-btn 
             icon="mdi-dots-vertical" 
             variant="text" 
@@ -386,10 +386,6 @@
                     <v-btn variant="text" size="small" @click="cancelEdit">취소</v-btn>
                   </div>
                 </div>
-                <div v-if="reply.likeCount && reply.likeCount > 0" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(reply.commentId)">
-                  <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
-                  <span class="text-caption">{{ reply.likeCount }}</span>
-                </div>
               </div>
               <div class="comment-actions d-flex align-center mt-1">
                 <span 
@@ -405,6 +401,10 @@
               </div>
             </div>
             <v-spacer></v-spacer>
+            <div v-if="reply.likeCount && reply.likeCount > 0" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(reply.commentId)">
+              <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
+              <span class="text-caption">{{ reply.likeCount }}</span>
+            </div>
             <!-- 대댓글 메뉴 (인스타그램 스타일) -->
             <v-btn 
               icon="mdi-dots-vertical" 
@@ -482,10 +482,16 @@
           <v-list>
             <!-- 좋아요 데이터가 있을 경우 표시 -->
             <div v-if="commentLikes.length > 0">
-              <v-list-item v-for="like in commentLikes" :key="like.id" class="py-2">
+              <v-list-item 
+                v-for="like in commentLikes" 
+                :key="like.id" 
+                class="py-2"
+                @click="$router.push(`/silverpotion/user/profile/${like.id}`)"
+                style="cursor: pointer"
+              >
                 <template v-slot:prepend>
                   <v-avatar size="40">
-                    <v-img :src="like.profileImage || require('@/assets/default-profile.png')"></v-img>
+                    <v-img :src="like.profileImgUrl || require('@/assets/default-profile.png')"></v-img>
                   </v-avatar>
                 </template>
                 <v-list-item-title class="font-weight-medium">{{ like.nickName }}</v-list-item-title>
@@ -649,7 +655,6 @@
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { reactive } from 'vue';
 
 export default {
   name: 'VoteDetail',
@@ -679,7 +684,7 @@ export default {
       newReply: '',
       replyingTo: null,
       loading: true,
-      expandedComments: reactive({}),
+      expandedComments: {},
       visibleRepliesCount: {},
       editingComment: null,
       editedCommentContent: '',
@@ -1407,6 +1412,51 @@ export default {
         this.visibleRepliesCount[comment.commentId] = 3;
       }
       this.visibleRepliesCount[comment.commentId] += 3;
+    },
+
+    // 댓글 좋아요 목록 다이얼로그 표시
+    async showCommentLikesDialog(commentId) {
+      this.commentLikesDialog = true;
+      this.commentLikes = [];
+      this.currentCommentId = commentId;
+      this.commentLikesPage = 0;
+      
+      this.fetchCommentLikes();
+    },
+    
+    // 댓글 좋아요 목록 가져오기
+    async fetchCommentLikes(page = 0) {
+      try {
+        this.commentLikesLoading = true;
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/like/list/${this.currentCommentId}`,
+          {
+            params: {
+              page: page,
+              size: 10
+            },
+            headers: {
+              'X-User-LoginId': localStorage.getItem('loginId')
+            }
+          }
+        );
+        
+        const result = response.data.result;
+        this.commentLikes = result.content || [];
+        this.commentLikesPage = page;
+        this.commentLikesTotalPages = result.totalPages;
+      } catch (error) {
+        console.error('댓글 좋아요 목록을 가져오는데 실패했습니다:', error);
+      } finally {
+        this.commentLikesLoading = false;
+      }
+    },
+    
+    // 댓글 좋아요 목록 더 불러오기
+    loadMoreCommentLikes() {
+      if (this.commentLikesPage < this.commentLikesTotalPages - 1 && !this.commentLikesLoading) {
+        this.fetchCommentLikes(this.commentLikesPage + 1);
+      }
     },
   }
 };
