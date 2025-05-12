@@ -48,7 +48,6 @@ export default {
             roomId: null,
             token: localStorage.getItem("token"),
             senderLoginId: localStorage.getItem("loginId"),
-            isSubscribed: false,
             isSending: false, 
             page: 0, // ✅ 현재 페이지
             hasMore: true, // ✅ 더 불러올 메시지가 있는지 여부
@@ -150,32 +149,6 @@ export default {
             this.loadingHistory = false;
         }
     },
-
-    // connectWebsocket() {
-    //     if (this.isSubscribed) {
-    //         console.log("🚫 이미 구독 중 → 중단");
-    //         return;
-    //     }
-
-    //     const loginId = localStorage.getItem("loginId");
-    //     const topic = `/user/${loginId}/chat`;
-
-    //     WebSocketManager.replaceSubscribe(topic, (message) => {
-    //         if (!message || !message.roomId) return;
-
-    //         const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
-    //         const notMine = String(message.senderId) !== String(this.userId);
-
-    //         if (roomMatch && notMine) {
-    //         this.messages.push(message);
-    //         this.scrollToBottom();
-    //         }
-    //     });
-
-    //         this.isSubscribed = true;
-    //         console.log(`✅ 구독 완료: ${topic}`);
-    //     },
-
         sendMessage() {
         if (this.newMessage.trim() === "") return;
         this.isSending = true; // 전송 중 플래그 설정
