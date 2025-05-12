@@ -13,7 +13,7 @@ class WebSocketManager {
   connect() {
     if (this.connected) {
       console.log("✅ 이미 연결됨");
-      return Promise.resolve();
+      return Promise.resolve(this.stompClient);
     }
     if (this.connecting) {
       // 연결 중이면 기존 Promise로 기다리기

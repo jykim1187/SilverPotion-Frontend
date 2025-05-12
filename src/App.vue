@@ -28,18 +28,28 @@ export default {
   data() {
     return {
       isWebSocketConnected: false,  // WebSocket 연결 상태를 관리
+      disconnectSse: null,
     };
   },
-  mounted() {
-    this.checkLoginStatus();
-    const loginId = localStorage.getItem("loginId");
-    if (loginId) {
-      WebSocketManager.connect().then(() => {
+  async mounted() {
+    const loginId = localStorage.getItem('loginId');
+    const token = localStorage.getItem('token');
+
+    // ✅ 로그인된 경우에만 연결
+    if (loginId && token) {
+      try {
+        await WebSocketManager.connect(); // WebSocket 연결
         WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
           emitter.emit('newMessageReceived', message);
           emitter.emit('incrementNotificationBadge');
         });
-      });
+
+        const { connectSse, disconnectSse } = useSse();
+        connectSse(loginId);
+        this.disconnectSse = disconnectSse;
+      } catch (e) {
+        console.error('❌ 실시간 연결 실패:', e);
+      }
     }
   },
   beforeUnmount() {
@@ -65,11 +75,8 @@ export default {
 
       localStorage.clear();
       emitter.emit('loginChanged');  // 로그인 상태 변경 이벤트 발생
-      this.$router.push('/');
-      
-      // 로그아웃 후 웹소켓 연결 종료
       this.disconnectWebSocket();
-
+      this.$router.push('/');
     } catch (error) {
       console.error('로그아웃 실패', error);
     }
@@ -92,9 +99,8 @@ export default {
       emitter.emit("newMessageReceived", { senderNickName: message.senderNickName, roomId: message.roomId, message });
     },
     disconnectWebSocket() {
-      // WebSocket 연결 해제
       WebSocketManager.disconnect();
-      this.isWebSocketConnected = false;
+      this.disconnectSse?.();
     }
   },
 
