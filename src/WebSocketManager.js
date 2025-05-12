@@ -126,6 +126,7 @@ class WebSocketManager {
   }
 
   _subscribe(destination, callback) {
+    console.log(`🚀 _subscribe 호출됨: ${destination}`);
     // 연결 상태 체크 후 구독
     if (!this.connected) {
       console.warn("❌ WebSocket 연결이 되지 않았습니다. 연결을 시도합니다.");

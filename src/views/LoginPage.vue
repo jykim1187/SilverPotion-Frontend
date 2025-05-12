@@ -185,8 +185,9 @@ export default {
         console.log("Login 성공! now routing to /");
         WebSocketManager.token = token;
         WebSocketManager.loginId = response.data.result.id;
-        this.$router.push('/');
+        await this.$router.push('/');
         this.$nextTick(() => {
+            console.log("📢 loginChanged 이벤트 발행");
             emitter.emit('loginChanged');
         });
 
