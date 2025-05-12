@@ -43,7 +43,7 @@ class WebSocketManager {
           this.connected = true;
           this.connecting = false; // 연결 완료 후 상태 초기화
           console.log("✅ WebSocket connected");
-          resolve();
+          resolve(this.stompClient);
         },
         (error) => {
           this.connected = false;
