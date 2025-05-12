@@ -48,7 +48,6 @@
 
 <script>
 import axios from 'axios';
-import WebSocketManager from '@/WebSocketManager';
 import emitter from '@/event-bus';
 
 export default {
