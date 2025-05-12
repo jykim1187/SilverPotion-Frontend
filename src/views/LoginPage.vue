@@ -122,12 +122,12 @@ export default {
       userName: "",
       googleUrl: "https://accounts.google.com/o/oauth2/auth",
       googleClientId: "73727762121-skf00kqrlnfjput7t493mmdifss29170.apps.googleusercontent.com",
-      googleRedirectUri: "http://localhost:3000/oauth/google/redirect",
+      googleRedirectUri: "https://www.silverpotion.site/oauth/google/redirect",
       googleScope: "openid email profile",
       googleResponseType: "code",
       kakaoUrl: "https://kauth.kakao.com/oauth/authorize",
       kakaoClientId: "740a1fc6969a1fc6c821d81a2236d3fe",
-      kakaoRedirectUri: "http://localhost:3000/oauth/kakao/redirect",
+      kakaoRedirectUri: "https://www.silverpotion.site/oauth/kakao/redirect",
     }
   },
   methods: {
