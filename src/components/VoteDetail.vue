@@ -302,7 +302,7 @@
                 class="comment-action-btn"
                 @click="toggleReplies(comment.commentId)"
               >
-                {{ expandedComments.has(comment.commentId) ? '답글 숨기기' : `답글 ${comment.replies.length}개 보기` }}
+                {{ expandedComments[comment.commentId] ? '답글 숨기기' : `답글 ${comment.replies.length}개 보기` }}
               </span>
             </div>
           </div>
@@ -341,7 +341,7 @@
         </div>
 
         <!-- 대댓글 목록 -->
-        <div v-if="comment.replies && comment.replies.length > 0 && expandedComments.has(comment.commentId)" class="ml-12 mt-2">
+        <div v-if="comment.replies && comment.replies.length > 0 && expandedComments[comment.commentId]" class="ml-12 mt-2">
           <div 
             v-for="reply in getVisibleReplies(comment)" 
             :key="reply.commentId"
@@ -649,6 +649,7 @@
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { reactive } from 'vue';
 
 export default {
   name: 'VoteDetail',
@@ -678,7 +679,7 @@ export default {
       newReply: '',
       replyingTo: null,
       loading: true,
-      expandedComments: new Set(),
+      expandedComments: reactive({}),
       visibleRepliesCount: {},
       editingComment: null,
       editedCommentContent: '',
@@ -1381,6 +1382,31 @@ export default {
     openReportDialog() {
       this.voteMenuDialog = false;
       this.showReportDialog = true;
+    },
+
+    // 대댓글 토글 메서드 추가
+    toggleReplies(commentId) {
+      this.expandedComments[commentId] = !this.expandedComments[commentId];
+    },
+
+    // 대댓글 관련 메서드들 추가
+    getVisibleReplies(comment) {
+      if (!comment.replies) return [];
+      const count = this.visibleRepliesCount[comment.commentId] || 3;
+      return comment.replies.slice(0, count);
+    },
+
+    hasMoreReplies(comment) {
+      if (!comment.replies) return false;
+      const count = this.visibleRepliesCount[comment.commentId] || 3;
+      return comment.replies.length > count;
+    },
+
+    showMoreReplies(comment) {
+      if (!this.visibleRepliesCount[comment.commentId]) {
+        this.visibleRepliesCount[comment.commentId] = 3;
+      }
+      this.visibleRepliesCount[comment.commentId] += 3;
     },
   }
 };

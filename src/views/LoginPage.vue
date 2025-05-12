@@ -169,7 +169,12 @@ export default {
         localStorage.setItem("userName", response.data.result.name);
         localStorage.setItem("nickName", response.data.result.nickName);
         localStorage.setItem("profileImage", response.data.result.profileImage);
-        localStorage.setItem("userId", response.data.result.userId);
+        
+        // userId가 null이 아닐 때만 저장
+        const userId = response.data.result.userId;
+        if (userId != null) {
+          localStorage.setItem('userId', userId);
+        }
 
         // 저장된 값 확인
         console.log('Stored Token:', localStorage.getItem('token'));
