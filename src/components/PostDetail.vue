@@ -159,7 +159,7 @@
           
           <!-- 댓글 메뉴 (인스타그램 스타일) -->
           <v-btn 
-            icon="mdi-dots-horizontal" 
+            icon="mdi-dots-vertical" 
             variant="text" 
             density="comfortable" 
             size="small"
@@ -198,7 +198,7 @@
             <v-avatar size="32" class="mr-2">
               <v-img :src="reply.profileImage || require('@/assets/default-profile.png')"></v-img>
             </v-avatar>
-            <div class="comment-container">
+            <div class="comment-container flex-grow-1">
               <div class="d-flex justify-space-between align-start">
                 <div class="comment-bubble">
                   <div class="d-flex align-center">
@@ -234,10 +234,6 @@
                     </div>
                   </div>
                 </div>
-                <span v-if="reply.isLike === 'Y'" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(reply.commentId)">
-                  <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
-                  <span class="text-caption">{{ reply.likeCount || 0 }}</span>
-                </span>
               </div>
               <div class="comment-actions d-flex align-center mt-1">
                 <span 
@@ -250,9 +246,13 @@
               </div>
             </div>
             <v-spacer></v-spacer>
+            <span v-if="reply.isLike === 'Y'" class="d-flex align-center comment-like-indicator ms-2" @click="showCommentLikesDialog(reply.commentId)">
+              <v-icon color="red" size="small" class="mr-1">mdi-heart</v-icon>
+              <span class="text-caption">{{ reply.likeCount || 0 }}</span>
+            </span>
             <!-- 대댓글 메뉴 (인스타그램 스타일) -->
             <v-btn 
-              icon="mdi-dots-horizontal" 
+              icon="mdi-dots-vertical" 
               variant="text" 
               density="comfortable" 
               size="small"
@@ -335,7 +335,13 @@
           <v-list>
             <!-- 좋아요 데이터가 있을 경우 표시 -->
             <div v-if="likes.length > 0">
-              <v-list-item v-for="like in likes" :key="like.userId" class="py-2">
+              <v-list-item 
+                v-for="like in likes" 
+                :key="like.userId" 
+                class="py-2"
+                @click="$router.push(`/silverpotion/user/profile/${like.userId}`)"
+                style="cursor: pointer"
+              >
                 <template v-slot:prepend>
                   <v-avatar size="40">
                     <v-img :src="like.profileImage || require('@/assets/default-profile.png')"></v-img>
@@ -368,10 +374,16 @@
           <v-list>
             <!-- 좋아요 데이터가 있을 경우 표시 -->
             <div v-if="commentLikes.length > 0">
-              <v-list-item v-for="like in commentLikes" :key="like.id" class="py-2">
+              <v-list-item 
+                v-for="like in commentLikes" 
+                :key="like.id" 
+                class="py-2"
+                @click="$router.push(`/silverpotion/user/profile/${like.id}`)"
+                style="cursor: pointer"
+              >
                 <template v-slot:prepend>
                   <v-avatar size="40">
-                    <v-img :src="like.profileImg || require('@/assets/default-profile.png')"></v-img>
+                    <v-img :src="like.profileImgUrl || require('@/assets/default-profile.png')"></v-img>
                   </v-avatar>
                 </template>
                 <v-list-item-title class="font-weight-medium">{{ like.nickName }}</v-list-item-title>
@@ -402,41 +414,51 @@
       </v-card>
     </v-dialog>
 
-    <!-- 확인 다이얼로그 -->
+    <!-- 인스타그램 스타일 옵션 다이얼로그 -->
+    <v-dialog v-model="optionsDialog" max-width="300" class="instagram-options-dialog">
+      <v-card rounded="lg">
+        <v-list density="compact">
+          <template v-if="isCommentOwner(findCommentById(selectedCommentId))">
+            <v-list-item @click="editSelectedComment" class="option-item">
+              <v-list-item-title class="text-center py-3">
+                수정
+              </v-list-item-title>
+            </v-list-item>
+            <v-divider></v-divider>
+            <v-list-item @click="confirmDeleteSelected" color="error" class="option-item">
+              <v-list-item-title class="text-center text-red py-3">
+                삭제
+              </v-list-item-title>
+            </v-list-item>
+            <v-divider></v-divider>
+          </template>
+          <template v-else>
+            <v-list-item @click="reportComment" class="option-item">
+              <v-list-item-title class="text-center py-3">
+                신고
+              </v-list-item-title>
+            </v-list-item>
+            <v-divider></v-divider>
+          </template>
+          <v-list-item @click="optionsDialog = false" class="option-item">
+            <v-list-item-title class="text-center py-3">취소</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-dialog>
+
+    <!-- 삭제 확인 다이얼로그 -->
     <v-dialog v-model="deleteDialog" max-width="300">
       <v-card>
         <v-card-title class="text-h6">댓글 삭제</v-card-title>
         <v-card-text>이 댓글을 정말 삭제하시겠습니까?</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" variant="text" @click="deleteComment">삭제</v-btn>
+          <v-btn color="error" variant="text" @click="deleteComment">삭제</v-btn>
           <v-btn color="grey" variant="text" @click="deleteDialog = false">취소</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <!-- 댓글 작성 입력창 -->
-    <div class="comment-input">
-      <div class="comment-input-container">
-        <v-textarea
-          v-model="newComment"
-          placeholder="댓글을 달아주세요..."
-          rows="1"
-          auto-grow
-          variant="plain"
-          hide-details
-          density="comfortable"
-        ></v-textarea>
-        <v-btn 
-          color="primary" 
-          @click="submitComment" 
-          :disabled="!newComment.trim()"
-          class="ml-2"
-        >
-          전송
-        </v-btn>
-      </div>
-    </div>
 
     <!-- 신고 다이얼로그 -->
     <v-dialog v-model="showReportDialog" max-width="400">
@@ -755,7 +777,6 @@ export default {
 
     // 선택된 댓글 수정 시작
     editSelectedComment() {
-      // 선택된 댓글 찾기
       const comment = this.findCommentById(this.selectedCommentId);
       if (comment) {
         this.startEditComment(comment);
@@ -849,12 +870,27 @@ export default {
 
     // 댓글 작성자 확인 (수정/삭제 권한)
     isCommentOwner(comment) {
-      // 현재 로그인한 사용자가 댓글 작성자인지 확인
-      console.log('Comment userId:', comment.userId, 'Current loginId:', this.loginId, 'Type loginId:', typeof this.loginId);
-      // 개발 중에는 항상 true 반환 (모든 사용자가 모든 댓글 수정/삭제 가능)
-      return true; 
-      // 실제 운영 시에는 아래 코드로 교체
-      // return this.loginId && comment.userId === parseInt(this.loginId);
+      if (!comment || !comment.userId) {
+        console.log('댓글 데이터가 없거나 userId가 없습니다:', comment);
+        return false;
+      }
+      
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        console.log('로그인된 사용자가 없습니다');
+        return false;
+      }
+
+      // 댓글의 userId와 로그인한 사용자의 ID를 비교
+      const isOwner = comment.userId === parseInt(userId);
+      console.log('댓글 소유자 확인:', {
+        commentId: comment.commentId,
+        commentUserId: comment.userId,
+        currentUserId: userId,
+        isOwner: isOwner
+      });
+      
+      return isOwner;
     },
 
     // 좋아요 목록 다이얼로그 표시
@@ -1000,6 +1036,12 @@ export default {
     confirmDeletePost() {
       this.postMenuDialog = false;
       this.deleteConfirmDialog = true;
+    },
+
+    // 댓글 신고
+    reportComment() {
+      this.optionsDialog = false;
+      this.showReportDialog = true;
     },
   }
 };
