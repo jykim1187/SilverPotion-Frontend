@@ -75,6 +75,7 @@ export default {
 
         // ✅ WebSocket 구독
         WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
+          console.log("✅ App.vue: subscribe 콜백 등록됨");
           console.log("💬 수신된 메시지:", message);
           emitter.emit('newMessageReceived', message);
           emitter.emit('incrementNotificationBadge');
