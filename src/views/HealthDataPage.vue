@@ -221,7 +221,7 @@
             <v-row>
               <v-col cols="12" sm="4" v-for="(group, index) in differentGroups" :key="'different-'+index">
                 <v-card outlined class="group-card-small" hover>
-                  <v-img :src="require('@/assets/default-gathering-main.png')" height="120" contain></v-img>
+                  <v-img :src="group.imageUrl || require('@/assets/default-gathering-main.png')" height="120" contain></v-img>
                   <v-card-title class="subtitle-1">{{ group.gatheringName }}</v-card-title>
                   <v-card-subtitle class="caption">{{ group.category }}</v-card-subtitle>
                   <v-card-text class="card-text-small">
