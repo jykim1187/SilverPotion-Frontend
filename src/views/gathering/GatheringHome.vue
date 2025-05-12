@@ -633,7 +633,6 @@ export default{
         this.page = 0;
         this.hasMore = true;
         this.messages = [];
-        this.loadMessageHistory();
     },
     computed: {
         isGatheringLeader() {
@@ -707,6 +706,8 @@ export default{
                 this.gatheringIntroduce = gatheringData.introduce;
                 this.gatheringLeaderId = gatheringData.leaderId;
                 this.chatRoomId = gatheringData.chatRoomId;
+                
+                this.loadMessageHistory(this.chatRoomId);
             } catch (error) {
                 console.error('모임 정보를 가져오는데 실패했습니다:', error);
             }
@@ -1015,11 +1016,11 @@ export default{
             }
         },
 
-        async loadMessageHistory() {
+        async loadMessageHistory(chatRoomId) {
             this.loadingHistory = true;
             try {
                 const response = await fetch(
-                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${this.roomId}/messages?page=${this.page}&size=30`,
+                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${chatRoomId}/messages?page=${this.page}&size=30`,
                     {
                         headers: {
                             Authorization: `Bearer ${this.token}`,

@@ -23,6 +23,12 @@ export function useSse() {
 
     eventSource.addEventListener('chat-message', (e) => {
       const data = JSON.parse(e.data);
+      const myUserId = localStorage.getItem("userId");
+
+      if (String(data.senderId) === String(myUserId)) {
+        // 내가 보낸 메시지는 무시
+        return;
+      }
       console.log('💬 [채팅 수신]:', data);
       emitter.emit('newMessageReceived', {
         senderNickName: data.senderNickName,
