@@ -185,8 +185,7 @@ export default {
         console.log("Login 성공! now routing to /");
         WebSocketManager.token = token;
         WebSocketManager.loginId = response.data.result.id;
-        WebSocketManager.connect();
-        emitter.emit('loginChanged');
+        emitter.emit('loginChanged');//로그인 상태 감지지
         this.$router.push('/');
 
        // 앱에 로그인 아이디 전달  

@@ -32,30 +32,11 @@ export default {
     };
   },
   async mounted() {
-    const loginId = localStorage.getItem('loginId');
-    const token = localStorage.getItem('token');
-
-    // ✅ 로그인된 경우에만 연결
-    if (loginId && token) {
-      try {
-        await WebSocketManager.connect(); // WebSocket 연결
-        WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
-          emitter.emit('newMessageReceived', message);
-          emitter.emit('incrementNotificationBadge');
-        });
-
-        const { connectSse, disconnectSse } = useSse();
-        connectSse(loginId);
-        this.disconnectSse = disconnectSse;
-      } catch (e) {
-        console.error('❌ 실시간 연결 실패:', e);
-      }
-    }
+    emitter.on('loginChanged', this.checkLoginStatus); // 로그인 상태 감지
+    this.checkLoginStatus(); // 새로고침 대응
   },
   beforeUnmount() {
-    // 앱이 종료될 때 웹소켓 연결을 끊습니다.
     WebSocketManager.disconnect();
-    // SSE 연결 해제
     if (this.disconnectSse) this.disconnectSse();
   },
   beforeRouteLeave(to, from, next) {
@@ -85,12 +66,28 @@ export default {
       const loginId = localStorage.getItem("loginId");
       const token = localStorage.getItem("token");
 
-      if (loginId && token) {
-      await WebSocketManager.connect();  // WebSocket 연결 시도
-      const { connectSse, disconnectSse } = useSse();
-        connectSse(loginId); // 명시적 호출
+      if (!loginId || !token || this.isWebSocketConnected) return;
+
+      try {
+        await WebSocketManager.connect();
+
+        // ✅ WebSocket 구독
+        WebSocketManager.subscribe(`/user/${loginId}/chat`, (message) => {
+          console.log("💬 수신된 메시지:", message);
+          emitter.emit('newMessageReceived', message);
+          emitter.emit('incrementNotificationBadge');
+        });
+
+        // ✅ SSE 연결
+        const { connectSse, disconnectSse } = useSse();
+        connectSse(loginId);
         this.disconnectSse = disconnectSse;
-    }
+
+        this.isWebSocketConnected = true;
+        console.log("🟢 실시간 연결 완료");
+      } catch (e) {
+        console.error('❌ 실시간 연결 실패:', e);
+      }
     },
 
     onNewMessage(message) {
