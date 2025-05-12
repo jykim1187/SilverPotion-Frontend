@@ -86,7 +86,8 @@
                             <img src="@/assets/comments-regular.svg" alt="chat" style="width: 35px; height: 35px;" />
                         </v-btn>
                         <v-btn v-if="isLogin" icon class="ml-2 mr-2" color="grey-darken-3" size="small" variant="text" 
-                        :to="{ path: '/notification' }"@click="clearNotificationBadge">
+                        :to="{ path: '/notification' }" 
+                        @click="clearNotificationBadge">
                             <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
 
                             <v-badge

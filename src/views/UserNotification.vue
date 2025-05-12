@@ -66,6 +66,8 @@
     data() {
       return {
         notifications: [],
+        notification: null,
+        index: null,
       };
     },
     async created() {
@@ -131,16 +133,16 @@
         const day = date.getDate();
         return `${month}/${day}`;
       },
-      async goTo(route) {
+      async goTo(route, notification, index) {
         if (route) {
           try {
-            // 1. 알림 읽음 처리
+            // 알림 읽음 처리
             await axios.post(`${process.env.VUE_APP_API_BASE_URL}/chat-service/notifications/${notification.id}/read`);
-            
-            // 2. 리스트에서 제거
+
+            // 리스트에서 제거
             this.notifications.splice(index, 1);
-            
-            // 3. 라우트 이동
+
+            // 라우트 이동
             this.$router.push(route);
           } catch (err) {
             console.error("❌ 알림 처리 실패:", err);
