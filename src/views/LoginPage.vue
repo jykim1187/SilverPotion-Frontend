@@ -110,7 +110,6 @@
 
 <script>
 import axios from 'axios'
-import emitter from '@/event-bus';
 import WebSocketManager from '@/WebSocketManager';
 // import { jwtDecode } from 'jwt-decode'
 
