@@ -31,8 +31,11 @@ export default {
       disconnectSse: null,
     };
   },
+  created() {
+    console.log('👂 emitter loginChanged 리스너 등록됨');
+    emitter.on('loginChanged', this.checkLoginStatus);
+  },
   async mounted() {
-    emitter.on('loginChanged', this.checkLoginStatus); // 로그인 상태 감지
     this.checkLoginStatus(); // 새로고침 대응
   },
   beforeUnmount() {
