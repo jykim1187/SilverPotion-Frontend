@@ -151,30 +151,30 @@ export default {
         }
     },
 
-    connectWebsocket() {
-        if (this.isSubscribed) {
-            console.log("🚫 이미 구독 중 → 중단");
-            return;
-        }
+    // connectWebsocket() {
+    //     if (this.isSubscribed) {
+    //         console.log("🚫 이미 구독 중 → 중단");
+    //         return;
+    //     }
 
-        const loginId = localStorage.getItem("loginId");
-        const topic = `/user/${loginId}/chat`;
+    //     const loginId = localStorage.getItem("loginId");
+    //     const topic = `/user/${loginId}/chat`;
 
-        WebSocketManager.replaceSubscribe(topic, (message) => {
-            if (!message || !message.roomId) return;
+    //     WebSocketManager.replaceSubscribe(topic, (message) => {
+    //         if (!message || !message.roomId) return;
 
-            const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
-            const notMine = String(message.senderId) !== String(this.userId);
+    //         const roomMatch = parseInt(message.roomId) === parseInt(this.roomId);
+    //         const notMine = String(message.senderId) !== String(this.userId);
 
-            if (roomMatch && notMine) {
-            this.messages.push(message);
-            this.scrollToBottom();
-            }
-        });
+    //         if (roomMatch && notMine) {
+    //         this.messages.push(message);
+    //         this.scrollToBottom();
+    //         }
+    //     });
 
-            this.isSubscribed = true;
-            console.log(`✅ 구독 완료: ${topic}`);
-        },
+    //         this.isSubscribed = true;
+    //         console.log(`✅ 구독 완료: ${topic}`);
+    //     },
 
         sendMessage() {
         if (this.newMessage.trim() === "") return;
@@ -241,12 +241,12 @@ export default {
         }
     },
 
-    disconnectWebSocket() {
-        const topic = `/user/${this.senderLoginId}/chat`;
-        console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
-        WebSocketManager.unsubscribe(topic);
-        this.isSubscribed = false;
-    },
+    // disconnectWebSocket() {
+    //     const topic = `/user/${this.senderLoginId}/chat`;
+    //     console.log("🛑 disconnectWebSocket 호출됨 → topic:", topic);
+    //     WebSocketManager.unsubscribe(topic);
+    //     this.isSubscribed = false;
+    // },
 }
 }
 </script>
