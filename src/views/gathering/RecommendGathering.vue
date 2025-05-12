@@ -16,14 +16,14 @@
                     class="address-card" 
                     variant="outlined" 
                     hover 
-                    @click="goToAddressUpdate"
+                    @click="openRegionModal"
                 >
                     <div v-if="userInfo" class="d-flex align-center pa-3">
                         <v-avatar color="primary" size="36" class="mr-3">
                             <v-icon color="white">mdi-map-marker</v-icon>
                         </v-avatar>
                         <div>
-                            <div class="text-caption text-grey">내 위치</div>
+                            <div class="text-caption text-grey">활동지역</div>
                             <div class="font-weight-medium">{{ userInfo.region || '주소 정보가 없습니다. 클릭하여 주소를 설정하세요.' }}</div>
                         </div>
                         <v-spacer></v-spacer>
@@ -138,13 +138,56 @@
                 </v-list>
             </div>
         </div>
+
+        <!-- 지역 선택 모달 추가 -->
+        <v-dialog
+          v-model="regionModalOpen"
+          max-width="800px"
+          persistent
+        >
+          <v-card>
+            <v-card-title class="headline">
+              활동지역 선택
+            </v-card-title>
+            
+            <v-card-text>
+              <KakaoMap 
+                ref="kakaoMapRef"
+                @region-selected="handleRegionSelected"
+              />
+            </v-card-text>
+            
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="red"
+                text
+                @click="regionModalOpen = false"
+              >
+                취소
+              </v-btn>
+              <v-btn
+                color="primary"
+                text
+                @click="confirmRegionSelection"
+                :loading="updatingRegion"
+              >
+                확인
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
 <script>
 import axios from 'axios';
+import KakaoMap from '@/views/gathering/RegionSelect.vue';
 
 export default{
+    components: {
+        KakaoMap
+    },
     data(){
         return {
             userInfo: null,
@@ -157,7 +200,10 @@ export default{
             loadingRecommended: false,
             recommendedError: null,
             activeFilter: 'region', // 기본 필터는 지역
-            allGatherings: [] // 모든 모임을 저장할 배열
+            allGatherings: [], // 모든 모임을 저장할 배열
+            regionModalOpen: false,
+            updatingRegion: false,
+            selectedRegionData: null, // 카카오맵에서 선택한 지역 데이터
         }
     },
     computed: {
@@ -305,6 +351,55 @@ export default{
                     categoryName: category
                 }
             });
+        },
+
+        handleRegionSelected(regionData) {
+            console.log('선택된 지역:', regionData);
+            this.selectedRegionData = regionData;
+        },
+
+        async confirmRegionSelection() {
+            if (!this.selectedRegionData) {
+                alert('지역을 선택해주세요.');
+                return;
+            }
+            
+            this.updatingRegion = true;
+            
+            try {
+                // 선택한 지역으로 사용자 정보 업데이트
+                await axios.patch(
+                    `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/update`,
+                    {
+                        region: this.selectedRegionData.name
+                    }
+                );
+                
+                // 사용자 정보 다시 불러오기
+                await this.fetchUserProfile();
+                
+                // 추천 모임 다시 불러오기
+                if (this.userInfo && this.userInfo.region) {
+                    await this.fetchRecommendedGatherings();
+                }
+                
+                // 모달 닫기
+                this.regionModalOpen = false;
+                
+                // 성공 메시지 표시
+                alert('활동지역이 업데이트되었습니다.');
+            } catch (err) {
+                console.error('활동지역 업데이트 실패:', err);
+                alert('활동지역 업데이트에 실패했습니다.');
+            } finally {
+                this.updatingRegion = false;
+            }
+        },
+        
+        // 지역 선택 모달 열기
+        openRegionModal() {
+            this.regionModalOpen = true;
+            this.selectedRegionData = null;
         }
     },
     mounted() {

@@ -337,7 +337,7 @@ export default{
                 v => !!v || '장소는 필수입니다'
             ],
             costRules: [
-                v => !!v || '비용은 필수입니다',
+                v => v !== null && v !== undefined && v !== '' || '비용은 필수입니다',
                 v => v >= 0 || '비용은 0 이상이어야 합니다'
             ],
             maxPeopleRules: [
