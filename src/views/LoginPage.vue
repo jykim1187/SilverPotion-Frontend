@@ -186,10 +186,7 @@ export default {
         WebSocketManager.token = token;
         WebSocketManager.loginId = response.data.result.id;
         await this.$router.push('/');
-        this.$nextTick(() => {
-            console.log("📢 loginChanged 이벤트 발행");
-            emitter.emit('loginChanged');
-        });
+        window.location.reload();
 
        // 앱에 로그인 아이디 전달  
         if(window.AndroidBridge && window.AndroidBridge.sendLoginId) {
