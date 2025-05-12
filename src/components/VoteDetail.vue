@@ -648,6 +648,61 @@
         </v-list>
       </v-card>
     </v-dialog>
+
+    <!-- 좋아요 목록 다이얼로그 -->
+    <v-dialog v-model="likesDialog" max-width="400">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <span class="text-h6">좋아요</span>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="likesDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="pa-0">
+          <v-list>
+            <!-- 좋아요 데이터가 있을 경우 표시 -->
+            <div v-if="likes.length > 0">
+              <v-list-item 
+                v-for="like in likes" 
+                :key="like.id" 
+                class="py-2"
+                @click="$router.push(`/silverpotion/user/profile/${like.id}`)"
+                style="cursor: pointer"
+              >
+                <template v-slot:prepend>
+                  <v-avatar size="40">
+                    <v-img :src="like.profileImgUrl || require('@/assets/default-profile.png')"></v-img>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="font-weight-medium">{{ like.nickName }}</v-list-item-title>
+              </v-list-item>
+              
+              <!-- 더 불러오기 버튼 -->
+              <div v-if="likesPage < likesTotalPages - 1" class="text-center py-2">
+                <v-btn 
+                  variant="text" 
+                  color="primary" 
+                  @click="loadMoreLikes" 
+                  :loading="likesLoading"
+                >
+                  더 보기
+                </v-btn>
+              </div>
+            </div>
+            <!-- 좋아요 데이터가 없을 경우 -->
+            <div v-else-if="likesLoading" class="py-5 text-center">
+              <v-progress-circular indeterminate color="primary"></v-progress-circular>
+              <p class="text-body-1 text-medium-emphasis mt-2">좋아요 정보를 불러오는 중...</p>
+            </div>
+            <div v-else class="py-5 text-center">
+              <p class="text-body-1 text-medium-emphasis">아직 좋아요가 없습니다</p>
+            </div>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -717,6 +772,9 @@ export default {
       expandedOptions: new Set(),
       voteMenuDialog: false,
       deleteConfirmDialog: false,
+      likesPage: 0,
+      likesTotalPages: 0,
+      likesLoading: false,
     };
   },
   computed: {
@@ -1456,6 +1514,52 @@ export default {
     loadMoreCommentLikes() {
       if (this.commentLikesPage < this.commentLikesTotalPages - 1 && !this.commentLikesLoading) {
         this.fetchCommentLikes(this.commentLikesPage + 1);
+      }
+    },
+
+    // 좋아요 목록 다이얼로그 표시
+    async showLikesDialog() {
+      this.likesDialog = true;
+      this.likes = [];
+      this.likesPage = 0;
+      this.likesTotalPages = 0;
+      
+      await this.fetchLikes();
+    },
+
+    // 좋아요 목록 가져오기
+    async fetchLikes(page = 0) {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const voteId = this.$route.params.voteId;
+        
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/post/vote/${voteId}/like/list`,
+          {
+            params: {
+              page: page,
+              size: 10
+            },
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        const result = response.data.result;
+        this.likes = result.content || [];
+        this.likesPage = page;
+        this.likesTotalPages = result.totalPages;
+      } catch (error) {
+        console.error('좋아요 목록을 가져오는데 실패했습니다:', error);
+        alert('좋아요 목록을 가져오는데 실패했습니다.');
+      }
+    },
+
+    // 좋아요 목록 더 불러오기
+    loadMoreLikes() {
+      if (this.likesPage < this.likesTotalPages - 1) {
+        this.fetchLikes(this.likesPage + 1);
       }
     },
   }
