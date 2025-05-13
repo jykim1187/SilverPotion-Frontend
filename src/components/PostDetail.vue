@@ -498,6 +498,29 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 댓글 입력창 -->
+    <div class="comment-input">
+      <div class="comment-input-container">
+        <v-textarea
+          v-model="newComment"
+          placeholder="댓글을 달아주세요..."
+          rows="1"
+          auto-grow
+          variant="plain"
+          hide-details
+          density="comfortable"
+        ></v-textarea>
+        <v-btn 
+          color="primary" 
+          @click="submitComment" 
+          :disabled="!newComment.trim()"
+          class="ml-2"
+        >
+          전송
+        </v-btn>
+      </div>
+    </div>
   </v-container>
 </template>
 
