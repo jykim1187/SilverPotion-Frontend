@@ -186,7 +186,7 @@
             </div>
 
             <!-- Floating Action Button and Toggle Menu -->
-            <div class="create-post-wrapper" v-if="!isVoteDetail">
+            <div class="create-post-wrapper" v-if="!isVoteDetail && isGatheringMember">
               <div class="toggle-menu" :class="{ 'show-menu': showMenu }">
                 <div class="menu-items">
                   <v-btn
@@ -397,6 +397,7 @@
           { text: '불법', value: 'ILLEGAL_ACT' },
           { text: '따돌림', value: 'BULLYING' }
         ],
+        isGatheringMember: false, // 모임 멤버 여부
       };
     },
     created() {
@@ -411,6 +412,9 @@
       
       // 로그인 ID 확인
       this.loginId = localStorage.getItem('loginId') || '';
+
+      // 모임 멤버 여부 확인
+      this.checkGatheringMembership();
     },
     computed: {
       filteredPosts() {
@@ -453,7 +457,20 @@
       document.removeEventListener('click', this.closeMenu);
     },
     methods: {
-
+      async checkGatheringMembership() {
+        try {
+          const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/gathering/${this.gatheringId}/userList`);
+          const userList = response.data.result || [];
+          const currentUserId = parseInt(localStorage.getItem('userId'), 10);
+          
+          this.isGatheringMember = userList.some(user => 
+            user.userId === currentUserId && user.status === 'ACTIVATE'
+          );
+        } catch (error) {
+          console.error('모임 회원 여부를 확인하는데 실패했습니다:', error);
+          this.isGatheringMember = false;
+        }
+      },
       getPostId(post) {
         if (!post) {
           return null;
@@ -503,11 +520,11 @@
           };
 
         try {
-          
           const response = await axios.get(apiUrl, { 
             params,
             headers: {
-              'X-User-LoginId': this.loginId
+              'X-User-LoginId': this.loginId || '',
+              'Internal-Request': 'true'  // 내부 요청임을 표시
             }
           });
           const pageData = response.data.result; 
@@ -521,14 +538,15 @@
                   this.posts = newPosts;
               }
               this.totalPages = pageData.totalPages;
-              this.currentPage = pageData.number; // Spring Page is 0-indexed
+              this.currentPage = pageData.number;
           } else {
               if (!loadMore) {
-                  this.posts = []; // Clear posts if structure is wrong on initial load
+                  this.posts = [];
               }
           }
           
         } catch (error) {
+          console.error('게시글 목록을 가져오는데 실패했습니다:', error);
           alert('게시글 목록을 가져오는데 실패했습니다.');
         } finally {
           this.loading = false;
