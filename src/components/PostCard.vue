@@ -3,7 +3,7 @@
         <div class="post-header">
             <div class="user-info">
                 <img 
-                    :src="post.profileImage" 
+                    :src="post.profileImage || require('@/assets/default-profile.png')" 
                     class="profile-image" 
                     alt="프로필 이미지"
                     @error="handleImageError"
@@ -229,6 +229,7 @@ export default {
             }
         },
         handleImageError(event) {
+            console.log('프로필 이미지 로드 실패:', event.target.src);
             event.target.src = require('@/assets/default-profile.png');
         }
     }
