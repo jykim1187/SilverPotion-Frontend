@@ -70,8 +70,14 @@ export default {
         const chatBox = this.$el.querySelector(".chat-box");
         chatBox.addEventListener("scroll", this.onScrollTop);
     },
-    beforeRouteLeave(to, from, next) {
-        this.markAsRead(); // ✅ 나가기 전에 읽음 처리
+    beforeRouteLeave: async function (to, from, next) {
+        try {
+            if (this.messages.length && this.messages[this.messages.length - 1]?.id) {
+            await this.markAsRead();
+            }
+        } catch (err) {
+            console.error('❌ 읽음 처리 실패:', err);
+        }
         next();
     },
     beforeUnmount() {
@@ -200,6 +206,7 @@ export default {
         const lastMessage = this.messages[this.messages.length - 1];
         const userId = localStorage.getItem("userId");
 
+
         try {
             await fetch(`${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/room/${this.roomId}/read?userId=${userId}&messageId=${lastMessage.id}`, {
                 method: 'PATCH',
@@ -226,20 +233,22 @@ export default {
 
 <style>
 .chat-box {
-    height: 400px;
+    height: 500px;
     overflow-y: auto;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    padding: 10px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
+    background-color: #fff;
+    border-radius: 12px;
 }
 
 .chat-message {
     display: flex;
     flex-direction: column;
-    max-width: 80%;
+    max-width: 85%;
     word-wrap: break-word;
 }
 
@@ -252,36 +261,40 @@ export default {
 }
 
 .message-content {
-    padding: 8px 12px;
-    border-radius: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
     position: relative;
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 12px;
+    font-size: 1.1rem;
+    line-height: 1.5;
 }
 
 .sent .message-content {
-    background-color: #e3f2fd;
-    color: #1976d2;
-    border-bottom-right-radius: 0;
+    background-color: #4FC3F7;
+    color: white;
+    border-bottom-right-radius: 4px;
 }
 
 .received .message-content {
-    background-color: #f5f5f5;
+    background-color: #f8f9fa;
     color: #333;
-    border-bottom-left-radius: 0;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #e0e0e0;
 }
 
 .sender-info {
-    font-weight: bold;
-    margin-bottom: 4px;
-    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 1rem;
+    color: #4FC3F7;
 }
 
 .message-with-time {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 12px;
 }
 
 .message-text {
@@ -290,28 +303,75 @@ export default {
 }
 
 .time {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     color: #888;
     display: inline-block;
     white-space: nowrap;
+    margin-left: 8px;
+}
+
+/* 카드 스타일 수정 */
+.v-card {
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.v-card-title {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    padding: 24px !important;
+    border-bottom: 2px solid #4FC3F7 !important;
+}
+
+/* 입력 필드 스타일 */
+.v-text-field {
+    margin-bottom: 16px !important;
+}
+
+.v-text-field :deep(.v-field__input) {
+    font-size: 1.1rem !important;
+    padding: 12px !important;
+}
+
+/* 전송 버튼 스타일 */
+.v-btn {
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    padding: 12px !important;
+    background-color: #4FC3F7 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    text-transform: none !important;
+    letter-spacing: 0.5px !important;
+}
+
+.v-btn:hover {
+    background-color: #81D4FA !important;
 }
 
 /* 반응형 스타일 */
 @media (max-width: 600px) {
+    .chat-box {
+        height: 450px;
+        padding: 16px;
+    }
+    
     .chat-message {
         max-width: 90%;
     }
     
     .message-content {
-        padding: 6px 10px;
+        padding: 10px 14px;
+        font-size: 1rem;
     }
     
     .sender-info {
-        font-size: 0.8rem;
+        font-size: 0.95rem;
     }
     
-    .message-text {
-        font-size: 0.9rem;
+    .time {
+        font-size: 0.85rem;
     }
 }
 </style>

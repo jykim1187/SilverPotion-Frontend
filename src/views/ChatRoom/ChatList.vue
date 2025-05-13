@@ -26,12 +26,12 @@
                                 </v-list-item-title>
 
                                 <v-list-item-subtitle class="d-flex justify-space-between align-center">
-                                    <span class="text-truncate">{{ chat.lastMessageContent || '메시지가 없습니다.' }}</span>
+                                    <span class="text-truncate message-content">{{ chat.lastMessageContent || '메시지가 없습니다.' }}</span>
                                     <v-badge
                                         v-if="chat.unreadCount > 0"
                                         :content="chat.unreadCount"
                                         color="error"
-                                        class="unread-badge"
+                                        class="unread-badge ml-2"
                                     ></v-badge>
                                 </v-list-item-subtitle>
                             </v-list-item>
@@ -218,6 +218,11 @@ export default {
     background-color: #f8f9fa;
 }
 
+.message-content {
+    max-width: calc(100% - 40px) !important; /* 뱃지 공간 확보 */
+    margin-right: 8px !important;
+}
+
 .unread-badge .v-badge__badge {
     font-size: 0.9rem;
     min-width: 24px;
@@ -241,6 +246,7 @@ export default {
     font-size: 1rem !important;
     color: #666 !important;
     line-height: 1.4 !important;
+    padding-right: 8px !important;
 }
 
 /* 카드 스타일 수정 */
