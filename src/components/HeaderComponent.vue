@@ -88,16 +88,26 @@
                         <v-btn v-if="isLogin" icon class="ml-2 mr-2" color="grey-darken-3" size="small" variant="text" 
                         :to="{ path: '/notification' }" 
                         @click="clearNotificationBadge">
-                            <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
-
-                            <v-badge
-                                v-if="hasNotifications"
-                                color="error"
-                                dot
-                                location="bottom end"
-                                offset-x="3"
-                                offset-y="3"
-                            ></v-badge>
+                            <v-tooltip
+                                v-model="showNotificationTooltip"
+                                location="bottom"
+                                :text="'새로운 알림이 왔어요!'"
+                                :disabled="!hasNotifications"
+                            >
+                                <template v-slot:activator="{ props }">
+                                    <div v-bind="props">
+                                        <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
+                                        <v-badge
+                                            v-if="hasNotifications"
+                                            color="error"
+                                            dot
+                                            location="bottom end"
+                                            offset-x="3"
+                                            offset-y="3"
+                                        ></v-badge>
+                                    </div>
+                                </template>
+                            </v-tooltip>
                         </v-btn>
                     </div>
                 </v-col>
@@ -122,6 +132,7 @@ export default {
       notificationsMenu: false,
       profileImage: null,
       notifications: [],
+      showNotificationTooltip: false,
     };
   },
   computed: {
@@ -197,6 +208,10 @@ export default {
             message: notification.content
         });
         this.hasNotifications = true;
+        this.showNotificationTooltip = true;
+        setTimeout(() => {
+            this.showNotificationTooltip = false;
+        }, 3000); // 3초 후 말풍선 사라짐
     },
     formatDate(datetime) {
         if (!datetime) return '';
@@ -215,12 +230,13 @@ export default {
     transform: translateX(-50%) !important;
     position: fixed;
     background: #fff !important;
-    color: #222 !important;
+    color: #333 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
 .header-container {
     width: 100%;
-    padding: 0 8px;
+    padding: 0 12px;
     overflow: visible;
 }
 
@@ -242,19 +258,48 @@ export default {
     text-overflow: ellipsis;
 }
 
-.notifications-drawer {
-    max-width: 100%;
-    border-radius: 0;
+/* 버튼 스타일 수정 */
+.v-btn {
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* 알림 아이콘 스타일 */
+.v-badge__badge {
+    background-color: #4FC3F7 !important; /* 하늘색 포인트 */
+    font-size: 0.8rem !important;
+    height: 20px !important;
+    min-width: 20px !important;
+}
+
+/* 프로필 메뉴 스타일 */
+.v-list-item {
+    padding: 12px 16px !important;
+}
+
+.v-list-item-title {
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+}
+
+.v-icon {
+    color: #4FC3F7 !important; /* 하늘색 포인트 */
+}
+
+/* 로고 크기 조정 */
+.logo-btn img {
+    height: 45px !important;
 }
 
 @media (max-width: 768px) {
     .header-content {
-        padding: 0 4px;
+        padding: 0 8px;
     }
     
     .v-btn {
         min-width: 0;
-        padding: 0 4px;
+        padding: 0 8px;
     }
 
     .button-group {
@@ -262,8 +307,8 @@ export default {
     }
 
     .v-avatar {
-        width: 36px !important;
-        height: 36px !important;
+        width: 40px !important;
+        height: 40px !important;
     }
 
     .v-btn .v-avatar {
