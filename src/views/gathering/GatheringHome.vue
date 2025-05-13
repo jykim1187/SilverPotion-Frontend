@@ -618,6 +618,7 @@ export default{
             isSubscribed: false,
             messages: [],
             newMessage: "",
+            senderNickName: localStorage.getItem("nickName"),
         }
     },
     beforeUnmount() {
@@ -972,7 +973,7 @@ export default{
                 content: this.newMessage,
                 type: "TEXT",
                 senderId: this.userId,
-                senderNickName: localStorage.getItem('nickname'),
+                senderNickName: localStorage.getItem('nickName'),
                 createdAt: new Date().toISOString()
             };
 
