@@ -88,16 +88,26 @@
                         <v-btn v-if="isLogin" icon class="ml-2 mr-2" color="grey-darken-3" size="small" variant="text" 
                         :to="{ path: '/notification' }" 
                         @click="clearNotificationBadge">
-                            <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
-
-                            <v-badge
-                                v-if="hasNotifications"
-                                color="error"
-                                dot
-                                location="bottom end"
-                                offset-x="3"
-                                offset-y="3"
-                            ></v-badge>
+                            <v-tooltip
+                                v-model="showNotificationTooltip"
+                                location="bottom"
+                                :text="'새로운 알림이 왔어요!'"
+                                :disabled="!hasNotifications"
+                            >
+                                <template v-slot:activator="{ props }">
+                                    <div v-bind="props">
+                                        <img src="@/assets/bell-regular.svg" alt="notifications" style="width: 26px; height: 26px;" />
+                                        <v-badge
+                                            v-if="hasNotifications"
+                                            color="error"
+                                            dot
+                                            location="bottom end"
+                                            offset-x="3"
+                                            offset-y="3"
+                                        ></v-badge>
+                                    </div>
+                                </template>
+                            </v-tooltip>
                         </v-btn>
                     </div>
                 </v-col>
@@ -122,6 +132,7 @@ export default {
       notificationsMenu: false,
       profileImage: null,
       notifications: [],
+      showNotificationTooltip: false,
     };
   },
   computed: {
@@ -197,6 +208,10 @@ export default {
             message: notification.content
         });
         this.hasNotifications = true;
+        this.showNotificationTooltip = true;
+        setTimeout(() => {
+            this.showNotificationTooltip = false;
+        }, 3000); // 3초 후 말풍선 사라짐
     },
     formatDate(datetime) {
         if (!datetime) return '';

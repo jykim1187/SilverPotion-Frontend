@@ -105,7 +105,7 @@
             return null;
           case "GATHERING_DEACTIVATED":// 모임 탈퇴 또는 해체
             return null;
-          case "GATHERING_JOINED":// 모임 참여 
+          case "JOINED":// 모임 참여 
             return `/silverpotion/gathering/home/${referenceId}`;
           case "CARE_REQUEST": // 보호자 요청
             return null;
@@ -165,6 +165,7 @@
             await this.markNotificationAsReadByRef(referenceId);
           alert("보호 요청을 수락했습니다.");
           this.fetchNotifications();
+          this.$router.push('/silverpotion/healthdatapage');
         } catch (err) {
           console.error("❌ 수락 실패:", err);
           alert("수락에 실패했습니다.");
