@@ -632,6 +632,7 @@ export default{
         this.page = 0;
         this.hasMore = true;
         this.messages = [];
+        this.loadMessageHistory();
     },
     computed: {
         isGatheringLeader() {
@@ -707,9 +708,7 @@ export default{
                 this.chatRoomId = gatheringData.chatRoomId;
                 this.roomId = this.chatRoomId; // roomId 설정
                 
-                if (this.isGatheringMember && this.roomId) {
-                    await this.loadMessageHistory(); // roomId가 설정된 후 호출
-                }
+                
             } catch (error) {
                 console.error('모임 정보를 가져오는데 실패했습니다:', error);
             }
@@ -1071,7 +1070,7 @@ export default{
                     chatBox.scrollTop = newScrollHeight - oldScrollHeight; // 스크롤 위치 유지
                 });
 
-                console.log(`📄 page ${this.page} 히스토리 불러옴`, reversed.length);
+                console.log(`📄 page ${this.page} 히스토리 성공적으로 불러옴`, reversed.length);
             } catch (error) {
                 console.error("❌ 채팅 히스토리 불러오기 실패", error);
                 alert("채팅 내역을 불러오는데 실패했습니다.");
