@@ -30,9 +30,19 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
     response => response,
     async error => {
+        // SMS 관련 API는 토큰 체크 건너뛰기
+        if (error.config.url.includes('/silverpotion/sms/')) {
+            return Promise.reject(error);
+        }
+
+        // 401 에러이고 refreshToken이 있을 때만 토큰 갱신 시도
         if(error.response && error.response.status === 401 ) {
             try{
                 const refreshToken = localStorage.getItem('refreshToken')
+                if (!refreshToken) {
+                    return Promise.reject(error);
+                }
+                
                 localStorage.removeItem('token')
                 const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/refresh-token`, {refreshToken})
                 console.log(response)

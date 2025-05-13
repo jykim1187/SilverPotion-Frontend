@@ -120,16 +120,54 @@
           <v-icon color="primary" size="20">mdi-phone</v-icon>
           <span>전화번호</span>
         </div>
-        <v-text-field
-          v-model="formData.phoneNumber"
-          placeholder="01012345678('-'을 빼고 입력해주세요)"
-          :rules="[rules.required, rules.phone]"
-          filled
-          dense
-          background-color="transparent"
-          hide-details="auto"
-          class="floating-input"
-        />
+        <div class="d-flex align-center">
+          <v-text-field
+            v-model="formData.phoneNumber"
+            placeholder="01012345678('-'을 빼고 입력해주세요)"
+            :rules="[rules.required, rules.phone]"
+            filled
+            dense
+            background-color="transparent"
+            hide-details="auto"
+            class="floating-input mr-2"
+            :disabled="authVerified"
+          />
+          <v-btn
+            color="primary"
+            :disabled="!formData.phoneNumber || !rules.phone(formData.phoneNumber) || authVerified || sendingAuth"
+            @click="sendAuthCode"
+            :loading="sendingAuth"
+          >
+            {{ authVerified ? '인증완료' : '인증요청' }}
+          </v-btn>
+        </div>
+        <!-- 인증번호 입력 필드 -->
+        <div v-if="authRequested && !authVerified" class="mt-2">
+          <div class="d-flex align-center">
+            <v-text-field
+              v-model="formData.inputCode"
+              placeholder="인증번호 4자리"
+              :rules="[rules.required]"
+              filled
+              dense
+              background-color="transparent"
+              hide-details="auto"
+              class="floating-input mr-2"
+              :disabled="verifyingAuth"
+            />
+            <v-btn
+              color="secondary"
+              :disabled="!formData.inputCode || verifyingAuth"
+              @click="verifyAuthCode"
+              :loading="verifyingAuth"
+            >
+              인증확인
+            </v-btn>
+          </div>
+          <div v-if="authMessage" :class="['validation-message', authVerified ? 'valid' : 'invalid']">
+            {{ authMessage }}
+          </div>
+        </div>
       </div>
 
       <div class="floating-input-wrapper">
@@ -291,6 +329,40 @@
 import axios from 'axios';
 import KakaoMap from '@/views/gathering/RegionSelect.vue';
 
+// Axios 인터셉터 설정
+axios.interceptors.response.use(
+  response => response,
+  async error => {
+    // SMS 관련 API는 토큰 체크 건너뛰기
+    if (error.config.url.includes('/silverpotion/sms/')) {
+      return Promise.reject(error);
+    }
+
+    // 401 에러이고 refreshToken이 있을 때만 토큰 갱신 시도
+    if (error.response?.status === 401) {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        return Promise.reject(error);
+      }
+
+      try {
+        const res = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/refresh-token`,
+          { refreshToken }
+        );
+        // 토큰 갱신 성공 시 원래 요청 재시도
+        const originalRequest = error.config;
+        originalRequest.headers['Authorization'] = `Bearer ${res.data.accessToken}`;
+        return axios(originalRequest);
+      } catch (refreshError) {
+        // 토큰 갱신 실패 시 에러 반환
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default {
   components: {
     KakaoMap
@@ -298,6 +370,11 @@ export default {
   data() {
     return {
       loading: false,
+      sendingAuth: false,
+      verifyingAuth: false,
+      authRequested: false,
+      authVerified: false,
+      authMessage: '',
       formData: {
         loginId: '',
         email: '',
@@ -305,6 +382,7 @@ export default {
         name: '',
         sex: null,
         phoneNumber: '',
+        inputCode: '', // authCode를 inputCode로 변경
         birthday: '',
         nickName: '',
         address: '',
@@ -508,6 +586,106 @@ export default {
       }, 300);
     },
 
+    async sendAuthCode() {
+      if (!this.formData.phoneNumber.trim()) {
+        alert("전화번호를 입력해주세요.");
+        return;
+      }
+      if (this.formData.phoneNumber.includes("-")) {
+        alert("전화번호에 '-'를 제거해주세요.");
+        return;
+      }
+
+      try {
+        console.log('Sending auth code to:', this.formData.phoneNumber);
+        // 새로운 axios 인스턴스 생성
+        const smsAxios = axios.create({
+          headers: {
+            'Content-Type': 'application/json',
+            'Internal-Request': 'true'
+          }
+        });
+
+        const response = await smsAxios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/sms/send-auth`,
+          {
+            phoneNumber: this.formData.phoneNumber
+          }
+        );
+        
+        console.log('Auth code response:', response);
+        
+        if (response.data) {
+          alert('인증번호가 전송되었습니다');
+          this.authRequested = true;
+          this.authMessage = '인증번호를 입력해주세요';
+        } else {
+          alert('인증번호 전송에 실패했습니다');
+        }
+      } catch (error) {
+        console.error('인증번호 전송 실패:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        alert(error.response?.data?.message || '인증번호 전송에 실패했습니다');
+      }
+    },
+
+    async verifyAuthCode() {
+      if (!this.formData.inputCode) {
+        alert('인증번호를 입력해주세요');
+        return;
+      }
+
+      this.verifyingAuth = true;
+      try {
+        console.log('Verifying auth code:', {
+          phoneNumber: this.formData.phoneNumber,
+          inputCode: this.formData.inputCode
+        });
+        
+        // 새로운 axios 인스턴스 생성
+        const smsAxios = axios.create({
+          headers: {
+            'Content-Type': 'application/json',
+            'Internal-Request': 'true'
+          }
+        });
+
+        const response = await smsAxios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/sms/verify-auth`,
+          {
+            phoneNumber: this.formData.phoneNumber,
+            inputCode: this.formData.inputCode
+          }
+        );
+        
+        console.log('Verify response:', response);
+        
+        if (response.data === true) {
+          this.authVerified = true;
+          this.authMessage = '인증이 완료되었습니다';
+          alert('인증이 완료되었습니다');
+        } else {
+          this.authMessage = '인증번호가 일치하지 않습니다';
+          alert('인증번호가 일치하지 않습니다');
+        }
+      } catch (error) {
+        console.error('인증 확인 실패:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        this.authMessage = '인증 확인에 실패했습니다';
+        alert(error.response?.data?.message || '인증 확인에 실패했습니다');
+      } finally {
+        this.verifyingAuth = false;
+      }
+    },
+
     async handleSubmit() {
       if (!this.$refs.form.validate()) return;
       
@@ -520,10 +698,19 @@ export default {
         this.showSnackbar('중복된 정보가 있습니다. 다시 확인해주세요.', 'error');
         return;
       }
+
+      // 휴대폰 인증 확인
+      if (!this.authVerified) {
+        this.showSnackbar('휴대폰 인증을 완료해주세요.', 'error');
+        return;
+      }
       
       this.loading = true;
       try {
-        const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/create`, this.formData);
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/user-service/silverpotion/user/create`,
+          this.formData
+        );
         console.log(response);
         this.showSnackbar('회원가입이 완료되었습니다!', 'success');
         //웹뷰에 전달. 즉 브라우저에는 무시되고 폰에서만 작동되는 코드임. 폰에 입력한 전화번호 전달
