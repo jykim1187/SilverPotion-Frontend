@@ -72,8 +72,7 @@
                   <!-- Header: Avatar, Nickname, Time, Menu -->
                   <template v-slot:prepend>
                     <v-avatar size="36" class="mr-3">
-                      <!-- Always use default image -->
-                      <v-img :src="require('@/assets/default-gathering.png')"></v-img>
+                      <v-img :src="post.profileImage || require('@/assets/default-gathering.png')"></v-img>
                     </v-avatar>
                   </template>
 

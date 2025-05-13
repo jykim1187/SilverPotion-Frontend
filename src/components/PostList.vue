@@ -7,8 +7,15 @@
     >
       <div class="d-flex align-center">
         <v-card-title class="flex-grow-1" @click="goToPostDetail(post.postId)">
-          {{ post.title }}
-          <v-chip v-if="post.isVote" size="small" color="primary" class="ml-2">투표</v-chip>
+          <div class="d-flex align-center">
+            <v-avatar size="36" class="mr-3">
+              <v-img :src="post.profileImage || require('@/assets/default-gathering.png')"></v-img>
+            </v-avatar>
+            <div>
+              {{ post.title }}
+              <v-chip v-if="post.isVote" size="small" color="primary" class="ml-2">투표</v-chip>
+            </div>
+          </div>
         </v-card-title>
         <v-btn icon @click.stop="toggleLike(post)">
           <v-icon :color="post.isLike === 'Y' ? 'red' : ''">
