@@ -363,8 +363,10 @@
                                             <template v-if="msg.senderId !== userId">
                                                 <div class="sender-info">{{ msg.senderNickName }}</div>
                                             </template>
-                                            <span>{{ msg.content }}</span>
-                                            <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                            <div class="message-text">
+                                                <span>{{ msg.content }}</span>
+                                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -970,6 +972,7 @@ export default{
                 content: this.newMessage,
                 type: "TEXT",
                 senderId: this.userId,
+                senderNickName: localStorage.getItem('nickname'),
                 createdAt: new Date().toISOString()
             };
 
@@ -1077,45 +1080,10 @@ export default{
         },
         formatTime(timeValue) {
             if (!timeValue) return '';
-            
-            // 배열 형태의 시간 처리 (Java LocalTime 형식)
-            if (Array.isArray(timeValue)) {
-                const [hour, minute] = timeValue;
-                // 시간과 분을 두 자리 숫자로 포맷팅
-                const formattedHour = hour.toString().padStart(2, '0');
-                const formattedMinute = minute.toString().padStart(2, '0');
-                return `${formattedHour}:${formattedMinute}`;
-            }
-            
-            // 문자열 형태의 시간 처리 (기존 로직)
-            if (typeof timeValue === 'string') {
-                // HH:MM:SS 형식에서 HH:MM 형식으로 변환
-                return timeValue.substring(0, 5);
-            }
-            
-            return '';
-        },
-        formatDateTime(dateValue, timeValue) {
-            if (!dateValue || !timeValue) return '날짜/시간 정보 없음';
-            
-            // 배열 형태의 날짜와 시간 처리
-            if (Array.isArray(dateValue) && Array.isArray(timeValue)) {
-                const [year, month, day] = dateValue;
-                const [hour, minute] = timeValue;
-                
-                return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분`;
-            }
-            
-            // 기존 형식 처리 (문자열 등)
-            try {
-                const dateStr = this.formatDate(dateValue);
-                const timeStr = this.formatTime(timeValue);
-                
-                return `${dateStr} ${timeStr}`;
-            } catch (error) {
-                console.error('날짜/시간 변환 오류:', error);
-                return '날짜/시간 정보 없음';
-            }
+            const date = new Date(timeValue);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
         },
 
         showUserProfile(member) {
@@ -1563,6 +1531,12 @@ export default{
     line-height: 1.5;
 }
 
+.message-text {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
 .sent .message-content {
     background-color: #4FC3F7;
     color: white;
@@ -1604,7 +1578,7 @@ export default{
     border-bottom: 2px solid #4FC3F7 !important;
 }
 
-/* 입력 필드 스타일 */
+/* 입력 필드 스타일링 */
 :deep(.chat-input) {
     margin-bottom: 16px !important;
 }
