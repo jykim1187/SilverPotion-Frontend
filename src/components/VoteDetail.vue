@@ -930,6 +930,29 @@ export default {
       }
     },
 
+    // 댓글 목록 가져오기
+    async fetchComments() {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        const voteId = this.$route.params.voteId;
+        
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/list/${voteId}`,
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        this.commentList = response.data.result || [];
+        console.log('댓글 목록:', this.commentList);
+      } catch (error) {
+        console.error('댓글 목록을 가져오는데 실패했습니다:', error);
+        alert('댓글 목록을 가져오는데 실패했습니다.');
+      }
+    },
+
     // 좋아요 토글
     async toggleLike() {
       try {
@@ -1560,6 +1583,53 @@ export default {
     loadMoreLikes() {
       if (this.likesPage < this.likesTotalPages - 1) {
         this.fetchLikes(this.likesPage + 1);
+      }
+    },
+
+    async updateComment(commentId) {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        await axios.put(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/update/${commentId}`,
+          {
+            content: this.editedCommentContent
+          },
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        this.editingComment = null;
+        this.editedCommentContent = '';
+        // 댓글 목록 새로고침
+        await this.fetchComments();
+      } catch (error) {
+        console.error('댓글 수정 중 오류가 발생했습니다:', error);
+        alert('댓글 수정 중 오류가 발생했습니다.');
+      }
+    },
+
+    async deleteComment() {
+      try {
+        const loginId = localStorage.getItem('loginId');
+        await axios.delete(
+          `${process.env.VUE_APP_API_BASE_URL}/post-service/silverpotion/comment/delete/${this.commentToDelete}`,
+          {
+            headers: {
+              'X-User-LoginId': loginId
+            }
+          }
+        );
+        
+        this.deleteDialog = false;
+        this.commentToDelete = null;
+        // 댓글 목록 새로고침
+        await this.fetchComments();
+      } catch (error) {
+        console.error('댓글 삭제 중 오류가 발생했습니다:', error);
+        alert('댓글 삭제 중 오류가 발생했습니다.');
       }
     },
   }
