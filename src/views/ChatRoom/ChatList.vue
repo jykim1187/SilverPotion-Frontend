@@ -210,29 +210,65 @@ export default {
 .chat-list-item {
     cursor: pointer;
     transition: background-color 0.2s;
+    padding: 16px !important;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .chat-list-item:hover {
-    background-color: #f5f5f5;
+    background-color: #f8f9fa;
 }
 
 .unread-badge .v-badge__badge {
-    font-size: 0.7rem;
-    min-width: 20px;
-    height: 20px;
+    font-size: 0.9rem;
+    min-width: 24px;
+    height: 24px;
     padding: 0;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: #4FC3F7 !important; /* 하늘색 포인트 */
 }
 
 .v-list-item-title {
-    font-size: 1rem;
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    margin-bottom: 4px !important;
 }
 
 .v-list-item-subtitle {
-    font-size: 0.875rem;
-    color: #666;
+    font-size: 1rem !important;
+    color: #666 !important;
+    line-height: 1.4 !important;
+}
+
+/* 카드 스타일 수정 */
+.v-card {
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.v-card-title {
+    font-size: 1.4rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    padding: 20px !important;
+    border-bottom: 2px solid #4FC3F7 !important; /* 하늘색 포인트 */
+}
+
+/* 시간 표시 스타일 */
+.text-caption {
+    font-size: 0.9rem !important;
+    color: #666 !important;
+}
+
+/* 아바타 스타일 */
+.v-avatar {
+    background-color: #4FC3F7 !important; /* 하늘색 포인트 */
+}
+
+.v-icon {
+    color: white !important;
 }
 </style>
