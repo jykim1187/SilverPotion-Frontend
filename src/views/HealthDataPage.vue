@@ -28,7 +28,7 @@
           :class="{ active: !showHealthData }"
           @click="showHealthData = false">
           <v-icon left>mdi-file-document-outline</v-icon>
-          건강 리포트
+           AI 리포트
         </button>
       </div>
     </div>
