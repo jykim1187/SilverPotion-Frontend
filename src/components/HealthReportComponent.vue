@@ -5,7 +5,7 @@
         <div class="user-profile" @click="showUserProfile">
           <img :src="profileImage" class="profile-image" alt="User Profile">
         </div>
-        <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 건강 리포트</h1>
+        <h1 @click="showUserProfile" class="user-name-title">{{ userName }} 님의 AI 리포트</h1>
       </div>
       
       <!-- 날짜 선택 -->

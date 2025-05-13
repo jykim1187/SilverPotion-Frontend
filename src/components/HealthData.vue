@@ -236,7 +236,7 @@
       <!-- 헬스 점수 섹션 - 버전 4 -->
       <div class="health-score-container version-4" v-if="selectedScoreDesign === 4">
         <div class="score-header-v4">
-          <h2>건강 지수</h2>
+          <h2>웰빙 점수</h2>
         </div>
         
         <div class="score-content-v4">
@@ -244,7 +244,7 @@
           <div v-if="didIwriteHealthDetail" class="score-card-hero">
             <!-- 왼쪽: 설명 텍스트 -->
             <div class="hero-content">
-              <div class="hero-title">종합 건강 점수</div>
+              <div class="hero-title"> 웰빙 점수</div>
               <div class="hero-subtitle">{{ getHealthScoreStatus() }}</div>
               <p class="score-description">
                 {{ getHealthScoreDescription() }}
@@ -272,8 +272,8 @@
               
               <!-- 자신의 데이터를 보는 경우 -->
               <template v-if="isCurrentUser">
-                <h3 class="guide-title">건강 프로필을 작성해 건강지수를 확인해보세요!</h3>
-                <p class="guide-description">건강 프로필 작성을 완료하면 맞춤형 건강 점수와 분석 결과를 확인할 수 있습니다.</p>
+                <h3 class="guide-title">건강 프로필을 작성해 웰빙점수를 확인해보세요!</h3>
+                <p class="guide-description">건강 프로필 작성을 완료하면 맞춤형 웰빙 점수와 분석 결과를 확인할 수 있습니다.</p>
                 <v-btn 
                   color="warning" 
                   class="guide-btn" 
