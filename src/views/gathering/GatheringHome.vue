@@ -359,26 +359,22 @@
                                         :key="index"
                                         :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
                                     >
-                                        <template v-if="msg.senderId === userId">
-                                            <div class="message-content">
-                                                {{ msg.content }}
-                                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
-                                            </div>
-                                        </template>
-                                        <template v-else>
-                                            <div class="message-content">
-                                                {{ msg.content }}
-                                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
-                                            </div>
-                                        </template>
+                                        <div class="message-content">
+                                            <template v-if="msg.senderId !== userId">
+                                                <div class="sender-info">{{ msg.senderNickName }}</div>
+                                            </template>
+                                            <span>{{ msg.content }}</span>
+                                            <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <v-text-field
                                     v-model="newMessage"
                                     label="메시지 입력"
                                     @keyup.enter="sendMessage"
+                                    class="chat-input"
                                 />
-                                <v-btn color="primary" block @click="sendMessage">전송</v-btn>
+                                <v-btn color="primary" block @click="sendMessage" class="send-btn">전송</v-btn>
                             </v-card-text>
                         </v-card>
                     </div>
@@ -706,8 +702,11 @@ export default{
                 this.gatheringIntroduce = gatheringData.introduce;
                 this.gatheringLeaderId = gatheringData.leaderId;
                 this.chatRoomId = gatheringData.chatRoomId;
+                this.roomId = this.chatRoomId; // roomId 설정
                 
-                this.loadMessageHistory(this.chatRoomId);
+                if (this.isGatheringMember && this.roomId) {
+                    await this.loadMessageHistory(); // roomId가 설정된 후 호출
+                }
             } catch (error) {
                 console.error('모임 정보를 가져오는데 실패했습니다:', error);
             }
@@ -1016,11 +1015,16 @@ export default{
             }
         },
 
-        async loadMessageHistory(chatRoomId) {
+        async loadMessageHistory() {
+            if (!this.roomId) {
+                console.warn("🚫 roomId가 없습니다.");
+                return;
+            }
+
             this.loadingHistory = true;
             try {
                 const response = await fetch(
-                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${chatRoomId}/messages?page=${this.page}&size=30`,
+                    `${process.env.VUE_APP_API_BASE_URL}/chat-service/chat/${this.roomId}/messages?page=${this.page}&size=30`,
                     {
                         headers: {
                             Authorization: `Bearer ${this.token}`,
@@ -1028,8 +1032,20 @@ export default{
                         }
                     }
                 );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const result = await response.json();
-                const reversed = result.content.reverse();
+                console.log('📥 메시지 히스토리 응답:', result);
+
+                if (!result.content || !Array.isArray(result.content)) {
+                    console.warn('⚠️ 메시지 데이터가 올바르지 않습니다:', result);
+                    return;
+                }
+
+                const reversed = result.content.reverse(); // 오래된 메시지가 위로 오도록
 
                 if (reversed.length === 0) {
                     this.hasMore = false;
@@ -1037,16 +1053,24 @@ export default{
                 }
 
                 const chatBox = this.$el.querySelector(".chat-box");
+                if (!chatBox) {
+                    console.warn('⚠️ 채팅 박스 엘리먼트를 찾을 수 없습니다.');
+                    return;
+                }
+
                 const oldScrollHeight = chatBox.scrollHeight;
 
-                this.messages = [...reversed, ...this.messages];
+                this.messages = [...reversed, ...this.messages]; // 위로 붙이기
 
                 this.$nextTick(() => {
                     const newScrollHeight = chatBox.scrollHeight;
-                    chatBox.scrollTop = newScrollHeight - oldScrollHeight;
+                    chatBox.scrollTop = newScrollHeight - oldScrollHeight; // 스크롤 위치 유지
                 });
+
+                console.log(`📄 page ${this.page} 히스토리 불러옴`, reversed.length);
             } catch (error) {
                 console.error("❌ 채팅 히스토리 불러오기 실패", error);
+                alert("채팅 내역을 불러오는데 실패했습니다.");
             } finally {
                 this.loadingHistory = false;
             }
@@ -1501,31 +1525,22 @@ export default{
 }
 
 .chat-box {
-    height: 300px;
+    height: 500px;
     overflow-y: auto;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    padding: 10px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-}
-
-.chat-box {
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 16px;
+    background-color: #fff;
+    border-radius: 12px;
 }
 
 .chat-message {
     display: flex;
     flex-direction: column;
-    max-width: 80%;
+    max-width: 85%;
     word-wrap: break-word;
 }
 
@@ -1538,30 +1553,101 @@ export default{
 }
 
 .message-content {
-    padding: 8px 12px;
-    border-radius: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
     position: relative;
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
     gap: 8px;
+    font-size: 1.1rem;
+    line-height: 1.5;
 }
 
 .sent .message-content {
-    background-color: #e3f2fd;
-    color: #1976d2;
-    border-bottom-right-radius: 0;
+    background-color: #4FC3F7;
+    color: white;
+    border-bottom-right-radius: 4px;
 }
 
 .received .message-content {
-    background-color: #f5f5f5;
+    background-color: #f8f9fa;
     color: #333;
-    border-bottom-left-radius: 0;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.sender-info {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #4FC3F7;
 }
 
 .time {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     color: #888;
     display: inline-block;
     white-space: nowrap;
+    margin-left: 8px;
+}
+
+/* 카드 스타일 수정 */
+:deep(.v-card) {
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+:deep(.v-card-title) {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    padding: 24px !important;
+    border-bottom: 2px solid #4FC3F7 !important;
+}
+
+/* 입력 필드 스타일 */
+:deep(.chat-input) {
+    margin-bottom: 16px !important;
+}
+
+:deep(.chat-input .v-field__input) {
+    font-size: 1.1rem !important;
+    padding: 12px !important;
+}
+
+/* 전송 버튼 스타일 */
+:deep(.send-btn) {
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    padding: 12px !important;
+    background-color: #4FC3F7 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    text-transform: none !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 600px) {
+    .chat-box {
+        height: 450px;
+        padding: 16px;
+    }
+    
+    .chat-message {
+        max-width: 90%;
+    }
+    
+    .message-content {
+        padding: 10px 14px;
+        font-size: 1rem;
+    }
+    
+    .sender-info {
+        font-size: 0.95rem;
+    }
+    
+    .time {
+        font-size: 0.85rem;
+    }
 }
 </style>
