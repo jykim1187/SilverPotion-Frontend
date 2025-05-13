@@ -231,7 +231,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .chat-box {
     height: 500px;
     overflow-y: auto;
@@ -311,12 +311,12 @@ export default {
 }
 
 /* 카드 스타일 수정 */
-.v-card {
+:deep(.v-card) {
     border-radius: 16px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-.v-card-title {
+:deep(.v-card-title) {
     font-size: 1.5rem !important;
     font-weight: 600 !important;
     color: #333 !important;
@@ -325,17 +325,17 @@ export default {
 }
 
 /* 입력 필드 스타일 */
-.v-text-field {
+:deep(.v-text-field) {
     margin-bottom: 16px !important;
 }
 
-.v-text-field :deep(.v-field__input) {
+:deep(.v-text-field .v-field__input) {
     font-size: 1.1rem !important;
     padding: 12px !important;
 }
 
 /* 전송 버튼 스타일 */
-.v-btn {
+:deep(.v-btn) {
     font-size: 1.1rem !important;
     font-weight: 500 !important;
     padding: 12px !important;
@@ -344,10 +344,6 @@ export default {
     border-radius: 8px !important;
     text-transform: none !important;
     letter-spacing: 0.5px !important;
-}
-
-.v-btn:hover {
-    background-color: #81D4FA !important;
 }
 
 /* 반응형 스타일 */

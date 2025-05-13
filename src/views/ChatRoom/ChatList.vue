@@ -223,7 +223,7 @@ export default {
     margin-right: 8px !important;
 }
 
-.unread-badge .v-badge__badge {
+:deep(.unread-badge .v-badge__badge) {
     font-size: 0.9rem;
     min-width: 24px;
     height: 24px;
@@ -235,14 +235,14 @@ export default {
     background-color: #4FC3F7 !important; /* 하늘색 포인트 */
 }
 
-.v-list-item-title {
+:deep(.v-list-item-title) {
     font-size: 1.2rem !important;
     font-weight: 600 !important;
     color: #333 !important;
     margin-bottom: 4px !important;
 }
 
-.v-list-item-subtitle {
+:deep(.v-list-item-subtitle) {
     font-size: 1rem !important;
     color: #666 !important;
     line-height: 1.4 !important;
@@ -250,12 +250,12 @@ export default {
 }
 
 /* 카드 스타일 수정 */
-.v-card {
+:deep(.v-card) {
     border-radius: 12px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-.v-card-title {
+:deep(.v-card-title) {
     font-size: 1.4rem !important;
     font-weight: 600 !important;
     color: #333 !important;
@@ -264,17 +264,17 @@ export default {
 }
 
 /* 시간 표시 스타일 */
-.text-caption {
+:deep(.text-caption) {
     font-size: 0.9rem !important;
     color: #666 !important;
 }
 
 /* 아바타 스타일 */
-.v-avatar {
+:deep(.v-avatar) {
     background-color: #4FC3F7 !important; /* 하늘색 포인트 */
 }
 
-.v-icon {
+:deep(.v-icon) {
     color: white !important;
 }
 </style>
