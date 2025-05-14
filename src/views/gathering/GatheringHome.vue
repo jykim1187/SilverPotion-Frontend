@@ -357,15 +357,16 @@
                                     <div 
                                         v-for="(msg, index) in messages"
                                         :key="index"
-                                        :class="['chat-message', msg.senderId === userId ? 'sent' : 'received' ]"
+                                        v-if="msg.content && msg.content.trim() !== ''"
+                                        :class="['chat-message', msg.senderId === userId ? 'sent' : 'received']"
                                     >
                                         <div class="message-content">
                                             <template v-if="msg.senderId !== userId">
-                                                <div class="sender-info">{{ msg.senderNickName }}</div>
+                                            <div class="sender-info">{{ msg.senderNickName }}</div>
                                             </template>
                                             <div class="message-text">
-                                                <span>{{ msg.content }}</span>
-                                                <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
+                                            <span>{{ msg.content }}</span>
+                                            <span class="time" v-if="msg.createdAt">{{ formatTime(msg.createdAt) }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -992,6 +993,8 @@ export default{
         },
 
         onMessageReceived(message) {
+            if (!message.content || message.content.trim() === '') return;
+
             console.log('📩 받은 메시지:', message);
             console.log('📩 roomMatch:', parseInt(message.roomId), this.roomId);
             console.log('📩 notMine:', message.senderId, this.userId);
