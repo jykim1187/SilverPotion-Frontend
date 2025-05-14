@@ -35,13 +35,6 @@
                                         </v-btn>
                                     </v-list-item-title>
                                 </v-list-item>
-                                <v-list-item>
-                                    <v-list-item-title>
-                                        <v-btn :to="{path:'/user/list'}" variant="text" block class="justify-start" @click="profileMenu = false">
-                                            <v-icon start>mdi-account-group</v-icon> 회원목록
-                                        </v-btn>
-                                    </v-list-item-title>
-                                </v-list-item>
                                 <v-list-item v-if="isAdmin">
                                     <v-list-item-title>
                                         <v-btn :to="{path:'/silverpotion/admin'}" variant="text" block class="justify-start" @click="profileMenu = false">
