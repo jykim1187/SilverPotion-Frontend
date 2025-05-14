@@ -355,9 +355,8 @@
                             <v-card-text>
                                 <div class="chat-box">
                                     <div 
-                                        v-for="(msg, index) in messages"
+                                        v-for="(msg, index) in filteredMessages"
                                         :key="index"
-                                        v-if="msg.content && msg.content.trim() !== ''"
                                         :class="['chat-message', msg.senderId === userId ? 'sent' : 'received']"
                                     >
                                         <div class="message-content">
@@ -649,6 +648,11 @@ export default{
                 const dateB = new Date(b.meetingDate + ' ' + b.meetingTime);
                 return dateA - dateB;
             });
+        },
+        filteredMessages() {
+            return this.messages.filter(
+                msg => msg.content && msg.content.trim() !== ''
+            );
         }
     },
     watch: {

@@ -9,9 +9,8 @@
                     <v-card-text>
                         <div class="chat-box">
                             <div 
-                                v-for="(msg, index) in messages"
+                                v-for="(msg, index) in filteredMessages"
                                 :key="index"
-                                v-if="msg.isDeleted || (msg.content && msg.content.trim() !== '')"
                                 :class="['chat-message', isMine(msg.senderId) ? 'sent' : 'received']"
                             >
                                 <div class="message-content">
@@ -65,6 +64,13 @@ export default {
         await this.loadMessageHistory();
         this.markAsRead();
 
+    },
+    computed: {
+        filteredMessages() {
+            return this.messages.filter(
+            msg => msg.isDeleted || (msg.content && msg.content.trim() !== '')
+            );
+        }
     },
     mounted() {
         emitter.on("newMessageReceived", this.onMessageReceived);
