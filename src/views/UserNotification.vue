@@ -11,46 +11,64 @@
                 <v-list-item
                   v-for="(notification, index) in notifications"
                   :key="index"
-                  class="chat-list-item"
+                  class="notification-item"
                   @click="goTo(notification.route, notification, index)"
                 >
                   <template v-slot:prepend>
-                    <v-avatar color="primary">
-                      <v-icon>mdi-bell-ring-outline</v-icon>
+                    <v-avatar color="#4FC3F7" size="40">
+                      <v-icon color="white">mdi-bell-ring-outline</v-icon>
                     </v-avatar>
                   </template>
-                  <!-- 삭제 버튼 -->
-                  <template v-slot:append>
-                    <v-icon
-                      small
-                      class="ml-2 text-grey"
-                      @click.stop="removeNotification(index)"
-                    >
-                      mdi-close
-                    </v-icon>
-                  </template>
-                  <v-list-item-title class="d-flex justify-space-between">
-                    <span class="font-weight-bold">{{ notification.title }}</span>
-                    <span class="text-caption text-medium-emphasis">
-                      {{ formatTime(notification.createdAt) }}
-                    </span>
+
+                  <v-list-item-title class="d-flex justify-space-between align-center mb-2">
+                    <span class="notification-title">{{ notification.title }}</span>
+                    <span class="notification-time">{{ formatTime(notification.createdAt) }}</span>
                   </v-list-item-title>
-  
-                  <v-list-item-subtitle class="text-truncate">
+
+                  <v-list-item-subtitle class="notification-message">
                     {{ notification.message }}
                   </v-list-item-subtitle>
+
                   <!-- 조건부 보호자 요청시 수락 거절 버튼 -->
                   <template v-if="notification.type === 'CARE_REQUEST'">
-                    <v-list-item-action class="mt-2">
-                      <v-btn small color="success" @click.stop="acceptCare(notification.referenceId)">수락</v-btn>
-                      <v-btn small color="error" @click.stop="rejectCare(notification.referenceId)">거절</v-btn>
+                    <v-list-item-action class="mt-3">
+                      <v-btn 
+                        color="#4FC3F7" 
+                        variant="tonal" 
+                        class="action-btn mr-2" 
+                        @click.stop="acceptCare(notification.referenceId)"
+                      >
+                        수락
+                      </v-btn>
+                      <v-btn 
+                        color="error" 
+                        variant="tonal" 
+                        class="action-btn" 
+                        @click.stop="rejectCare(notification.referenceId)"
+                      >
+                        거절
+                      </v-btn>
                     </v-list-item-action>
+                  </template>
+
+                  <!-- 삭제 버튼 -->
+                  <template v-slot:append>
+                    <v-btn
+                      icon
+                      variant="text"
+                      color="grey"
+                      size="small"
+                      @click.stop="removeNotification(index)"
+                    >
+                      <v-icon>mdi-close</v-icon>
+                    </v-btn>
                   </template>
                 </v-list-item>
               </v-list>
-  
-              <div v-if="notifications.length === 0" class="text-center text-grey">
-                알림이 없습니다.
+
+              <div v-if="notifications.length === 0" class="empty-container">
+                <v-icon size="x-large" color="grey-lighten-1">mdi-bell-off-outline</v-icon>
+                <p class="mt-3 text-grey-darken-1">알림이 없습니다.</p>
               </div>
             </v-card-text>
           </v-card>
@@ -199,19 +217,82 @@
   </script>
   
   <style scoped>
-  .chat-list-item {
+  .notification-item {
     cursor: pointer;
     transition: background-color 0.2s;
+    padding: 16px !important;
+    border-bottom: 1px solid #f0f0f0;
   }
-  .chat-list-item:hover {
-    background-color: #f5f5f5;
+
+  .notification-item:hover {
+    background-color: #f8f9fa;
   }
-  .v-list-item-title {
-    font-size: 1rem;
+
+  .notification-title {
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
   }
-  .v-list-item-subtitle {
-    font-size: 0.875rem;
+
+  .notification-time {
+    font-size: 0.9rem !important;
+    color: #666 !important;
+  }
+
+  .notification-message {
+    font-size: 1.1rem !important;
+    color: #666 !important;
+    line-height: 1.4 !important;
+    margin-top: 4px !important;
+  }
+
+  .action-btn {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    text-transform: none !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  /* 카드 스타일 수정 */
+  :deep(.v-card) {
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  :deep(.v-card-title) {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    padding: 24px !important;
+    border-bottom: 2px solid #4FC3F7 !important;
+  }
+
+  .empty-container {
+    padding: 48px 0;
+    text-align: center;
+  }
+
+  .empty-container p {
+    font-size: 1.1rem;
     color: #666;
+  }
+
+  /* 반응형 스타일 */
+  @media (max-width: 600px) {
+    .notification-title {
+      font-size: 1.1rem !important;
+    }
+    
+    .notification-message {
+      font-size: 1rem !important;
+    }
+    
+    .action-btn {
+      font-size: 0.95rem !important;
+      padding: 6px 12px !important;
+    }
   }
   </style>
   
