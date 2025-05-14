@@ -755,17 +755,7 @@ export default{
             
             return '';
         },
-        formatDateTime(dateArr, timeArr) {
-            if (!Array.isArray(dateArr) || !Array.isArray(timeArr)) return '';
-
-            const [year, month, day] = dateArr;
-            const [hours, minutes] = timeArr;
-
-            const formattedDate = `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
-            const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-
-            return `${formattedDate} ${formattedTime}`;
-        },
+        
         formatCost(cost) {
             return cost > 0 ? `${cost.toLocaleString()}원` : '회비없음';
         },
