@@ -748,6 +748,17 @@ export default{
                 console.error('정기모임 목록을 가져오는데 실패했습니다:', error);
             }
         },
+        formatDateTime(dateArr, timeArr) {
+            if (!Array.isArray(dateArr) || !Array.isArray(timeArr)) return '';
+
+            const [year, month, day] = dateArr;
+            const [hours, minutes] = timeArr;
+
+            const formattedDate = `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
+            const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+            return `${formattedDate} ${formattedTime}`;
+        },
         formatDate(dateValue) {
             if (!dateValue) return '날짜 정보 없음';
             
