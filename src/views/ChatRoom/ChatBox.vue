@@ -11,8 +11,9 @@
                             <div 
                                 v-for="(msg, index) in messages"
                                 :key="index"
+                                v-if="msg.isDeleted || (msg.content && msg.content.trim() !== '')"
                                 :class="['chat-message', isMine(msg.senderId) ? 'sent' : 'received']"
-                                >
+                            >
                                 <div class="message-content">
                                     <template v-if="!isMine(msg.senderId)">
                                     <div class="sender-info">{{ msg.senderNickName }}</div>
