@@ -632,7 +632,7 @@ export default{
         this.page = 0;
         this.hasMore = true;
         this.messages = [];
-        this.loadMessageHistory();
+        
     },
     computed: {
         isGatheringLeader() {
@@ -679,7 +679,7 @@ export default{
             const chatBox = this.$el.querySelector(".chat-box");
             if (chatBox) chatBox.addEventListener("scroll", this.onScrollTop);
         }
-
+        this.loadMessageHistory();
     },
     methods: {
         handleBackButton() {
